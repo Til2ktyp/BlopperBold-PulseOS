@@ -763,6 +763,8 @@
         <div class="status-center" id="status-time">00:00</div>
         <div class="status-right" id="status-date">Mo, 25. Mai</div>
     </div>
+
+    <h1 id="standby-message">version 1</h1>
     <script>
         let idleTimeout;
         const IDLE_TIME = 5 * 60 * 1000;
@@ -1173,7 +1175,7 @@
                         window.location.reload();
                     }, 5000);
                 }
-                
+
                 // --- TIMER ENGINE ---
                 if (data.action.startsWith('timer-')) {
                     const action = data.action.replace('timer-', '');
