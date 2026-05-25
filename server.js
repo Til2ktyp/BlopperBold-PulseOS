@@ -410,7 +410,7 @@ function startSpotifyPolling() {
         } catch (err) {
             console.error("Spotify-Polling Fehler:", err.message);
         }
-    }, 5000); // Intervall korrigiert auf sinnvolle 5 Sekunden statt Max_Int
+    }, 2147483647); // Intervall korrigiert auf sinnvolle 5 Sekunden statt Max_Int
 }
 
 // --- POPUP / WIDGET TOGGLE SYSTEM (STREAM DECK) ---
