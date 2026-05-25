@@ -396,22 +396,45 @@ app.get('/popup/:name', (req, res) => {
     }
 });
 
-app.get('/update', (req, res) => {
-    console.log('Update-Skript wird im Hintergrund gestartet...');
-    const scriptPath = path.join(__dirname, 'updater.py');
+// Hier speichern wir alle geöffneten Browser-Tabs
+let clients = [];
 
+// SSE-Endpunkt: Browser verbinden sich hierher
+app.get('/events', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    // Client zur Liste hinzufügen
+    clients.push(res);
+
+    // Wenn der User den Tab schließt, aus der Liste entfernen
+    req.on('close', () => {
+        clients = clients.filter(client => client !== res);
+    });
+});
+
+// Dein bestehender Update-Endpunkt (aufgerufen durch dein Stream Deck)
+app.get('/update', (req, res) => {
+    console.log('Update via Stream Deck ausgelöst!');
+
+    // 1. Allen Browsern SAGEN, dass sie gleich neu laden sollen
+    clients.forEach(client => {
+        client.write('data: reload\n\n');
+    });
+
+    // 2. Python-Skript im Hintergrund starten
+    const scriptPath = path.join(__dirname, 'updater.py');
     const child = spawn('python', [scriptPath], {
         detached: true,
         stdio: 'ignore',
         cwd: __dirname
     });
-
     child.unref();
 
-    res.json({ 
-        success: true, 
-        message: 'Update gestartet. Server startet neu...' 
-    });
+    // Dem Stream Deck antworten
+    res.send('Update-Prozess gestartet und Clients benachrichtigt.');
 });
 
 // --- SERVER START ---
