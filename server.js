@@ -440,7 +440,6 @@ app.get('/update', (req, res) => {
     res.send('Update-Prozess gestartet und Clients benachrichtigt.');
 });
 
-const express = require('express');
 const app = express();
 // ... deine bestehenden Imports ...
 
