@@ -398,16 +398,19 @@ app.get('/popup/:name', (req, res) => {
 
 app.get('/update', (req, res) => {
     console.log('Update-Skript wird im Hintergrund gestartet...');
-    const child = spawn('python3', ['"C:\\Users\\Neu\\Blopperbold-Nexus\\updater.py"'], {
-        detached: true,          
-        stdio: 'ignore'          
+    const scriptPath = path.join(__dirname, 'updater.py');
+
+    const child = spawn('python', [scriptPath], {
+        detached: true,
+        stdio: 'ignore',
+        cwd: __dirname
     });
 
     child.unref();
 
     res.json({ 
         success: true, 
-        message: 'Update-Skript im Hintergrund gestartet. Server startet gleich neu...' 
+        message: 'Update gestartet. Server startet neu...' 
     });
 });
 
