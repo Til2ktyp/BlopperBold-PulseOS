@@ -440,9 +440,6 @@ app.get('/update', (req, res) => {
     res.send('Update-Prozess gestartet und Clients benachrichtigt.');
 });
 
-const app = express();
-// ... deine bestehenden Imports ...
-
 // 1. Das Reload-Modul importieren
 const reloadHub = require('./reload-hub');
 
