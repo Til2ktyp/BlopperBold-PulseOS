@@ -1,0 +1,9 @@
+.env
+todos.json
+todo.json
+public/.DS_Store
+reminder_scheduler.py
+node_modules/.DS_Store
+node_modules/qs/.DS_Store
+node_modules/gopd/.DS_Store
+.DS_Store

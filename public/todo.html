@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hub To-Do Steuerung</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #090a0f;
+            color: #ffffff;
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+        .container { max-width: 500px; margin: 0 auto; }
+        h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 20px; color: rgba(255,255,255,0.95); }
+        
+        /* Eingabebereich */
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        input {
+            flex-grow: 1;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            padding: 16px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus { border-color: #38bdf8; }
+        
+        button {
+            background: #38bdf8;
+            border: none;
+            color: #090a0f;
+            font-weight: 700;
+            padding: 0 20px;
+            border-radius: 14px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        button:active { transform: scale(0.97); }
+
+        /* To-Do Liste */
+        .todo-list { display: flex; flex-direction: column; gap: 12px; }
+        .todo-item {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .todo-content { display: flex; align-items: center; gap: 12px; flex-grow: 1; min-width: 0; }
+        
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .todo-text { font-size: 1.05rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        /* Done States */
+        .todo-item.done { opacity: 0.5; background: rgba(255,255,255,0.01); }
+        .todo-item.done .checkbox { background: #34a853; border-color: #34a853; }
+        .todo-item.done .checkbox::after { content: "✓"; color: #fff; font-size: 0.8rem; font-weight: 700; }
+        .todo-item.done .todo-text { text-decoration: line-through; }
+
+        /* Löschen Button */
+        .delete-btn {
+            background: rgba(255, 69, 58, 0.15);
+            color: #ff453a;
+            border: 1px solid rgba(255, 69, 58, 0.3);
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .delete-btn:active { transform: scale(0.95); }
+        
+        .clear-all {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.6);
+            padding: 12px;
+            border-radius: 12px;
+            margin-top: 20px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 To-Do Steuerung</h1>
+        
+        <div class="input-group">
+            <input type="text" id="todo-input" placeholder="Neues To-Do..." autocomplete="off">
+            <button onclick="addTodo()">Hinzufügen</button>
+        </div>
+
+        <div id="list-container" class="todo-list"></div>
+        
+        <button class="clear-all" onclick="clearDone()">Erledigte aufräumen</button>
+    </div>
+
+    <script>
+        // 1. Verbindung zum SSE-Stream herstellen
+        const eventSource = new EventSource('/events');
+        
+        eventSource.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                // Sobald der Server neue To-Dos mitschickt, rendern wir sie sofort live auf dem Handy nach
+                if (data.todos) {
+                    renderList(data.todos);
+                }
+            } catch(e) { console.error("Fehler beim SSE-Update:", e); }
+        };
+
+        // 2. Beim allerersten Laden der Seite einmal die Liste holen
+        function fetchInitialList() {
+            fetch('/todo/list')
+                .then(res => res.json())
+                .then(todos => renderList(todos))
+                .catch(e => console.error("Fehler beim Laden der Liste:", e));
+        }
+        fetchInitialList();
+
+        // 3. Die Liste sauber im HTML aufbauen
+        function renderList(todos) {
+            const container = document.getElementById('list-container');
+            container.innerHTML = '';
+            
+            if (!todos || todos.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.3); padding:20px;">Keine Aufgaben</div>';
+                return;
+            }
+
+            todos.forEach((todo, index) => {
+                const item = document.createElement('div');
+                item.className = `todo-item ${todo.done ? 'done' : ''}`;
+                
+                // Klick auf das gesamte Item löst das Abhaken aus
+                item.addEventListener('click', () => toggleTodo(index));
+                
+                item.innerHTML = `
+                    <div class="todo-content">
+                        <div class="checkbox"></div>
+                        <span class="todo-text">${todo.text}</span>
+                    </div>
+                    <button class="delete-btn">Löschen</button>
+                `;
+
+                // Event-Listener für den Lösch-Button separat setzen, um Vererbungen zu stoppen
+                const deleteBtn = item.querySelector('.delete-btn');
+                deleteBtn.addEventListener('click', (event) => {
+                    event.stopPropagation(); // Verhindert, dass das Item gleichzeitig als erledigt markiert wird
+                    deleteTodo(index);
+                });
+
+                container.appendChild(item);
+            });
+        }
+
+        // 4. API-Calls an deine server.js senden
+        function addTodo() {
+            const input = document.getElementById('todo-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            fetch('/todo/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            })
+            .then(res => {
+                if(res.ok) input.value = ''; 
+            })
+            .catch(e => console.error("Fehler beim Hinzufügen:", e));
+        }
+
+        // Erlaubt das Absenden per Enter-Taste im Input-Feld
+        document.getElementById('todo-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addTodo();
+        });
+
+        function toggleTodo(index) {
+            fetch(`/todo/toggle?index=${index}`)
+            .catch(e => console.error("Fehler beim Umschalten:", e));
+        }
+
+        function deleteTodo(index) {
+            fetch(`/todo/delete?index=${index}`)
+            .catch(e => console.error("Fehler beim Löschen:", e));
+        }
+
+        function clearDone() {
+            fetch('/todo/clear')
+            .catch(e => console.error("Fehler beim Aufräumen:", e));
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<style>
+    /* Spezifisches Layout für das Fullscreen Vim-Cheatsheet */
+    .vim-wrapper {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .vim-header {
+        margin-bottom: 35px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 15px;
+    }
+
+    .vim-header h1 {
+        font-size: 2.8rem;
+        font-weight: 700;
+        letter-spacing: -1.5px;
+        margin-bottom: 5px;
+    }
+
+    .vim-header p {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 1.1rem;
+    }
+
+    /* 3 Spalten nebeneinander nutzen die volle Breite perfekt aus */
+    .vim-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 25px;
+    }
+
+    .vim-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        padding: 24px;
+    }
+
+    .vim-card h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: rgba(255, 255, 255, 0.9);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .vim-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .vim-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        font-size: 1.05rem;
+        line-height: 1.4;
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .keys {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+        flex-shrink: 0;
+        min-width: 75px; /* Hält die Tasten links sauber untereinander aligned */
+    }
+
+    /* Schicke Apple-Style Keyboard-Tasten */
+    kbd {
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #ffffff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .desc {
+        padding-top: 2px;
+    }
+</style>
+
+<div class="vim-wrapper">
+    <div class="vim-grid">
+        <!-- SPALTE 1: MODI & BEENDEN -->
+        <div class="vim-card">
+            <h2>💾 Modi & Datei</h2>
+            <div class="vim-list">
+                <div class="vim-item"><div class="keys"><kbd>i</kbd></div><div class="desc">Einfügen vor dem Cursor</div></div>
+                <div class="vim-item"><div class="keys"><kbd>a</kbd></div><div class="desc">Einfügen nach dem Cursor (Anhängen)</div></div>
+                <div class="vim-item"><div class="keys"><kbd>o</kbd></div><div class="desc">Neue Zeile unterhalb einfügen</div></div>
+                <div class="vim-item"><div class="keys"><kbd>O</kbd></div><div class="desc">Neue Zeile oberhalb einfügen</div></div>
+                <div class="vim-item"><div class="keys"><kbd>Esc</kbd></div><div class="desc">Zurück in den Normal-Modus</div></div>
+                <div class="vim-item"><div class="keys"><kbd>:wq</kbd> <span style="font-size:0.8rem; opacity:0.5">oder</span> <kbd>:x</kbd></div><div class="desc">Speichern und schließen</div></div>
+                <div class="vim-item"><div class="keys"><kbd>:q!</kbd></div><div class="desc">Schließen ohne Speichern</div></div>
+            </div>
+        </div>
+
+        <!-- SPALTE 2: BEWEGUNG -->
+        <div class="vim-card">
+            <h2>🚶 Navigation</h2>
+            <div class="vim-list">
+                <div class="vim-item"><div class="keys"><kbd>h</kbd> <kbd>j</kbd> <kbd>k</kbd> <kbd>l</kbd></div><div class="desc">Cursor nach Links, Unten, Oben, Rechts</div></div>
+                <div class="vim-item"><div class="keys"><kbd>w</kbd> / <kbd>b</kbd></div><div class="desc">Ein Wort vorwärts / rückwärts springen</div></div>
+                <div class="vim-item"><div class="keys"><kbd>0</kbd> / <kbd>$</kbd></div><div class="desc">Zum Zeilenanfang / Zeilenende springen</div></div>
+                <div class="vim-item"><div class="keys"><kbd>gg</kbd> / <kbd>G</kbd></div><div class="desc">Zum Dateianfang / Dateiende springen</div></div>
+                <div class="vim-item"><div class="keys"><kbd>:{Zahl}</kbd></div><div class="desc">Zu einer bestimmten Zeile springen (z.B. :25)</div></div>
+                <div class="vim-item"><div class="keys"><kbd>H</kbd> / <kbd>L</kbd></div><div class="desc">An den obersten / untersten Bildschirmrand</div></div>
+            </div>
+        </div>
+
+        <!-- SPALTE 3: EDITIEREN & CLIPBOARD -->
+        <div class="vim-card">
+            <h2>✂️ Editieren & Clipboard</h2>
+            <div class="vim-list">
+                <div class="vim-item"><div class="keys"><kbd>u</kbd></div><div class="desc">Aktion rückgängig machen (Undo)</div></div>
+                <div class="vim-item"><div class="keys"><kbd>Ctrl</kbd>+<kbd>r</kbd></div><div class="desc">Aktion wiederholen (Redo)</div></div>
+                <div class="vim-item"><div class="keys"><kbd>dd</kbd></div><div class="desc">Aktuelle Zeile löschen (ausschneiden)</div></div>
+                <div class="vim-item"><div class="keys"><kbd>yy</kbd></div><div class="desc">Aktuelle Zeile kopieren (Yank)</div></div>
+                <div class="vim-item"><div class="keys"><kbd>p</kbd></div><div class="desc">Inhalt NACH dem Cursor einfügen</div></div>
+                <div class="vim-item"><div class="keys"><kbd>P</kbd></div><div class="desc">Inhalt VOR dem Cursor einfügen</div></div>
+                <div class="vim-item"><div class="keys"><kbd>x</kbd></div><div class="desc">Einzelnes Zeichen löschen</div></div>
+            </div>
+        </div>
+    </div>
+</div>
