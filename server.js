@@ -7,6 +7,8 @@ const fs = require('fs');
 const app = express();
 const PORT = 3000;
 
+const PulseOSVERSION = 26.5;
+
 // WICHTIG: Erlaubt Express, JSON-Daten (z.B. vom Handy) zu lesen
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
