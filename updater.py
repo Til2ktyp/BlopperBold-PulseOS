@@ -15,6 +15,6 @@ os.system("cd Blopperbold-Nexus")
 
 os.system("git pull")
 
-os.system("C:\\Users\\Neu\\Desktop\\startserver.bat")
+os.system("start C:\\Users\\Neu\\Desktop\\startserver.bat")
 
 print("Update Abgeschlossen")
