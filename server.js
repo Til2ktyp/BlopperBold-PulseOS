@@ -365,7 +365,7 @@ function startSpotifyPolling() {
 // --- POPUP / WIDGET TOGGLE SYSTEM (STREAM DECK) ---
 let allPopupsHidden = false;
 
-app.get('/popup/:name', (req, res) => {
+app.get('/popups/:name', (req, res) => {
     const name = req.params.name;
     const requestedMode = req.query.mode; // Liest '?mode=...' aus der URL aus
 
