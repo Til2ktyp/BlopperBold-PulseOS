@@ -365,7 +365,7 @@ function startSpotifyPolling() {
 // --- POPUP / WIDGET TOGGLE SYSTEM (STREAM DECK) ---
 let allPopupsHidden = false;
 
-app.get('/popups/:name', (req, res) => {
+app.get('/popup/:name', (req, res) => {
     const name = req.params.name;
     const requestedMode = req.query.mode; // Liest '?mode=...' aus der URL aus
 
@@ -391,6 +391,21 @@ app.get('/popups/:name', (req, res) => {
     } else {
         res.send(`Popup [${name}] getoggelt.\n`);
     }
+});
+
+app.get('/update', (req, res) => {
+    console.log('Update-Skript wird im Hintergrund gestartet...');
+    const child = spawn('python3', ['"C:\\Users\\Neu\\Blopperbold-Nexus\\updater.py"'], {
+        detached: true,          
+        stdio: 'ignore'          
+    });
+
+    child.unref();
+
+    res.json({ 
+        success: true, 
+        message: 'Update-Skript im Hintergrund gestartet. Server startet gleich neu...' 
+    });
 });
 
 // --- SERVER START ---
