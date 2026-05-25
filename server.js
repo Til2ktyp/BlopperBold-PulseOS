@@ -13,21 +13,68 @@ const PulseOSVERSION = "26.5.1111";
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// DAS ZENTRALE ARRAY FÜR ALLE OPENING DISPLAYS
 let clients = [];
 
+// Hilfsfunktion um Daten an alle Displays zu senden (Widgets, Spotify, etc.)
 function sendToClients(data) {
-    clients.forEach(client => client.res.write(`data: ${JSON.stringify(data)}\n\n`));
+    clients.forEach(client => {
+        try {
+            client.res.write(`data: ${JSON.stringify(data)}\n\n`);
+        } catch(e) {
+            console.error("Fehler beim Senden an Client:", e.message);
+        }
+    });
 }
 
-// --- SSE EVENTS VERBINDUNG ---
+// --- 🌐 ZENTRALE SSE EVENTS VERBINDUNG (Für Widgets, Spotify UND Reloads) ---
 app.get('/events', (req, res) => {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+    });
+    
+    // Herzschlag an den Browser senden, damit Chromium/Electron die Verbindung nicht trennt
+    res.write('\n'); 
+
     const clientId = Date.now();
     clients.push({ id: clientId, res });
-    req.on('close', () => clients = clients.filter(c => c.id !== clientId));
+    console.log(`[SSE] Display verbunden. Aktive Displays: ${clients.length}`);
+
+    req.on('close', () => {
+        clients = clients.filter(c => c.id !== clientId);
+        console.log(`[SSE] Display getrennt. Verbleibende Displays: ${clients.length}`);
+    });
 });
+
+// --- 🚀 DER ULTIMATIVE RESTART/UPDATE ENDPUNKT (FÜR STREAM DECK) ---
+app.get('/update', (req, res) => {
+    console.log(`[Update] Stream Deck aktiv. Sende Reload an ${clients.length} Displays...`);
+
+    // Sende das reine Text-Signal "reload" an alle Displays, bevor wir sterben
+    clients.forEach(client => {
+        try {
+            client.res.write("data: reload\n\n");
+        } catch (err) {
+            console.error("Fehler beim Senden des Reload-Signals:", err.message);
+        }
+    });
+
+    // Python-Skript im Hintergrund starten
+    const scriptPath = path.join(__dirname, 'updater.py');
+    console.log(`[Update] Starte Hintergrund-Skript: ${scriptPath}`);
+    
+    const child = spawn('python', [scriptPath], {
+        detached: true,
+        stdio: 'ignore',
+        cwd: __dirname
+    });
+    child.unref();
+
+    res.send('Update-Prozess gestartet und alle Displays benachrichtigt.\n');
+});
+
 
 // --- DYNAMISCHES WIDGET SYSTEM ---
 app.get('/widget/:name', (req, res) => {
@@ -326,7 +373,7 @@ function startSpotifyPolling() {
             if (resPlayback.status === 204 || resPlayback.status > 400) {
                 console.log("ℹ️ Spotify sagt: Kein aktives Gerät oder Wiedergabe pausiert (Status " + resPlayback.status + ")");
                 return;
-}
+            }
 
             const playback = await resPlayback.json();
             if (playback && playback.is_playing) {
@@ -363,7 +410,7 @@ function startSpotifyPolling() {
         } catch (err) {
             console.error("Spotify-Polling Fehler:", err.message);
         }
-    }, 2147483647);
+    }, 5000); // Intervall korrigiert auf sinnvolle 5 Sekunden statt Max_Int
 }
 
 // --- POPUP / WIDGET TOGGLE SYSTEM (STREAM DECK) ---
@@ -371,7 +418,7 @@ let allPopupsHidden = false;
 
 app.get('/popup/:name', (req, res) => {
     const name = req.params.name;
-    const requestedMode = req.query.mode; // Liest '?mode=...' aus der URL aus
+    const requestedMode = req.query.mode; 
 
     if (name === 'alle') {
         allPopupsHidden = !allPopupsHidden;
@@ -383,7 +430,6 @@ app.get('/popup/:name', (req, res) => {
         return res.send(`Alle Popups werden ${allPopupsHidden ? 'versteckt' : 'eingeblendet'}.\n`);
     }
 
-    // Übergibt den extrahierten Modus direkt an die index.html via SSE
     sendToClients({ 
         action: 'toggle-popup', 
         target: name,
@@ -397,57 +443,6 @@ app.get('/popup/:name', (req, res) => {
     }
 });
 
-// SSE-Endpunkt: Browser verbinden sich hierher
-app.get('/events', (req, res) => {
-    res.writeHead(200, {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-    });
-    
-    // Wichtig für manche Server-Setups (z.B. Proxies)
-    res.write('\n'); 
-
-    clients.push(res);
-
-    req.on('close', () => {
-        clients = clients.filter(client => client !== res);
-    });
-});
-
-app.get('/update', (req, res) => {
-    console.log('Update via Stream Deck ausgelöst!');
-
-    // Fehlerbehebung: Verwende die korrekte SSE-Formatierung und fange Fehler ab
-    clients.forEach(client => {
-        try {
-            // "data: reload\n\n" ist das strikte Protokoll für SSE
-            client.write("data: reload\n\n");
-        } catch (err) {
-            console.error("Fehler beim Senden an einen Client:", err.message);
-        }
-    });
-
-    // Python-Skript im Hintergrund starten
-    const scriptPath = path.join(__dirname, 'updater.py');
-    const child = spawn('python', [scriptPath], {
-        detached: true,
-        stdio: 'ignore',
-        cwd: __dirname
-    });
-    child.unref();
-
-    res.send('Update-Prozess gestartet und Clients benachrichtigt.');
-});
-
-// 1. Das Reload-Modul importieren
-const reloadHub = require('./reload-hub');
-
-// ... dein bestehender Code ...
-
-// 2. Die zwei neuen Routen einfach unten dranhängen
-app.get('/events', reloadHub.registerClient); // Hierhin verbinden sich die Displays
-app.get('/update', reloadHub.triggerUpdate);
 
 // --- SERVER START ---
 app.listen(PORT, () => {
