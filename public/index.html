@@ -1246,22 +1246,16 @@
                     else if (action === 'stop') { clearInterval(swInterval); swRunning = false; }
                     else if (action === 'reset') { clearInterval(swInterval); swRunning = false; swTime = 0; document.getElementById('stopwatch-display').textContent = "00:00.0"; hidePopup('stopwatch-popup'); }
                 }
+                
+                // --- RELOAD HANDLER ---
+                if (event.data === 'reload') {
+                    console.log('Server meldet Update. Lade in 5 Sekunden neu...');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 5000);
+                }
             } catch(err) { console.error(err); }
         };
-      
-      const eventSource = new EventSource('/events');
-      
-      eventSource.onmessage = function(event) {
-          if (event.data === 'reload') {
-              console.log('Server meldet Update. Lade in 5 Sekunden neu...');
-              
-              // 5 Sekunden warten, damit das Python-Skript Zeit hat, 
-              // den Server zu killen und neu zu starten
-              setTimeout(() => {
-                  window.location.reload();
-              }, 5000);
-          }
-      };
     </script>
 </body>
 </html>
