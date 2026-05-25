@@ -38,11 +38,11 @@ function hideLoadingScreen() {
     const stage2Delay = Math.random() * 2000 + 2000;
     
     setTimeout(() => {
-        const subtitle = document.querySelector('.loading-subtitle');
+        // const subtitle = document.querySelector('.loading-subtitle');
         const barContainer = document.querySelector('.loading-bar-container');
         const loadingBar = document.querySelector('.loading-bar');
         
-        subtitle.classList.add('show');
+        // subtitle.classList.add('show');
         barContainer.classList.add('show');
         
         const remainingTime = totalLoadTime - stage2Delay;

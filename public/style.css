@@ -574,24 +574,6 @@ body.standby-active #reminder-container, .reminder.box, .reminder-lines, .remind
     justify-content: center;
 }
 
-.loading-subtitle {
-    font-size: 1.8rem;
-    color: #ffffff;
-    letter-spacing: 2px;
-    font-weight: 300;
-    min-height: 2.2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.8s ease-out;
-}
-
-.loading-subtitle.show {
-    opacity: 1;
-    animation: fadeInUp 0.8s ease-out;
-}
-
 .loading-bar-container {
     width: 300px;
     height: 6px;
@@ -608,7 +590,7 @@ body.standby-active #reminder-container, .reminder.box, .reminder-lines, .remind
 
 .loading-bar-container.show {
     opacity: 1;
-    animation: fadeInUp 0.8s ease-out;
+    animation: fadeInUp 0.5s ease-out;
 }
 
 .loading-bar {
