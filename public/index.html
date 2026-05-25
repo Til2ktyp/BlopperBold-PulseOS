@@ -550,6 +550,144 @@
         }
 
         #idle-screen { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 5; transition: transform 0.6s ease, filter 0.6s ease, opacity 0.5s ease; }
+        
+        /* --- 🚀 LOADING SCREEN STYLES --- */
+        #loading-screen {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            z-index: 99999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 1;
+            transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #loading-screen.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-content {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+            position: relative;
+            height: auto;
+        }
+
+        .loading-logo {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            animation: fadeIn 0.8s ease-out;
+            min-height: 4.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-subtitle {
+            font-size: 1.8rem;
+            color: #ffffff;
+            letter-spacing: 2px;
+            font-weight: 300;
+            min-height: 2.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.8s ease-out;
+        }
+
+        .loading-subtitle.show {
+            opacity: 1;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .loading-bar-container {
+            width: 300px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            min-height: 6px;
+            display: flex;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.8s ease-out;
+        }
+
+        .loading-bar-container.show {
+            opacity: 1;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .loading-bar {
+            height: 100%;
+            width: 0%;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+            animation: loadingProgress 12s ease-in-out forwards;
+        }
+
+        .loading-text {
+            font-size: 1.1rem;
+            color: #ffffff;
+            letter-spacing: 1px;
+            animation: fadeInUp 1.5s ease-out 0.9s both, pulse 2s ease-in-out 3s infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { text-shadow: 0 0 20px rgba(255, 255, 255, 0.3); }
+            50% { text-shadow: 0 0 40px rgba(255, 255, 255, 0.6); }
+        }
+
+        @keyframes loadingProgress {
+            0% { width: 0%; }
+            50% { width: 80%; }
+            100% { width: 100%; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        /* Aura & Clock fade-in nach Loading */
+        #loading-screen.fade-out ~ .aura-bg,
+        #loading-screen.fade-out ~ #idle-screen {
+            animation: fadeIn 1s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
         #clock { font-size: var(--clock-size); font-weight: 500; letter-spacing: -3px; line-height: 1; margin-bottom: 10px; font-variant-numeric: tabular-nums; }
         #weather { font-size: 2rem; font-weight: 400; color: rgba(255, 255, 255, 0.85); background: rgba(255, 255, 255, 0.05); padding: 8px 20px; border-radius: 30px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         #widget-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; opacity: 0; transform: scale(0.92); filter: blur(15px); transition: transform 0.6s ease, filter 0.6s ease, opacity 0.5s ease; }
@@ -685,6 +823,96 @@
             top: 30px; /* Rutscht ins Sichtfeld */
         }
 
+        /* --- 🍞 INIT TOAST NOTIFICATION STYLE --- */
+        #init-toast {
+            position: fixed;
+            top: -120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            color: #ffffff;
+            padding: 16px 30px;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            z-index: 9998;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2);
+            min-width: 280px;
+            display: none;
+            opacity: 0;
+        }
+
+        #init-toast.init-show {
+            display: block;
+            opacity: 1;
+            top: 30px;
+            animation: slideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2);
+        }
+
+        #init-toast.init-hide {
+            display: block;
+            opacity: 0;
+            animation: slideUp 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+                top: 30px;
+            }
+            to {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+                top: -120px;
+            }
+        }
+
+        .init-toast-text {
+            text-align: center;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .init-toast-bar-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .init-toast-bar {
+            height: 100%;
+            width: 0%;
+            background: #ffffff;
+            border-radius: 2px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            animation: initProgress 3s ease-in-out forwards;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        @keyframes initProgress {
+            0% { width: 0%; }
+            70% { width: 85%; }
+            100% { width: 100%; }
+        }
+
         .queue-list { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; flex-grow: 1; scrollbar-width: none; }
         .queue-list::-webkit-scrollbar { display: none; }
         .queue-item { display: flex; align-items: center; gap: 15px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
@@ -700,6 +928,13 @@
     </div>
 
     <div id="mode-toast">Modus: Semi</div>
+
+    <div id="init-toast">
+        <div class="init-toast-text">INITIALISIERE</div>
+        <div class="init-toast-bar-container">
+            <div class="init-toast-bar"></div>
+        </div>
+    </div>
 
     <div id="popup-container">
         <div id="timer-popup" class="popup-box">
@@ -732,6 +967,17 @@
                 <div class="adhs-title">!! Erinnerung !!</div>
                 <div class="adhs-message" id="adhs-message-text">Aufstehen!</div>
                 <button class="adhs-btn" onclick="closeAdhsPopup()">OK, GECHECKT!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🚀 LOADING SCREEN -->
+    <div id="loading-screen">
+        <div class="loading-content">
+            <div class="loading-logo">BLOPPERBOLD</div>
+            <div class="loading-subtitle">Pulse OS</div>
+            <div class="loading-bar-container">
+                <div class="loading-bar"></div>
             </div>
         </div>
     </div>
@@ -785,8 +1031,86 @@
             document.getElementById('status-time').textContent = timeStr;
             document.getElementById('status-date').textContent = now.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: 'short' }).replace('.', '');
         }
-        setInterval(updateClock, 1000);
-        updateClock();
+        
+        // Uhr erst nach 1 Sekunde aktualisieren (während Init-Toast lädt)
+        setTimeout(() => {
+            updateClock();
+            setInterval(updateClock, 1000);
+        }, 1000);
+        
+
+        // --- 🚀 LOADING SCREEN LOGIC ---
+        function hideLoadingScreen() {
+            const loadingScreen = document.getElementById('loading-screen');
+            
+            // Random startup time between 9-14 seconds (rarely 20)
+            const randomValue = Math.random();
+            let totalLoadTime;
+            
+            if (randomValue < 0.05) {
+                // 5% chance for 20 seconds
+                totalLoadTime = 20000;
+            } else {
+                // 95% chance for 9-14 seconds
+                totalLoadTime = Math.random() * 5000 + 9000;
+            }
+            
+            // Stage 1: BLOPPERBOLD is already visible
+            // Stage 2: After 2-4 seconds, show "Pulse OS" and progress bar
+            const stage2Delay = Math.random() * 2000 + 2000; // 2-4 seconds
+            
+            setTimeout(() => {
+                // Stage 2: Show Pulse OS and loading bar
+                const subtitle = document.querySelector('.loading-subtitle');
+                const barContainer = document.querySelector('.loading-bar-container');
+                const loadingBar = document.querySelector('.loading-bar');
+                
+                subtitle.classList.add('show');
+                barContainer.classList.add('show');
+                
+                // Adjust progress bar animation to match remaining time
+                const remainingTime = totalLoadTime - stage2Delay;
+                loadingBar.style.animationDuration = remainingTime + 'ms';
+            }, stage2Delay);
+            
+            // Hide loading screen after total time
+            setTimeout(() => {
+                loadingScreen.classList.add('fade-out');
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                    
+                    // Stage 3: Show init toast with progress bar
+                    showInitToast();
+                }, 1200);
+            }, totalLoadTime);
+        }
+
+        // Show init toast and load weather
+        function showInitToast() {
+            const initToast = document.getElementById('init-toast');
+            initToast.classList.add('init-show');
+            
+            // Wetter laden während Init-Toast angezeigt wird
+            fetchWeather();
+            
+            // Hide toast after 3.5 seconds (Loadbar läuft 3s, extra 0.5s für Animation)
+            setTimeout(() => {
+                initToast.classList.remove('init-show');
+                initToast.classList.add('init-hide');
+                
+                // Entfernen nach Animation
+                setTimeout(() => {
+                    initToast.classList.remove('init-hide');
+                }, 500);
+            }, 3500);
+        }
+
+        // Loading Screen ausblenden, sobald die Seite vollständig geladen ist
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', hideLoadingScreen);
+        } else {
+            hideLoadingScreen();
+        }
         
 
         async function fetchWeather() {
@@ -802,8 +1126,11 @@
                 document.getElementById('status-weather').innerHTML = `☁️ ${temp}°C`;
             } catch (e) { console.log("Wetter Fehler"); }
         }
-        fetchWeather();
+        
+        // Wetter wird beim Init-Toast geladen
+        // Nur regelmäßiges Update alle 30 Minuten
         setInterval(fetchWeather, 30 * 60 * 1000);
+        
 
         // --- AUTARKE FRONTEND-ENGINE ---
         let timerInterval, timerTime = 0, timerRunning = false;
