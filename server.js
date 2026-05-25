@@ -440,6 +440,19 @@ app.get('/update', (req, res) => {
     res.send('Update-Prozess gestartet und Clients benachrichtigt.');
 });
 
+const express = require('express');
+const app = express();
+// ... deine bestehenden Imports ...
+
+// 1. Das Reload-Modul importieren
+const reloadHub = require('./reload-hub');
+
+// ... dein bestehender Code ...
+
+// 2. Die zwei neuen Routen einfach unten dranhängen
+app.get('/events', reloadHub.registerClient); // Hierhin verbinden sich die Displays
+app.get('/update', reloadHub.triggerUpdate);
+
 // --- SERVER START ---
 app.listen(PORT, () => {
     console.log(`Server läuft auf http://localhost:${PORT}`);

@@ -788,6 +788,7 @@
         setInterval(updateClock, 1000);
         updateClock();
         
+
         async function fetchWeather() {
             try {
                 const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
@@ -911,6 +912,7 @@
                     return;
                 }
                 
+                
                 const data = JSON.parse(event.data);
                 if (!data || !data.action) return; 
 
@@ -1010,7 +1012,7 @@
                     }
                 }
 
-                                // --- SPOTIFY SSE LOGIK ---
+                // --- SPOTIFY SSE LOGIK ---
                 if (data.action === 'spotify-playing') {
                     document.getElementById('track-title').textContent = data.title;
                     document.getElementById('track-artist').textContent = data.artist;
@@ -1162,6 +1164,16 @@
                     }
                 }
 
+                if (event.data === 'reload') {
+                    console.log('Hub meldet Server-Update. Trenne Verbindung und lade neu...');
+                    eventSource.close(); // Verbindung kappen, um Fehler beim Server-Down zu vermeiden
+                    
+                    // 5 Sekunden warten, bis der Hub wieder hochgefahren ist, dann neu laden
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 5000);
+                }
+                
                 // --- TIMER ENGINE ---
                 if (data.action.startsWith('timer-')) {
                     const action = data.action.replace('timer-', '');
