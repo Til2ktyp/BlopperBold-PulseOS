@@ -1246,6 +1246,23 @@
                 }
             } catch(err) { console.error(err); }
         };
+      
+      function starteUpdate() {
+          console.log("Update wird ausgelöst...");
+          
+          fetch('/update')
+              .then(response => response.json())
+              .then(data => {
+                  console.log(data.message); // "Update gestartet. Server startet neu..."
+                  
+                  // Warte 5 Sekunden (5000 ms), damit der Server Zeit zum Restarten hat
+                  setTimeout(() => {
+                      console.log("Lade Seite neu...");
+                      window.location.reload(); // Lädt die aktuelle Index-Seite neu
+                  }, 5000);
+              })
+              .catch(error => console.error("Fehler beim Update-Aufruf:", error));
+      }
     </script>
 </body>
 </html>
