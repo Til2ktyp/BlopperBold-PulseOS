@@ -399,30 +399,36 @@ app.get('/popup/:name', (req, res) => {
 
 // SSE-Endpunkt: Browser verbinden sich hierher
 app.get('/events', (req, res) => {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+    });
+    
+    // Wichtig für manche Server-Setups (z.B. Proxies)
+    res.write('\n'); 
 
-    // Client zur Liste hinzufügen
     clients.push(res);
 
-    // Wenn der User den Tab schließt, aus der Liste entfernen
     req.on('close', () => {
         clients = clients.filter(client => client !== res);
     });
 });
 
-// Dein bestehender Update-Endpunkt (aufgerufen durch dein Stream Deck)
 app.get('/update', (req, res) => {
     console.log('Update via Stream Deck ausgelöst!');
 
-    // 1. Allen Browsern SAGEN, dass sie gleich neu laden sollen
+    // Fehlerbehebung: Verwende die korrekte SSE-Formatierung und fange Fehler ab
     clients.forEach(client => {
-        client.write('data: reload\n\n');
+        try {
+            // "data: reload\n\n" ist das strikte Protokoll für SSE
+            client.write("data: reload\n\n");
+        } catch (err) {
+            console.error("Fehler beim Senden an einen Client:", err.message);
+        }
     });
 
-    // 2. Python-Skript im Hintergrund starten
+    // Python-Skript im Hintergrund starten
     const scriptPath = path.join(__dirname, 'updater.py');
     const child = spawn('python', [scriptPath], {
         detached: true,
@@ -431,7 +437,6 @@ app.get('/update', (req, res) => {
     });
     child.unref();
 
-    // Dem Stream Deck antworten
     res.send('Update-Prozess gestartet und Clients benachrichtigt.');
 });
 
