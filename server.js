@@ -14,6 +14,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 let clients = [];
+
 function sendToClients(data) {
     clients.forEach(client => client.res.write(`data: ${JSON.stringify(data)}\n\n`));
 }
@@ -395,9 +396,6 @@ app.get('/popup/:name', (req, res) => {
         res.send(`Popup [${name}] getoggelt.\n`);
     }
 });
-
-// Hier speichern wir alle geöffneten Browser-Tabs
-let clients = [];
 
 // SSE-Endpunkt: Browser verbinden sich hierher
 app.get('/events', (req, res) => {
