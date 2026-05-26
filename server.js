@@ -75,6 +75,20 @@ app.get('/update', (req, res) => {
     res.send('Update-Prozess gestartet und alle Displays benachrichtigt.\n');
 });
 
+// --- 🔄 RELOAD ENDPUNKT (ohne Update-Skript) ---
+app.get('/reload', (req, res) => {
+    console.log(`[Reload] Sende Reload-Signal an ${clients.length} Displays...`);
+
+    clients.forEach(client => {
+        try {
+            client.res.write("data: reload\n\n");
+        } catch (err) {
+            console.error("Fehler beim Senden des Reload-Signals:", err.message);
+        }
+    });
+
+    res.send('Reload-Signal an alle Displays gesendet.\n');
+});
 
 // --- DYNAMISCHES WIDGET SYSTEM ---
 app.get('/widget/:name', (req, res) => {

@@ -81,25 +81,66 @@ body, #clock, #weather, .aura-bg {
 /* --- LOW-POWERED GPU MODE --- */
 body.animation-low .blob {
     animation: none;
-    opacity: 0.3;
+    opacity: 0;
 }
 
 body.animation-low .aura-bg {
-    filter: blur(20px);
-    opacity: 0.4;
+    filter: none;
+    opacity: 0;
 }
 
 body.animation-medium {
-    --anim-duration: 1.5;
-    --blur-strength: 50px;
-    --blob-opacity: 0.6;
+    --anim-duration: 1;
+    --blur-strength: 0px;
+    --blob-opacity: 0.4;
+    --glass-blur: none;
+}
+
+body.animation-medium .blob {
+    animation: moveBlob calc(25s * var(--anim-duration)) infinite alternate ease-in-out;
+    opacity: 0.4;
+}
+
+body.animation-medium .aura-bg {
+    filter: none;
+    opacity: 0.4;
 }
 
 body.animation-low {
-    --anim-duration: 2.5;
-    --blur-strength: 20px;
-    --blob-opacity: 0.3;
-    --anim-scale: 0.5;
+    --anim-duration: 1;
+    --blur-strength: 0px;
+    --blob-opacity: 0;
+    --anim-scale: 0;
+    --glass-blur: none;
+}
+
+/* --- LOW-POWERED MODE MEGA-OPTIMIZATIONS --- */
+body.animation-low .popup-box,
+body.animation-low #status-bar,
+body.animation-low .widget-slot,
+body.animation-low #adhs-overlay,
+body.animation-low .reminder-box,
+body.animation-low #weather,
+body.animation-medium .popup-box,
+body.animation-medium #status-bar,
+body.animation-medium .widget-slot,
+body.animation-medium #adhs-overlay,
+body.animation-medium .reminder-box,
+body.animation-medium #weather {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+body.animation-low .popup-box {
+    box-shadow: none !important;
+}
+
+body.animation-medium .popup-box,
+body.animation-medium .todo-item,
+body.animation-medium .todo-clear-btn,
+body.animation-medium .spotify-card {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
 
 /* --- POPUPS OBEN LINKS --- */
@@ -253,6 +294,11 @@ body.animation-low .popup-box.timer-alarm {
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+body.animation-low #status-bar {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
 body.widget-active #status-bar {
     opacity: 1;
     transform: translateY(0);
@@ -317,6 +363,11 @@ body.standby-active #status-bar {
     display: flex;
     align-items: center;
     gap: 18px;
+}
+
+body.animation-low .todo-item {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
     cursor: pointer;
     user-select: none;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -405,6 +456,11 @@ body.standby-active #status-bar {
     backdrop-filter: blur(10px);
 }
 
+body.animation-low .todo-clear-btn {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
 .todo-clear-btn:hover {
     background: rgba(255, 69, 58, 0.2);
     border-color: rgba(255, 69, 58, 0.4);
@@ -446,8 +502,7 @@ body.standby-active .widget-title {
     border-radius: 20px; 
     padding: 16px 20px; 
     gap: 20px;
-    width: 380px; 
-    box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+    width: 380px;
     opacity: 0;
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     pointer-events: none;
@@ -455,7 +510,13 @@ body.standby-active .widget-title {
     bottom: 30px;
     right: 30px;
     z-index: 90;
-    transform: translateY(20px); 
+    transform: translateY(20px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+}
+
+body.animation-low .spotify-card {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
 
 body.standby-active .spotify-card {
@@ -693,10 +754,39 @@ body.standby-active #reminder-container, .reminder.box, .reminder-lines, .remind
 
 #clock { font-size: var(--clock-size); font-weight: 500; letter-spacing: -3px; line-height: 1; margin-bottom: 10px; font-variant-numeric: tabular-nums; }
 #weather { font-size: 2rem; font-weight: 400; color: rgba(255, 255, 255, 0.85); background: rgba(255, 255, 255, 0.05); padding: 8px 20px; border-radius: 30px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
+
+body.animation-low #weather {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
 #widget-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; opacity: 0; transform: scale(0.92); filter: blur(15px); transition: transform 0.6s ease, filter 0.6s ease, opacity 0.5s ease; }
+
+body.animation-low #widget-container {
+    filter: blur(0px) !important;
+}
+
+body.animation-medium #widget-container {
+    filter: blur(0px) !important;
+}
 .widget-slot { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 11, 16, 0.25); backdrop-filter: var(--glass-blur); padding: 50px; overflow-y: auto; opacity: 0; transform: scale(0.95); filter: blur(10px); transition: transform 0.5s ease, filter 0.5s ease, opacity 0.4s ease; }
+
+body.animation-low .widget-slot {
+    filter: blur(0px) !important;
+}
+
+body.animation-medium .widget-slot {
+    filter: blur(0px) !important;
+}
 .widget-slot.slot-active { opacity: 1; transform: scale(1); filter: blur(0px); }
 body.widget-active #idle-screen { transform: scale(1.08); filter: blur(20px); opacity: 0; }
+
+body.animation-low.widget-active #idle-screen {
+    filter: blur(0px) !important;
+}
+
+body.animation-medium.widget-active #idle-screen {
+    filter: blur(0px) !important;
+}
 body.widget-active #widget-container { opacity: 1; pointer-events: auto; transform: scale(1); filter: blur(0px); }
 
 /* --- NATIVES SPOTIFY DASHBOARD WIDGET STYLE (FULLSCREEN) --- */
