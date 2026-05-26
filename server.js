@@ -145,6 +145,24 @@ app.get('/stopwatch/reset', (req, res) => {
     res.send("Stoppuhr zurückgesetzt.\n");
 });
 
+// --- ANIMATIONS QUALITY ENDPOINT ---
+let animationQuality = 'auto'; // auto, high, medium, low
+
+app.get('/quality/animations', (req, res) => {
+    res.json({ quality: animationQuality });
+});
+
+app.get('/quality/animations/set/:level', (req, res) => {
+    const level = req.params.level;
+    if (['high', 'medium', 'low', 'auto'].includes(level)) {
+        animationQuality = level;
+        sendToClients({ action: 'animation-quality-changed', quality: level });
+        res.send(`Animations-Qualität auf ${level} gesetzt.\n`);
+    } else {
+        res.status(400).send("Ungültiger Quality-Level. Erlaubt: high, medium, low, auto\n");
+    }
+});
+
 // --- REMINDER SYSTEM ---
 app.get('/reminder', (req, res) => {
     const text = req.query.text || "Kein Text angegeben";

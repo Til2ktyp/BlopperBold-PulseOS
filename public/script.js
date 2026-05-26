@@ -8,6 +8,70 @@ let clockSize = localStorage.getItem('hub-clock-size') || '11';
 
 document.documentElement.style.setProperty('--clock-size', clockSize + 'rem');
 
+// --- 🎬 ANIMATIONS QUALITY DETECTION & APPLICATION ---
+let animationQuality = localStorage.getItem('animation-quality') || 'high';
+
+async function initAnimationQuality() {
+    try {
+        const response = await fetch('/quality/animations');
+        const data = await response.json();
+        animationQuality = data.quality || 'high';
+        
+        // Auto-detect für Low-Power-Devices
+        if (animationQuality === 'auto') {
+            animationQuality = await detectDeviceCapability() ? 'high' : 'low';
+        }
+        
+        applyAnimationQuality(animationQuality);
+        localStorage.setItem('animation-quality', animationQuality);
+        console.log(`[Animations] Quality-Mode: ${animationQuality}`);
+    } catch (e) {
+        console.warn("[Animations] Fehler beim Abrufen der Quality, nutze Default:", e);
+        applyAnimationQuality('high');
+    }
+}
+
+function detectDeviceCapability() {
+    // Prüfe GPU-Kapazität via WebGL
+    try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (!gl) return false;
+        
+        const renderer = gl.getParameter(gl.RENDERER);
+        const vendor = gl.getParameter(gl.VENDOR);
+        
+        // Low-Power-Devices erkennen
+        const lowPowerIndicators = ['Mali', 'Adreno', 'PowerVR', 'Apple A8', 'A9', 'Intel HD Graphics 4000'];
+        const isLowPower = lowPowerIndicators.some(indicator => 
+            renderer.includes(indicator) || vendor.includes(indicator)
+        );
+        
+        return !isLowPower;
+    } catch (e) {
+        return true; // Fallback zu High-Quality wenn WebGL nicht verfügbar
+    }
+}
+
+function applyAnimationQuality(quality) {
+    document.body.classList.remove('animation-high', 'animation-medium', 'animation-low');
+    
+    if (quality === 'high') {
+        document.body.classList.add('animation-high');
+    } else if (quality === 'medium') {
+        document.body.classList.add('animation-medium');
+    } else if (quality === 'low') {
+        document.body.classList.add('animation-low');
+    }
+}
+
+// Initialize animations beim Load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAnimationQuality);
+} else {
+    initAnimationQuality();
+}
+
 function updateClock() {
     const now = new Date();
     const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
@@ -201,7 +265,16 @@ eventSource.onmessage = function(event) {
         }
         
         const data = JSON.parse(event.data);
-        if (!data || !data.action) return; 
+        if (!data || !data.action) return;
+        
+        // --- 🎬 ANIMATIONS QUALITY CHANGED ---
+        if (data.action === 'animation-quality-changed') {
+            animationQuality = data.quality;
+            applyAnimationQuality(animationQuality);
+            localStorage.setItem('animation-quality', animationQuality);
+            console.log(`[Animations] Quality geändert zu: ${animationQuality}`);
+            return;
+        }
 
         // --- 🔥 STREAM DECK POPUP TOGGLE LOGIK ---
         if (data.action === 'toggle-popup') {
