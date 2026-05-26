@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlopperBold</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a0a3e 50%, #0f0f2e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+            padding-bottom: 110px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #00ffff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            font-weight: 900;
+            letter-spacing: 2px;
+        }
+
+        .header p {
+            color: #00ffff;
+            font-size: 0.9rem;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 12px 20px;
+            background: rgba(0, 255, 255, 0.05);
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 12px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.1), inset 0 0 20px rgba(0, 255, 255, 0.05);
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #00ffff;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 10px #00ff88; }
+            50% { opacity: 0.5; box-shadow: 0 0 20px #00ff88; }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .display-selector {
+            margin-bottom: 30px;
+        }
+
+        .display-selector label {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            color: #00ffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(0, 255, 255, 0.08);
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            color: #ffffff;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            font-weight: 600;
+        }
+
+        select::placeholder, input::placeholder {
+            color: #00ffff;
+            opacity: 0.6;
+        }
+
+        select:hover, input:hover {
+            border-color: #00ffff;
+            background: rgba(0, 255, 255, 0.15);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2), inset 0 0 15px rgba(0, 255, 255, 0.05);
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #00ffff;
+            background: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.4), inset 0 0 20px rgba(0, 255, 255, 0.1);
+        }
+
+        select option {
+            background: #1a0a3e;
+            color: #ffffff;
+        }
+
+        .control-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(0, 255, 255, 0.06);
+            border: 2px solid rgba(0, 255, 255, 0.2);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.1), inset 0 0 20px rgba(0, 255, 255, 0.03);
+            animation: slideUp 0.6s ease both;
+        }
+
+        .control-section:nth-of-type(1) {
+            animation-delay: 0.3s;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #00ffff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 3px;
+            height: 20px;
+            background: linear-gradient(180deg, #00ffff, #ff00ff);
+            border-radius: 2px;
+            box-shadow: 0 0 10px #00ffff;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #00ffff, #00cc99);
+            border: 2px solid rgba(0, 255, 255, 0.5);
+            border-radius: 8px;
+            color: #0a0e27;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.5);
+            border-color: #00ffff;
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+        }
+
+        .btn.secondary {
+            background: linear-gradient(135deg, #ff00ff, #cc00ff);
+            border-color: rgba(255, 0, 255, 0.5);
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.3);
+            color: #ffffff;
+        }
+
+        .btn.secondary:hover {
+            box-shadow: 0 0 25px rgba(255, 0, 255, 0.5);
+            border-color: #ff00ff;
+        }
+
+        .btn.danger {
+            background: linear-gradient(135deg, #ff0055, #ff0088);
+            border-color: rgba(255, 0, 85, 0.5);
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.3);
+            color: #ffffff;
+        }
+
+        .btn.danger:hover {
+            box-shadow: 0 0 25px rgba(255, 0, 85, 0.5);
+            border-color: #ff0055;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .input-group input {
+            flex: 1;
+        }
+
+        .input-group button {
+            flex: 0 0 auto;
+            padding: 12px 24px;
+        }
+
+        .timer-presets {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .timer-presets button {
+            padding: 8px 12px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 6px;
+            color: #00ffff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .timer-presets button:hover {
+            background: rgba(0, 255, 255, 0.3);
+            border-color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .reminder-levels {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .level-btn {
+            padding: 10px 12px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 6px;
+            color: #00ffff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .level-btn:hover {
+            background: rgba(0, 255, 255, 0.2);
+            border-color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .level-btn.active {
+            background: linear-gradient(135deg, #00ffff, #00cc99);
+            border-color: #00ffff;
+            color: #0a0e27;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+
+        .dropdown-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .dropdown-group.full {
+            grid-template-columns: 1fr;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            color: #00ffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .no-display {
+            text-align: center;
+            padding: 40px 20px;
+            color: #00ffff;
+        }
+
+        .no-display-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 110px;
+            right: 20px;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, #00ff88, #00ffcc);
+            color: #0a0e27;
+            border-radius: 8px;
+            box-shadow: 0 4px 25px rgba(0, 255, 136, 0.4);
+            animation: slideIn 0.3s ease;
+            z-index: 1000;
+            font-weight: 600;
+            border: 2px solid #00ff88;
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, #ff0055, #ff0088);
+            color: #ffffff;
+            border-color: #ff0055;
+            box-shadow: 0 4px 25px rgba(255, 0, 85, 0.4);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* BOTTOM NAVIGATION BAR */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 90px;
+            background: rgba(10, 14, 39, 0.95);
+            border-top: 2px solid rgba(0, 255, 255, 0.3);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            backdrop-filter: blur(20px);
+            z-index: 100;
+            box-shadow: 0 -5px 25px rgba(0, 255, 255, 0.1);
+            padding-bottom: 5px;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #00ffff;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            user-select: none;
+        }
+
+        .nav-item-icon {
+            font-size: 1.8rem;
+            line-height: 1;
+        }
+
+        .nav-item:hover {
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .nav-item.active {
+            color: #00ffff;
+            text-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+        }
+
+        .nav-item.active .nav-item-icon {
+            animation: pulse-icon 1s infinite;
+        }
+
+        @keyframes pulse-icon {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: slideUp 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .button-group {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .dropdown-group {
+                grid-template-columns: 1fr;
+            }
+
+            .status-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            body {
+                padding: 15px;
+                padding-bottom: 110px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚡ BLOPPERBOLD</h1>
+            <p>NEURAL CONTROL INTERFACE</p>
+        </div>
+
+        <!-- Display Selector -->
+        <div class="display-selector">
+            <label for="display-select">📡 SELECT DISPLAY</label>
+            <select id="display-select">
+                <option value="">-- Lade Displays...</option>
+            </select>
+            <div class="status-bar" style="margin-top: 10px;">
+                <div class="status-item">
+                    <div class="status-dot"></div>
+                    <span id="status-text">Verbindung wird hergestellt...</span>
+                </div>
+                <div class="status-item">
+                    <span id="display-count">0 Displays verbunden</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: ANZEIGE -->
+        <div id="tab-display" class="tab-content active">
+            <!-- Quality Control -->
+            <div class="control-section">
+                <div class="section-title">⚡ Qualitätseinstellungen</div>
+                <div class="form-group">
+                    <label for="quality-select">Animation Qualität:</label>
+                    <select id="quality-select">
+                        <option value="auto">Automatisch (Standard)</option>
+                        <option value="high">Hoch (Volle Qualität)</option>
+                        <option value="medium">Mittel (Ausgewogen)</option>
+                        <option value="low">Niedrig (Sparsam)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Widget Control -->
+            <div class="control-section">
+                <div class="section-title">🎨 Widgets & Anzeige</div>
+                <div class="dropdown-group full">
+                    <div class="form-group">
+                        <label for="widget-select">Widget anzeigen:</label>
+                        <div class="input-group">
+                            <select id="widget-select">
+                                <option value="">-- Wähle ein Widget...</option>
+                                <option value="spotify">🎵 Spotify</option>
+                                <option value="homeassistant">🏠 Home Assistant</option>
+                                <option value="info">ℹ️ Info</option>
+                                <option value="settings">⚙️ Einstellungen</option>
+                                <option value="vim">📝 Vim</option>
+                            </select>
+                            <button class="btn secondary" id="btn-widget">Zeigen</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button class="btn secondary" id="btn-idle">🏠 Idle</button>
+                    <button class="btn secondary" id="btn-standby">🌙 Standby</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: TIMER -->
+        <div id="tab-timer" class="tab-content">
+            <div class="control-section">
+                <div class="section-title">⏱️ Timer</div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 0.85rem; margin-bottom: 8px; color: #00ffff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Zeit eingeben:</label>
+                    <div class="input-group">
+                        <input type="number" id="timer-value" placeholder="Sekunden" min="1" value="600">
+                        <button class="btn" id="btn-timer-set">Setzen</button>
+                    </div>
+                </div>
+
+                <label style="display: block; font-size: 0.85rem; margin-bottom: 8px; color: #00ffff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Schnellvorgaben:</label>
+                <div class="timer-presets">
+                    <button id="preset-60">1 Min</button>
+                    <button id="preset-300">5 Min</button>
+                    <button id="preset-600">10 Min</button>
+                    <button id="preset-900">15 Min</button>
+                    <button id="preset-1800">30 Min</button>
+                </div>
+
+                <div class="button-group" style="margin-top: 15px;">
+                    <button class="btn" id="btn-timer-start">▶ Start</button>
+                    <button class="btn secondary" id="btn-timer-stop">⏸ Stop</button>
+                    <button class="btn danger" id="btn-timer-reset">⟲ Reset</button>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <div class="section-title">⏱️ Stoppuhr</div>
+                <div class="button-group">
+                    <button class="btn" id="btn-stopwatch-start">▶ Start</button>
+                    <button class="btn secondary" id="btn-stopwatch-stop">⏸ Stop</button>
+                    <button class="btn danger" id="btn-stopwatch-reset">⟲ Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: ERINNERUNGEN -->
+        <div id="tab-reminder" class="tab-content">
+            <div class="control-section">
+                <div class="section-title">🔔 Erinnerungen</div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 0.85rem; margin-bottom: 8px; color: #00ffff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Erinnerungstext:</label>
+                    <div class="input-group">
+                        <input type="text" id="reminder-text" placeholder="Text eingeben..." style="flex: 1;">
+                        <button class="btn secondary" id="btn-reminder" style="flex: 0 0 auto; padding: 12px 20px;">↑</button>
+                    </div>
+                </div>
+
+                <label style="display: block; font-size: 0.85rem; margin-bottom: 10px; color: #00ffff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Prioritätsstufe:</label>
+                <div class="reminder-levels">
+                    <button class="level-btn active" data-level="1">🟢 Stufe 1</button>
+                    <button class="level-btn" data-level="2">🟡 Stufe 2</button>
+                    <button class="level-btn" data-level="3">🔴 Stufe 3</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: EINSTELLUNGEN -->
+        <div id="tab-settings" class="tab-content">
+            <div class="control-section">
+                <div class="section-title">⚙️ Systemsteuerung</div>
+                <div class="button-group">
+                    <button class="btn danger" id="btn-reload">🔄 Neu laden</button>
+                    <button class="btn secondary" id="btn-popups">👁️ Popups</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- No Display Selected Message -->
+        <div id="no-display-message">
+            <div class="no-display">
+                <div class="no-display-icon">📡</div>
+                <p>Wähle ein Display oben aus</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <div class="bottom-nav">
+        <div class="nav-item active" data-tab="display">
+            <div class="nav-item-icon">📺</div>
+            <div>Anzeige</div>
+        </div>
+        <div class="nav-item" data-tab="timer">
+            <div class="nav-item-icon">⏱️</div>
+            <div>Timer</div>
+        </div>
+        <div class="nav-item" data-tab="reminder">
+            <div class="nav-item-icon">🔔</div>
+            <div>Erinnern</div>
+        </div>
+        <div class="nav-item" data-tab="settings">
+            <div class="nav-item-icon">⚙️</div>
+            <div>System</div>
+        </div>
+    </div>
+
+    <script>
+        let selectedDisplayId = localStorage.getItem('selected-display') || null;
+        let displays = {};
+        let autoRefreshInterval;
+        let reminderLevel = 1;
+        let currentTab = 'display';
+
+        // Toast Notification
+        function showToast(message, isError = false) {
+            const toast = document.createElement('div');
+            toast.className = isError ? 'toast error' : 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // TAB NAVIGATION
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const tab = item.dataset.tab;
+                switchTab(tab);
+            });
+        });
+
+        function switchTab(tab) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+
+            // Show selected tab
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            document.querySelector(`.nav-item[data-tab="${tab}"]`).classList.add('active');
+            currentTab = tab;
+
+            localStorage.setItem('selected-tab', tab);
+        }
+
+        // Restore last tab
+        const lastTab = localStorage.getItem('selected-tab') || 'display';
+        switchTab(lastTab);
+
+        // Lade alle Displays
+        async function loadDisplays() {
+            try {
+                const response = await fetch('/config/displays/status');
+                const data = await response.json();
+                
+                displays = {};
+                const select = document.getElementById('display-select');
+                select.innerHTML = '';
+                
+                if (data.displays && data.displays.length > 0) {
+                    data.displays.forEach(display => {
+                        displays[display.displayId] = display;
+                    });
+                    
+                    // Fülle Dropdown
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = '-- Wähle ein Display...';
+                    select.appendChild(option);
+                    
+                    data.displays.forEach(display => {
+                        const option = document.createElement('option');
+                        option.value = display.displayId;
+                        option.textContent = `${display.name} (${display.ip})`;
+                        select.appendChild(option);
+                    });
+                    
+                    // Aktualisiere Status
+                    document.getElementById('status-text').textContent = '✅ ONLINE';
+                    document.getElementById('display-count').textContent = `${data.onlineCount}/${data.configuredCount} DISPLAYS`;
+                    
+                    // Stelle vorheriges Display wieder her
+                    if (selectedDisplayId && displays[selectedDisplayId]) {
+                        select.value = selectedDisplayId;
+                        showControls();
+                    } else {
+                        hideControls();
+                    }
+                } else {
+                    select.innerHTML = '<option value="">KEINE DISPLAYS VERBUNDEN</option>';
+                    document.getElementById('status-text').textContent = '⏳ OFFLINE';
+                    hideControls();
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der Displays:', error);
+                document.getElementById('status-text').textContent = '❌ ERROR';
+                showToast('Verbindungsfehler', true);
+            }
+        }
+
+        function showControls() {
+            document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+            document.getElementById(`tab-${currentTab}`).style.display = 'block';
+            document.getElementById('no-display-message').style.display = 'none';
+        }
+
+        function hideControls() {
+            document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+            document.getElementById('no-display-message').style.display = 'block';
+        }
+
+        // Display Selection
+        document.getElementById('display-select').addEventListener('change', (e) => {
+            selectedDisplayId = e.target.value;
+            localStorage.setItem('selected-display', selectedDisplayId);
+            
+            if (selectedDisplayId) {
+                showControls();
+                loadQuality();
+            } else {
+                hideControls();
+            }
+        });
+
+        // API Call Helper
+        async function apiCall(endpoint) {
+            try {
+                const response = await fetch(endpoint);
+                const text = await response.text();
+                showToast('✅ BEFEHL GESENDET');
+                return true;
+            } catch (error) {
+                console.error('API Error:', error);
+                showToast('❌ FEHLER', true);
+                return false;
+            }
+        }
+
+        // Quality Control
+        async function loadQuality() {
+            try {
+                const response = await fetch(`/display/${selectedDisplayId}/quality/animations`);
+                const data = await response.json();
+                document.getElementById('quality-select').value = data.quality;
+            } catch (error) {
+                console.error('Fehler beim Laden der Qualität:', error);
+            }
+        }
+
+        document.getElementById('quality-select').addEventListener('change', async (e) => {
+            await apiCall(`/display/${selectedDisplayId}/quality/animations/set/${e.target.value}`);
+        });
+
+        // Widget Control
+        document.getElementById('btn-widget').addEventListener('click', async () => {
+            const widget = document.getElementById('widget-select').value;
+            if (!widget) {
+                showToast('Wähle ein Widget aus', true);
+                return;
+            }
+            await apiCall(`/display/${selectedDisplayId}/widget/${widget}`);
+        });
+
+        document.getElementById('btn-idle').addEventListener('click', () => {
+            apiCall(`/display/${selectedDisplayId}/idle`);
+        });
+
+        // Timer Control
+        function setTimerValue(seconds) {
+            document.getElementById('timer-value').value = seconds;
+        }
+
+        document.getElementById('btn-timer-set').addEventListener('click', () => {
+            const value = document.getElementById('timer-value').value;
+            if (!value || value < 1) {
+                showToast('Gültige Zeit eingeben', true);
+                return;
+            }
+            apiCall(`/display/${selectedDisplayId}/timer/set/${value}`);
+        });
+
+        document.getElementById('btn-timer-start').addEventListener('click', () => {
+            apiCall(`/display/${selectedDisplayId}/timer/start`);
+        });
+
+        document.getElementById('btn-timer-stop').addEventListener('click', () => {
+            apiCall(`/display/${selectedDisplayId}/timer/stop`);
+        });
+
+        document.getElementById('btn-timer-reset').addEventListener('click', () => {
+            apiCall(`/display/${selectedDisplayId}/timer/reset`);
+        });
+
+        // Timer Presets
+        document.getElementById('preset-60').addEventListener('click', () => setTimerValue(60));
+        document.getElementById('preset-300').addEventListener('click', () => setTimerValue(300));
+        document.getElementById('preset-600').addEventListener('click', () => setTimerValue(600));
+        document.getElementById('preset-900').addEventListener('click', () => setTimerValue(900));
+        document.getElementById('preset-1800').addEventListener('click', () => setTimerValue(1800));
+
+        // Stopwatch Control
+        document.getElementById('btn-stopwatch-start').addEventListener('click', () => {
+            apiCall(`/display/${selectedDisplayId}/stopwatch/start`);
+        });
+
+        document.getElementById('btn-stopwatch-stop').addEventListener('click', () => {
+            apiCall(`/display/${selectedDisplayId}/stopwatch/stop`);
+        });
+
+        document.getElementById('btn-stopwatch-reset').addEventListener('click', () => {
+            apiCall(`/display/${selectedDisplayId}/stopwatch/reset`);
+        });
+
+        // Reminder Levels
+        document.querySelectorAll('.level-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                reminderLevel = parseInt(btn.dataset.level);
+            });
+        });
+
+        // Reminder
+        document.getElementById('btn-reminder').addEventListener('click', () => {
+            const text = document.getElementById('reminder-text').value;
+            if (!text) {
+                showToast('Text eingeben', true);
+                return;
+            }
+            apiCall(`/display/${selectedDisplayId}/reminder?text=${encodeURIComponent(text)}&stufe=${reminderLevel}`);
+            document.getElementById('reminder-text').value = '';
+        });
+
+        // Andere Befehle
+        document.getElementById('btn-standby').addEventListener('click', () => {
+            apiCall(`/display/${selectedDisplayId}/standby`);
+        });
+
+        document.getElementById('btn-reload').addEventListener('click', () => {
+            apiCall(`/display/${selectedDisplayId}/reload`);
+        });
+
+        document.getElementById('btn-popups').addEventListener('click', () => {
+            apiCall(`/display/${selectedDisplayId}/popup/alle`);
+        });
+
+        // Auto-refresh displays (weniger häufig für bessere Performance)
+        loadDisplays();
+        autoRefreshInterval = setInterval(loadDisplays, 10);
+
+        // Cleanup on leave
+        window.addEventListener('beforeunload', () => {
+            clearInterval(autoRefreshInterval);
+        });
+    </script>
+</body>
+</html>

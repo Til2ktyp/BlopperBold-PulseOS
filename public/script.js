@@ -1,6 +1,10 @@
 let idleTimeout;
 const IDLE_TIME = 5 * 60 * 1000;
 
+// --- 📺 DISPLAY ID & CONFIGURATION ---
+let displayId = localStorage.getItem('display-id') || null;
+let displayName = localStorage.getItem('display-name') || 'Unknown';
+
 let lat = localStorage.getItem('hub-lat') || '53.5653';
 let lon = localStorage.getItem('hub-lon') || '11.3653';
 let locName = localStorage.getItem('hub-city') || 'Pampow';
@@ -9,7 +13,7 @@ let clockSize = localStorage.getItem('hub-clock-size') || '11';
 document.documentElement.style.setProperty('--clock-size', clockSize + 'rem');
 
 // --- 🎬 ANIMATIONS QUALITY DETECTION & APPLICATION ---
-let animationQuality = localStorage.getItem('animation-quality') || 'high';
+let animationQuality = localStorage.getItem('animation-quality') || 'auto';
 
 async function initAnimationQuality() {
     try {
@@ -266,6 +270,27 @@ eventSource.onmessage = function(event) {
         
         const data = JSON.parse(event.data);
         if (!data || !data.action) return;
+        
+        // --- 📺 DISPLAY INITIALIZATION ---
+        if (data.action === 'init-display') {
+            displayId = data.displayId;
+            displayName = data.name;
+            animationQuality = data.quality || 'auto';
+            
+            localStorage.setItem('display-id', displayId);
+            localStorage.setItem('display-name', displayName);
+            localStorage.setItem('animation-quality', animationQuality);
+            
+            console.log(`[Display] Initialisiert - ID: ${displayId} | Name: ${displayName} | Quality: ${animationQuality}`);
+            
+            // Auto-detect für Low-Power-Devices wenn auto
+            if (animationQuality === 'auto') {
+                animationQuality = detectDeviceCapability() ? 'high' : 'low';
+            }
+            
+            applyAnimationQuality(animationQuality);
+            return;
+        }
         
         // --- 🎬 ANIMATIONS QUALITY CHANGED ---
         if (data.action === 'animation-quality-changed') {

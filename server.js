@@ -13,16 +13,91 @@ const PulseOSVERSION = "26.5.1111";
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// --- 🎯 DISPLAY MANAGEMENT SYSTEM ---
+// Lade alle Displays aus .env
+function loadDisplaysFromEnv() {
+    const displays = {};
+    const envVars = process.env;
+    
+    let displayNum = 1;
+    while (envVars[`DISPLAY_${displayNum}_IP`]) {
+        const ip = envVars[`DISPLAY_${displayNum}_IP`];
+        const name = envVars[`DISPLAY_${displayNum}_NAME`] || `Display ${displayNum}`;
+        const quality = envVars[`DISPLAY_${displayNum}_QUALITY`] || 'auto';
+        displays[displayNum] = { ip, name, displayId: displayNum, quality };
+        console.log(`[Displays] Display ${displayNum} (${name}) konfiguriert: ${ip} | Quality: ${quality}`);
+        displayNum++;
+    }
+    return displays;
+}
+
+const CONFIGURED_DISPLAYS = loadDisplaysFromEnv();
+
+// Display-Einstellungen Datei
+const DISPLAY_SETTINGS_FILE = path.join(__dirname, 'display-settings.json');
+
+function loadDisplaySettings() {
+    try {
+        if (!fs.existsSync(DISPLAY_SETTINGS_FILE)) {
+            // Initialisiere mit den .env-Qualitäts-Einstellungen
+            const initialSettings = {};
+            for (const [displayId, config] of Object.entries(CONFIGURED_DISPLAYS)) {
+                initialSettings[displayId] = { animationQuality: config.quality };
+            }
+            return initialSettings;
+        }
+        const data = fs.readFileSync(DISPLAY_SETTINGS_FILE, 'utf8');
+        return data ? JSON.parse(data) : {};
+    } catch (e) {
+        console.error("[DisplaySettings] Fehler beim Laden:", e);
+        return {};
+    }
+}
+
+function saveDisplaySettings(settings) {
+    try {
+        fs.writeFileSync(DISPLAY_SETTINGS_FILE, JSON.stringify(settings, null, 2));
+    } catch (e) {
+        console.error("[DisplaySettings] Fehler beim Speichern:", e);
+    }
+}
+
+let displaySettings = loadDisplaySettings();
+
+// IP zu DisplayID Mapping
+function getDisplayIdFromIp(ip) {
+    for (const [displayId, config] of Object.entries(CONFIGURED_DISPLAYS)) {
+        if (config.ip === ip) {
+            return parseInt(displayId);
+        }
+    }
+    return null;
+}
+
 // DAS ZENTRALE ARRAY FÜR ALLE OPENING DISPLAYS
 let clients = [];
+// Pro-Display Client Mapping: { displayId: { id, res, ip, displayId } }
 
-// Hilfsfunktion um Daten an alle Displays zu senden (Widgets, Spotify, etc.)
+// Hilfsfunktion um Daten an ALLE Displays zu senden (Widgets, Spotify, etc.)
 function sendToClients(data) {
     clients.forEach(client => {
         try {
             client.res.write(`data: ${JSON.stringify(data)}\n\n`);
         } catch(e) {
             console.error("Fehler beim Senden an Client:", e.message);
+        }
+    });
+}
+
+// Hilfsfunktion um Daten an EIN spezifisches Display zu senden
+function sendToDisplay(displayId, data) {
+    clients.forEach(client => {
+        if (client.displayId === displayId) {
+            try {
+                client.res.write(`data: ${JSON.stringify(data)}\n\n`);
+            } catch(e) {
+                console.error(`Fehler beim Senden an Display ${displayId}:`, e.message);
+            }
         }
     });
 }
@@ -38,13 +113,33 @@ app.get('/events', (req, res) => {
     // Herzschlag an den Browser senden, damit Chromium/Electron die Verbindung nicht trennt
     res.write('\n'); 
 
+    // Hole die Client-IP-Adresse
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || 
+                     req.socket.remoteAddress?.replace('::ffff:', '') || 
+                     req.ip || 
+                     'unknown';
+    
+    const displayId = getDisplayIdFromIp(clientIp);
     const clientId = Date.now();
-    clients.push({ id: clientId, res });
-    console.log(`[SSE] Display verbunden. Aktive Displays: ${clients.length}`);
+    const displayName = displayId ? CONFIGURED_DISPLAYS[displayId]?.name : 'Unknown';
+    
+    clients.push({ id: clientId, res, ip: clientIp, displayId: displayId, name: displayName });
+    console.log(`[SSE] Display verbunden - Name: ${displayName} | IP: ${clientIp} | DisplayID: ${displayId} | Aktive Displays: ${clients.length}`);
+
+    // Sende die DisplayID zum Client
+    if (displayId) {
+        try {
+            res.write(`data: ${JSON.stringify({ action: 'init-display', displayId, name: displayName, quality: displaySettings[displayId]?.animationQuality || 'auto' })}\n\n`);
+        } catch(e) {
+            console.error("Fehler beim Senden der DisplayID:", e.message);
+        }
+    } else {
+        console.warn(`[SSE] ⚠️ IP ${clientIp} konnte keinem Display zugeordnet werden!`);
+    }
 
     req.on('close', () => {
         clients = clients.filter(c => c.id !== clientId);
-        console.log(`[SSE] Display getrennt. Verbleibende Displays: ${clients.length}`);
+        console.log(`[SSE] Display getrennt (${displayName}). Verbleibende Displays: ${clients.length}`);
     });
 });
 
@@ -75,6 +170,15 @@ app.get('/update', (req, res) => {
     res.send('Update-Prozess gestartet und alle Displays benachrichtigt.\n');
 });
 
+// --- � PER-DISPLAY UPDATE ---
+app.get('/display/:displayId/update', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    console.log(`[Update] Display ${displayId} Update angefordert.`);
+
+    sendToDisplay(displayId, { action: 'reload', displayId });
+    res.send(`Display ${displayId} wird aktualisiert.\n`);
+});
+
 // --- 🔄 RELOAD ENDPUNKT (ohne Update-Skript) ---
 app.get('/reload', (req, res) => {
     console.log(`[Reload] Sende Reload-Signal an ${clients.length} Displays...`);
@@ -88,6 +192,15 @@ app.get('/reload', (req, res) => {
     });
 
     res.send('Reload-Signal an alle Displays gesendet.\n');
+});
+
+// --- 🔄 PER-DISPLAY RELOAD ---
+app.get('/display/:displayId/reload', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    console.log(`[Reload] Display ${displayId} Reload angefordert.`);
+
+    sendToDisplay(displayId, { action: 'reload', displayId });
+    res.send(`Display ${displayId} wird neu geladen.\n`);
 });
 
 // --- DYNAMISCHES WIDGET SYSTEM ---
@@ -104,15 +217,44 @@ app.get('/widget/:name', (req, res) => {
     }
 });
 
+// --- PER-DISPLAY WIDGET SYSTEM ---
+app.get('/display/:displayId/widget/:name', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    const widgetName = req.params.name;
+    const filePath = path.join(__dirname, 'public', 'widgets', `${widgetName}.html`);
+
+    if (fs.existsSync(filePath)) {
+        const htmlContent = fs.readFileSync(filePath, 'utf8');
+        sendToDisplay(displayId, { action: 'show-widget', html: htmlContent, name: widgetName, displayId });
+        res.send(`Widget [${widgetName}] für Display ${displayId} geladen.\n`);
+    } else {
+        res.status(404).send(`Widget [${widgetName}] nicht gefunden.\n`);
+    }
+});
+
 app.get('/idle', (req, res) => {
     sendToClients({ action: 'go-idle' });
     res.send("Zurück zum Idle-Screen.\n");
+});
+
+// --- PER-DISPLAY IDLE ---
+app.get('/display/:displayId/idle', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    sendToDisplay(displayId, { action: 'go-idle', displayId });
+    res.send(`Display ${displayId} zurück zum Idle-Screen.\n`);
 });
 
 // --- 🌙 STANDBY ENPOINT FÜR CURL ---
 app.get('/standby', (req, res) => {
     sendToClients({ action: 'toggle-standby' });
     res.send("Standby-Modus getoggelt.\n");
+});
+
+// --- 🌙 PER-DISPLAY STANDBY ---
+app.get('/display/:displayId/standby', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    sendToDisplay(displayId, { action: 'toggle-standby', displayId });
+    res.send(`Display ${displayId} Standby-Modus getoggelt.\n`);
 });
 
 // --- TIMER STEUERUNGEN ---
@@ -143,6 +285,38 @@ app.get('/timer/reset', (req, res) => {
     res.send("Timer zurückgesetzt.\n");
 });
 
+// --- PER-DISPLAY TIMER STEUERUNGEN ---
+app.get('/display/:displayId/timer/set/:value', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    sendToDisplay(displayId, { action: 'timer-set', value: req.params.value, displayId });
+    res.send(`Timer für Display ${displayId} auf ${req.params.value} Sekunden gesetzt.\n`);
+});
+
+app.get('/display/:displayId/timer/adjust/:unit/:amount', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    const { unit, amount } = req.params;
+    sendToDisplay(displayId, { action: 'timer-adjust', unit: unit, amount: parseInt(amount), displayId });
+    res.send(`Timer für Display ${displayId} angepasst: ${amount} ${unit}.\n`);
+});
+
+app.get('/display/:displayId/timer/start', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    sendToDisplay(displayId, { action: 'timer-start', displayId });
+    res.send(`Timer für Display ${displayId} gestartet.\n`);
+});
+
+app.get('/display/:displayId/timer/stop', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    sendToDisplay(displayId, { action: 'timer-stop', displayId });
+    res.send(`Timer für Display ${displayId} gestoppt.\n`);
+});
+
+app.get('/display/:displayId/timer/reset', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    sendToDisplay(displayId, { action: 'timer-reset', displayId });
+    res.send(`Timer für Display ${displayId} zurückgesetzt.\n`);
+});
+
 // --- STOPWATCH STEUERUNGEN ---
 app.get('/stopwatch/start', (req, res) => {
     sendToClients({ action: 'stopwatch-start' });
@@ -159,22 +333,91 @@ app.get('/stopwatch/reset', (req, res) => {
     res.send("Stoppuhr zurückgesetzt.\n");
 });
 
+// --- PER-DISPLAY STOPWATCH STEUERUNGEN ---
+app.get('/display/:displayId/stopwatch/start', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    sendToDisplay(displayId, { action: 'stopwatch-start', displayId });
+    res.send(`Stoppuhr für Display ${displayId} gestartet.\n`);
+});
+
+app.get('/display/:displayId/stopwatch/stop', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    sendToDisplay(displayId, { action: 'stopwatch-stop', displayId });
+    res.send(`Stoppuhr für Display ${displayId} gestoppt.\n`);
+});
+
+app.get('/display/:displayId/stopwatch/reset', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    sendToDisplay(displayId, { action: 'stopwatch-reset', displayId });
+    res.send(`Stoppuhr für Display ${displayId} zurückgesetzt.\n`);
+});
+
 // --- ANIMATIONS QUALITY ENDPOINT ---
-let animationQuality = 'auto'; // auto, high, medium, low
+let animationQuality = 'auto'; // Globale Fallback
 
 app.get('/quality/animations', (req, res) => {
-    res.json({ quality: animationQuality });
+    // Hole IP des Clients
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || 
+                     req.socket.remoteAddress?.replace('::ffff:', '') || 
+                     req.ip || 
+                     'unknown';
+    const displayId = getDisplayIdFromIp(clientIp);
+    
+    // Nutze Display-spezifische Einstellung, sonst Global-Fallback
+    const quality = displayId && displaySettings[displayId]?.animationQuality ? 
+                    displaySettings[displayId].animationQuality : 
+                    animationQuality;
+    
+    res.json({ quality, displayId });
 });
 
 app.get('/quality/animations/set/:level', (req, res) => {
     const level = req.params.level;
-    if (['high', 'medium', 'low', 'auto'].includes(level)) {
-        animationQuality = level;
-        sendToClients({ action: 'animation-quality-changed', quality: level });
-        res.send(`Animations-Qualität auf ${level} gesetzt.\n`);
-    } else {
-        res.status(400).send("Ungültiger Quality-Level. Erlaubt: high, medium, low, auto\n");
+    if (!['high', 'medium', 'low', 'auto'].includes(level)) {
+        return res.status(400).send("Ungültiger Quality-Level. Erlaubt: high, medium, low, auto\n");
     }
+    
+    // Setze global für alle neuen Connections
+    animationQuality = level;
+    
+    // Speichere auch für alle aktiven Displays
+    clients.forEach(client => {
+        if (client.displayId) {
+            if (!displaySettings[client.displayId]) {
+                displaySettings[client.displayId] = {};
+            }
+            displaySettings[client.displayId].animationQuality = level;
+        }
+    });
+    
+    saveDisplaySettings(displaySettings);
+    sendToClients({ action: 'animation-quality-changed', quality: level });
+    res.send(`Animations-Qualität auf ${level} gesetzt.\n`);
+});
+
+// --- PER-DISPLAY QUALITY ENDPOINT ---
+app.get('/display/:displayId/quality/animations/set/:level', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    const level = req.params.level;
+    
+    if (!['high', 'medium', 'low', 'auto'].includes(level)) {
+        return res.status(400).send("Ungültiger Quality-Level. Erlaubt: high, medium, low, auto\n");
+    }
+    
+    if (!displaySettings[displayId]) {
+        displaySettings[displayId] = {};
+    }
+    displaySettings[displayId].animationQuality = level;
+    saveDisplaySettings(displaySettings);
+    
+    sendToDisplay(displayId, { action: 'animation-quality-changed', quality: level });
+    res.send(`Animations-Qualität für Display ${displayId} auf ${level} gesetzt.\n`);
+});
+
+app.get('/display/:displayId/quality/animations', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    const quality = displaySettings[displayId]?.animationQuality || animationQuality;
+    res.json({ quality, displayId });
 });
 
 // --- REMINDER SYSTEM ---
@@ -189,6 +432,22 @@ app.get('/reminder', (req, res) => {
     });
 
     res.send(`Reminder der Stufe ${stufe} gesendet.\n`);
+});
+
+// --- PER-DISPLAY REMINDER SYSTEM ---
+app.get('/display/:displayId/reminder', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    const text = req.query.text || "Kein Text angegeben";
+    const stufe = req.query.stufe || 1;
+
+    sendToDisplay(displayId, {
+        action: "show-reminder",
+        text: text,
+        stufe: parseInt(stufe),
+        displayId
+    });
+
+    res.send(`Reminder der Stufe ${stufe} für Display ${displayId} gesendet.\n`);
 });
 
 
@@ -442,7 +701,7 @@ function startSpotifyPolling() {
         } catch (err) {
             console.error("Spotify-Polling Fehler:", err.message);
         }
-    }, 2147483647); // Intervall korrigiert auf sinnvolle 5 Sekunden statt Max_Int
+    }, 15000); // Intervall korrigiert auf sinnvolle 5 Sekunden statt Max_Int
 }
 
 // --- POPUP / WIDGET TOGGLE SYSTEM (STREAM DECK) ---
@@ -475,6 +734,51 @@ app.get('/popup/:name', (req, res) => {
     }
 });
 
+// --- PER-DISPLAY POPUP SYSTEM ---
+app.get('/display/:displayId/popup/:name', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    const name = req.params.name;
+    const requestedMode = req.query.mode; 
+
+    sendToDisplay(displayId, { 
+        action: 'toggle-popup', 
+        target: name,
+        mode: requestedMode,
+        displayId
+    });
+
+    if (requestedMode) {
+        res.send(`Popup [${name}] für Display ${displayId} auf Modus [${requestedMode}] gesetzt.\n`);
+    } else {
+        res.send(`Popup [${name}] für Display ${displayId} getoggelt.\n`);
+    }
+});
+
+
+// --- SERVER INFO & CONFIG ENDPOINTS ---
+app.get('/config/displays', (req, res) => {
+    const displaysList = Object.entries(CONFIGURED_DISPLAYS).map(([id, config]) => ({
+        displayId: id,
+        name: config.name,
+        ip: config.ip,
+        online: clients.some(c => c.displayId === parseInt(id)),
+        settings: displaySettings[id] || {}
+    }));
+    res.json({ displays: displaysList, total: displaysList.length });
+});
+
+app.get('/config/displays/status', (req, res) => {
+    const status = {
+        configuredCount: Object.keys(CONFIGURED_DISPLAYS).length,
+        onlineCount: clients.length,
+        displays: clients.map(c => ({
+            displayId: c.displayId,
+            name: c.name,
+            ip: c.ip
+        }))
+    };
+    res.json(status);
+});
 
 // --- SERVER START ---
 app.listen(PORT, () => {
