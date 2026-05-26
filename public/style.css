@@ -590,7 +590,7 @@ body.standby-active #reminder-container, .reminder.box, .reminder-lines, .remind
 
 .loading-bar-container.show {
     opacity: 1;
-    animation: fadeInUp 0.5s ease-out;
+    animation: fadeIn 0.5s ease-out;
 }
 
 .loading-bar {
@@ -849,7 +849,7 @@ body.standby-active .spotify-dashboard-layout{
     background: #ffffff;
     border-radius: 2px;
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-    animation: initProgress 3s ease-in-out forwards;
+    animation: initProgress 6s ease-in-out forwards;
 }
 
 @keyframes slideDown {

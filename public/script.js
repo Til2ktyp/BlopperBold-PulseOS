@@ -32,10 +32,10 @@ function hideLoadingScreen() {
     if (randomValue < 0.05) {
         totalLoadTime = 20000;
     } else {
-        totalLoadTime = Math.random() * 5000 + 9000;
+        totalLoadTime = Math.random() * 5000 + 4000;
     }
     
-    const stage2Delay = Math.random() * 2000 + 2000;
+    const stage2Delay = Math.random() * 500 + 500;
     
     setTimeout(() => {
         // const subtitle = document.querySelector('.loading-subtitle');
@@ -48,13 +48,15 @@ function hideLoadingScreen() {
         const remainingTime = totalLoadTime - stage2Delay;
         loadingBar.style.animationDuration = remainingTime + 'ms';
     }, stage2Delay);
+
+    setTimeout(showInitToast, totalLoadTime - 1000);
     
     setTimeout(() => {
         loadingScreen.classList.add('fade-out');
         setTimeout(() => {
             loadingScreen.style.display = 'none';
-            showInitToast();
-        }, 1200);
+            fetchWeather();
+        }, 1600);
     }, totalLoadTime);
 }
 
@@ -71,7 +73,7 @@ function showInitToast() {
         setTimeout(() => {
             initToast.classList.remove('init-hide');
         }, 500);
-    }, 3500);
+    }, 6200);
 }
 
 if (document.readyState === 'loading') {
