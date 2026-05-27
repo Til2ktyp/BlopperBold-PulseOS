@@ -1,5 +1,119 @@
 let idleTimeout;
-const IDLE_TIME = 5 * 60 * 1000;
+let standbyTimeout;
+
+const IDLE_TIME = 3 * 60 * 1000; // 3min
+const STANDBY_TIME = 10 * 1000; // 30 sekunden nach Idle
+const NIGHT_START = 22 * 60 + 30; // 22:30
+const NIGHT_END = 6 * 60; // 6:00
+
+// --- 🌙 NIGHT MODE AUTO-STANDBY SYSTEM ---
+let isNightMode = false;
+let lastActivityTime = Date.now();
+
+function isCurrentlyNight() {
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    
+    // 22:30 bis Mitternacht ODER Mitternacht bis 6:00
+    if (currentTime >= NIGHT_START || currentTime < NIGHT_END) {
+        return true;
+    }
+    return false;
+}
+
+function updateNightMode() {
+    const wasNightMode = isNightMode;
+    isNightMode = isCurrentlyNight();
+    
+    if (wasNightMode !== isNightMode) {
+        console.log(`[NightMode] Status: ${isNightMode ? 'AKTIV' : 'INAKTIV'}`);
+        
+        // Wenn Nachtmodus endet und wir sind im Standby: Standby ausschalten
+        if (!isNightMode && document.body.classList.contains('standby-active')) {
+            console.log('[NightMode] Nacht vorbei - Standby deaktivieren');
+            document.body.classList.remove('standby-active');
+        }
+        
+        // Timer neu starten
+        resetIdleTimer();
+    }
+}
+
+function resetIdleTimer() {
+    if (idleTimeout) clearTimeout(idleTimeout);
+    if (standbyTimeout) clearTimeout(standbyTimeout);
+
+    lastActivityTime = Date.now();
+
+    // Alles wieder normal anzeigen
+    document.body.classList.remove('standby-active');
+
+    // Nur nachts aktiv
+    if (isNightMode) {
+
+        // Erst Idle
+        idleTimeout = setTimeout(() => {
+            console.log('[Idle] Wechsel zu Idle-Screen');
+
+            document.body.classList.remove('widget-active');
+            document.getElementById('spotify-widget').classList.remove('active');
+
+            // Danach Standby Timer starten
+            standbyTimeout = setTimeout(() => {
+                console.log('[Standby] Standby aktivieren');
+
+                document.body.classList.add('standby-active');
+
+            }, STANDBY_TIME);
+
+        }, IDLE_TIME);
+    }
+}
+
+function wakeDisplay(reason = 'unknown', force = false) {
+    // Nur nachts automatisch aufwecken
+    if (!isNightMode && !force) return;
+
+    console.log(`[Wake] Display geweckt durch: ${reason}`);
+
+    // Standby deaktivieren
+    if (document.body.classList.contains('standby-active')) {
+        document.body.classList.remove('standby-active');
+    }
+
+    // Idle-Timer resetten
+    resetIdleTimer();
+}
+
+// Benutzeraktivität erkennen
+function setupActivityListeners() {
+    const events = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'click'];
+    
+    events.forEach(event => {
+        document.addEventListener(event, () => {
+            const timeSinceLastActivity = Date.now() - lastActivityTime;
+            
+            // Nur bei echten Aktivitäten (nicht sofort nach letzter)
+            if (timeSinceLastActivity > 500) {
+                console.log('[Activity] Benutzerinteraktion erkannt');
+                lastActivityTime = Date.now();
+                
+                // Aus Standby aufwachen
+                if (document.body.classList.contains('standby-active')) {
+                    console.log('[Activity] Standby deaktivieren');
+                    document.body.classList.remove('standby-active');
+                }
+                
+                // Timer resetten (nur nachts)
+                resetIdleTimer();
+            }
+        }, { passive: true });
+    });
+}
+
+// Nachtmodus alle 30 Sekunden prüfen
+setInterval(updateNightMode, 30000);
+updateNightMode(); // Initial check
 
 // --- 📺 DISPLAY ID & CONFIGURATION ---
 let displayId = localStorage.getItem('display-id') || null;
@@ -100,7 +214,7 @@ function hideLoadingScreen() {
     if (randomValue < 0.05) {
         totalLoadTime = 20000;
     } else {
-        totalLoadTime = Math.random() * 100 + 100; //5000 + 4000
+        totalLoadTime = Math.random() * 3000 + 4000; //5000 + 4000
     }
     
     const stage2Delay = Math.random() * 500 + 500;
@@ -149,6 +263,9 @@ if (document.readyState === 'loading') {
 } else {
     hideLoadingScreen();
 }
+
+// Setup night mode and activity detection
+setupActivityListeners();
 
 async function fetchWeather() {
     try {
@@ -488,6 +605,7 @@ eventSource.onmessage = function(event) {
 
         // --- REMINDER & WIDGET LOGIK ---
         if (data.action === 'show-widget') {
+            wakeDisplay('widget');
             const slotA = document.getElementById('widget-slot-a');
             const slotB = document.getElementById('widget-slot-b');
             const nextSlot = (currentSlot === 'a') ? document.getElementById('widget-slot-b') : document.getElementById('widget-slot-a');
@@ -514,6 +632,7 @@ eventSource.onmessage = function(event) {
         }
 
         if (data.action === 'toggle-standby') {
+            wakeDisplay('toggle-standby', true);
             document.body.classList.remove('widget-active');
             document.getElementById('spotify-widget').classList.remove('active');
             
@@ -522,6 +641,7 @@ eventSource.onmessage = function(event) {
         }
 
         if (data.action === 'show-reminder') {
+            wakeDisplay('reminder');
             const level = parseInt(data.stufe) || 1;
             if (level === 3) {
                 document.getElementById('adhs-message-text').textContent = data.text || 'Aufstehen!';
@@ -557,6 +677,7 @@ eventSource.onmessage = function(event) {
                 document.getElementById('timer-display').textContent = formatTime(timerTime);
                 showPopup('timer-popup');
                 if (timerTime > 0) {
+                    wakeDisplay('timer-finished', true);
                     tPopup.classList.remove('timer-alarm');
                     document.getElementById('timer-label-text').textContent = "⏱️ Timer";
                 }
