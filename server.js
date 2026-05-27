@@ -24,11 +24,17 @@ function loadDisplaysFromEnv() {
         const ip = envVars[`DISPLAY_${displayNum}_IP`];
         const name = envVars[`DISPLAY_${displayNum}_NAME`] || `Display ${displayNum}`;
         const quality = envVars[`DISPLAY_${displayNum}_QUALITY`] || 'auto';
-        displays[displayNum] = { ip, name, displayId: displayNum, quality };
-        console.log(`[Displays] Display ${displayNum} (${name}) konfiguriert: ${ip} | Quality: ${quality}`);
+        const serial = envVars[`DISPLAY_${displayNum}_SERIAL`] || `SERIAL_${displayNum}`;
+        displays[displayNum] = { ip, name, displayId: displayNum, quality, serial };
+        console.log(`[Displays] Display ${displayNum} (${name}) konfiguriert: ${ip} | Quality: ${quality} | Serial: ${serial}`);
         displayNum++;
     }
     return displays;
+}
+
+function getSerial(displayId) {
+    const serial= envVars[`DISPLAY_${displayId}_SERIAL`] || `SERIAL_${displayId}`; 
+    return serial;
 }
 
 const CONFIGURED_DISPLAYS = loadDisplaysFromEnv();
@@ -118,7 +124,8 @@ app.get('/events', (req, res) => {
                      req.socket.remoteAddress?.replace('::ffff:', '') || 
                      req.ip || 
                      'unknown';
-    
+
+
     const displayId = getDisplayIdFromIp(clientIp);
     const clientId = Date.now();
     const displayName = displayId ? CONFIGURED_DISPLAYS[displayId]?.name : 'Unknown';
@@ -129,7 +136,7 @@ app.get('/events', (req, res) => {
     // Sende die DisplayID zum Client
     if (displayId) {
         try {
-            res.write(`data: ${JSON.stringify({ action: 'init-display', displayId, name: displayName, quality: displaySettings[displayId]?.animationQuality || 'auto' })}\n\n`);
+            res.write(`data: ${JSON.stringify({ action: 'init-display', displayId, name: displayName, quality: displaySettings[displayId]?.animationQuality || 'auto', serial: CONFIGURED_DISPLAYS[displayId]?.serial })}\n\n`);
         } catch(e) {
             console.error("Fehler beim Senden der DisplayID:", e.message);
         }
@@ -209,7 +216,20 @@ app.get('/widget/:name', (req, res) => {
     const filePath = path.join(__dirname, 'public', 'widgets', `${widgetName}.html`);
 
     if (fs.existsSync(filePath)) {
-        const htmlContent = fs.readFileSync(filePath, 'utf8');
+        let htmlContent = fs.readFileSync(filePath, 'utf8');
+        
+        // Für info.html: Ersetze {{SERIAL}} Placeholder
+        if (widgetName === 'info') {
+            const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || 
+                            req.socket.remoteAddress?.replace('::ffff:', '') || 
+                            req.ip || 
+                            'unknown';
+            const displayId = getDisplayIdFromIp(clientIp);
+            const serial = displayId ? (CONFIGURED_DISPLAYS[displayId]?.serial || 'UNKNOWN') : 'UNMAPPED';
+            
+            htmlContent = htmlContent.replace('{{SERIAL}}', serial);
+        }
+        
         sendToClients({ action: 'show-widget', html: htmlContent, name: widgetName });
         res.send(`Widget [${widgetName}] geladen.\n`);
     } else {
@@ -224,7 +244,14 @@ app.get('/display/:displayId/widget/:name', (req, res) => {
     const filePath = path.join(__dirname, 'public', 'widgets', `${widgetName}.html`);
 
     if (fs.existsSync(filePath)) {
-        const htmlContent = fs.readFileSync(filePath, 'utf8');
+        let htmlContent = fs.readFileSync(filePath, 'utf8');
+        
+        // Für info.html: Ersetze {{SERIAL}} Placeholder
+        if (widgetName === 'info') {
+            const serial = CONFIGURED_DISPLAYS[displayId]?.serial || 'UNKNOWN';
+            htmlContent = htmlContent.replace('{{SERIAL}}', serial);
+        }
+        
         sendToDisplay(displayId, { action: 'show-widget', html: htmlContent, name: widgetName, displayId });
         res.send(`Widget [${widgetName}] für Display ${displayId} geladen.\n`);
     } else {
@@ -676,7 +703,7 @@ function startSpotifyPolling() {
                     if (resQueue.status === 200) {
                         const queueJson = await resQueue.json();
                         if (queueJson && queueJson.queue) {
-                            queueData = queueJson.queue.slice(0, 4).map(track => ({
+                            queueData = queueJson.queue.slice(0, 3).map(track => ({
                                 title: track.name,
                                 artist: track.artists.map(a => a.name).join(', ')
                             }));
@@ -701,7 +728,7 @@ function startSpotifyPolling() {
         } catch (err) {
             console.error("Spotify-Polling Fehler:", err.message);
         }
-    }, 15000); // Intervall korrigiert auf sinnvolle 5 Sekunden statt Max_Int
+    }, 900000); // Intervall korrigiert auf sinnvolle 5 Sekunden statt Max_Int
 }
 
 // --- POPUP / WIDGET TOGGLE SYSTEM (STREAM DECK) ---
@@ -779,6 +806,7 @@ app.get('/config/displays/status', (req, res) => {
     };
     res.json(status);
 });
+
 
 // --- SERVER START ---
 app.listen(PORT, () => {

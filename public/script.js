@@ -100,7 +100,7 @@ function hideLoadingScreen() {
     if (randomValue < 0.05) {
         totalLoadTime = 20000;
     } else {
-        totalLoadTime = Math.random() * 5000 + 4000;
+        totalLoadTime = Math.random() * 100 + 100; //5000 + 4000
     }
     
     const stage2Delay = Math.random() * 500 + 500;
@@ -253,6 +253,10 @@ function localTimerReset() {
 
 function closeAdhsPopup() { document.getElementById('adhs-overlay').classList.remove('active'); }
 
+function getSerial() {
+    document.getElementById('serial');
+}
+
 const eventSource = new EventSource('/events');
 let currentSlot = 'a';
 
@@ -387,6 +391,8 @@ eventSource.onmessage = function(event) {
                 }
             }
         }
+
+
 
         // --- SPOTIFY SSE LOGIK ---
         if (data.action === 'spotify-playing') {

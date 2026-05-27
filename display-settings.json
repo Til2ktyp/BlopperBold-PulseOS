@@ -5,6 +5,9 @@
   "2": {
     "animationQuality": "medium"
   },
+  "4": {
+    "animationQuality": "low"
+  },
   "NaN": {
     "animationQuality": "low"
   }
