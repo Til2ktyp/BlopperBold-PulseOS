@@ -1,8 +1,8 @@
 let idleTimeout;
 let standbyTimeout;
 
-const IDLE_TIME = 3 * 60 * 1000; // 3min
-const STANDBY_TIME = 10 * 1000; // 30 sekunden nach Idle
+const IDLE_TIME = 15 * 1000; // 15 sekunden
+const STANDBY_TIME = 5 * 1000; // 5 sekunden nach Idle
 const NIGHT_START = 22 * 60 + 30; // 22:30
 const NIGHT_END = 6 * 60; // 6:00
 
