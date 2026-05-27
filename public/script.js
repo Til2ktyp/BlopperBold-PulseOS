@@ -211,13 +211,13 @@ function hideLoadingScreen() {
     const randomValue = Math.random();
     let totalLoadTime;
     
-    if (randomValue < 0.05) {
+    if (randomValue < 0.005) {
         totalLoadTime = 20000;
     } else {
-        totalLoadTime = Math.random() * 3000 + 4000; //5000 + 4000
+        totalLoadTime = Math.random() * 3000 + 4000; //3000 + 4000
     }
     
-    const stage2Delay = Math.random() * 500 + 500;
+    const stage2Delay = Math.random() * 200 + 400;
     
     setTimeout(() => {
         // const subtitle = document.querySelector('.loading-subtitle');
