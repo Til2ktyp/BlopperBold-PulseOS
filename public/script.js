@@ -1,14 +1,15 @@
 let idleTimeout;
 let standbyTimeout;
 
-const IDLE_TIME = 15 * 1000; // 15 sekunden
+const IDLE_TIME = 20 * 1000; // 20 sekunden
 const STANDBY_TIME = 5 * 1000; // 5 sekunden nach Idle
 const NIGHT_START = 22 * 60 + 30; // 22:30
-const NIGHT_END = 6 * 60; // 6:00
+const NIGHT_END = 6 * 60 + 0; // 6:00
 
 // --- 🌙 NIGHT MODE AUTO-STANDBY SYSTEM ---
 let isNightMode = false;
 let lastActivityTime = Date.now();
+let standbyDisabled = localStorage.getItem('standby-disabled'); // Standby-Toggle State
 
 function isCurrentlyNight() {
     const now = new Date();
@@ -48,8 +49,8 @@ function resetIdleTimer() {
     // Alles wieder normal anzeigen
     document.body.classList.remove('standby-active');
 
-    // Nur nachts aktiv
-    if (isNightMode) {
+    // Nur nachts aktiv UND wenn Standby nicht deaktiviert ist
+    if (isNightMode && standbyDisabled) {
 
         // Erst Idle
         idleTimeout = setTimeout(() => {
@@ -71,8 +72,8 @@ function resetIdleTimer() {
 }
 
 function wakeDisplay(reason = 'unknown', force = false) {
-    // Nur nachts automatisch aufwecken
-    if (!isNightMode && !force) return;
+    // Nur nachts automatisch aufwecken (wenn nicht deaktiviert)
+    if ((!isNightMode || standbyDisabled) && !force) return;
 
     console.log(`[Wake] Display geweckt durch: ${reason}`);
 
@@ -280,8 +281,52 @@ async function fetchWeather() {
 
 setInterval(fetchWeather, 30 * 60 * 1000);
 
+// --- 🔔 REMINDER SCHEDULER ---
+function checkScheduledReminders() {
+    const now = new Date();
+    const currentTime = now.getHours().toString().padStart(2, '0') + ':' + 
+                       now.getMinutes().toString().padStart(2, '0');
+    const dayName = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'][now.getDay()];
+    
+    scheduledReminders.forEach((reminder, index) => {
+        if (!reminder.time || !reminder.days) return;
+        
+        const isTimeMatch = reminder.time === currentTime;
+        const isDayMatch = reminder.days === 'täglich' || 
+                          (reminder.days === 'wöchentlich' && reminder.dayName === dayName) ||
+                          reminder.days === '';
+        
+        if (isTimeMatch && isDayMatch && !reminder.lastTriggered) {
+            console.log('[Reminder] Triggering:', reminder.text);
+            
+            // Show reminder popup
+            const reminderPopup = document.getElementById('reminder-popup');
+            if (reminderPopup) {
+                document.getElementById('reminder-label-text').textContent = `🔔 Erinnerung - Level ${reminder.level}`;
+                document.getElementById('reminder-content').textContent = reminder.text;
+                reminderPopup.classList.add('reminder-show');
+                wakeDisplay('reminder-triggered', true);
+                
+                // Mark as triggered for this minute
+                reminder.lastTriggered = now.getTime();
+                setTimeout(() => {
+                    reminder.lastTriggered = null;
+                }, 60000);
+            }
+        }
+    });
+}
+
+// Scheduled Reminders speichern
+let scheduledReminders = JSON.parse(localStorage.getItem('scheduled-reminders') || '[]');
+
+// Check reminders every minute
+setInterval(checkScheduledReminders, 60000);
+checkScheduledReminders(); // Initial check
+
 // --- AUTARKE FRONTEND-ENGINE ---
 let timerInterval, timerTime = 0, timerRunning = false;
+let timerName = 'Timer'; // Timer-Name für Anzeige
 let swInterval, swTime = 0, swRunning = false, swStartTime = 0;
 
 let lastTrackId = null;
@@ -289,6 +334,11 @@ let spotifySemiTimeout = null;
 let isSpotifyForcedHidden = false; 
 
 let spotifyMode = 'immer';
+
+let spotifyProgressInterval = null;
+let spotifyCurrentProgress = 0;
+let spotifyCurrentDuration = 0;
+let spotifyLastUpdate = 0;
 
 function formatTime(seconds) {
     const isNegative = seconds < 0;
@@ -356,6 +406,7 @@ function localTimerReset() {
     tPopup.classList.add('popup-hide');
     
     document.getElementById('timer-display').textContent = "00:00";
+    timerName = 'Timer'; // Reset to default
     document.getElementById('timer-label-text').textContent = "⏱️ Timer";
     
     setTimeout(() => {
@@ -374,8 +425,377 @@ function getSerial() {
     document.getElementById('serial');
 }
 
+// --- 🎵 SPOTIFY CACHE FUNCTIONS ---
+function loadSpotifyCacheFromStorage() {
+    const cached = localStorage.getItem('spotify-cache');
+    if (cached) {
+        try {
+            const data = JSON.parse(cached);
+            console.log('[Spotify Cache] Geladen aus localStorage');
+            return data;
+        } catch (e) {
+            console.error('[Spotify Cache] Fehler beim Laden:', e);
+            return null;
+        }
+    }
+    return null;
+}
+
+function saveSpotifyCacheToStorage(data) {
+    try {
+        localStorage.setItem('spotify-cache', JSON.stringify(data));
+        console.log('[Spotify Cache] Gespeichert in localStorage');
+    } catch (e) {
+        console.error('[Spotify Cache] Fehler beim Speichern:', e);
+    }
+}
+
+let selectedDate = new Date();
+let currentDate = new Date();
+let events = JSON.parse(localStorage.getItem('calendar-events') || '{}');
+
+// Kalender rendern
+function renderCalendar() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    // Update header
+    document.getElementById('current-month').textContent = 
+        currentDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+    
+    // First day of month & number of days
+    const firstDay = new Date(year, month, 1).getDay() || 7; // 1-7 (Mo-So)
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    
+    const calendarDays = document.getElementById('calendar-days');
+    calendarDays.innerHTML = '';
+    
+    // Previous month days
+    for (let i = firstDay - 1; i > 0; i--) {
+        const day = daysInPrevMonth - i + 1;
+        const cell = createDayCell(day, true);
+        calendarDays.appendChild(cell);
+    }
+    
+    // Current month days
+    for (let day = 1; day <= daysInMonth; day++) {
+        const cell = createDayCell(day, false);
+        calendarDays.appendChild(cell);
+    }
+    
+    // Next month days
+    const totalCells = calendarDays.children.length;
+    const remainingCells = 42 - totalCells; // 6 weeks * 7 days
+    for (let day = 1; day <= remainingCells; day++) {
+        const cell = createDayCell(day, true);
+        calendarDays.appendChild(cell);
+    }
+}
+
+function createDayCell(day, isOtherMonth) {
+    const cell = document.createElement('div');
+    cell.className = 'day-cell';
+    if (isOtherMonth) cell.classList.add('other-month');
+            
+    const dateStr = formatDateString(new Date(currentDate.getFullYear(), currentDate.getMonth(), day));
+    const today = formatDateString(new Date());
+            
+    if (dateStr === today && !isOtherMonth) {
+        cell.classList.add('today');
+    }
+            
+    if (events[dateStr] && events[dateStr].length > 0) {
+        cell.classList.add('has-event');
+    }
+    
+    cell.innerHTML = `<span class="day-number">${day}</span>`;
+    if (events[dateStr] && events[dateStr].length > 0) {
+        cell.innerHTML += '<div class="event-dot"></div>';
+    }
+            
+    cell.addEventListener('click', () => selectDate(day, isOtherMonth));
+    return cell;
+}
+
+function formatDateString(date) {
+    return date.toISOString().split('T')[0];
+}
+
+function selectDate(day, isOtherMonth) {
+    if (isOtherMonth) {
+        if (day < 15) {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+        } else {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+        }
+    }
+    selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    renderCalendar();
+    updateEventList();
+}
+
+function updateEventList() {
+    const dateStr = formatDateString(selectedDate);
+    const dayName = selectedDate.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+    document.getElementById('selected-date').textContent = dayName;
+    
+    const eventList = document.getElementById('event-list');
+    const dayEvents = events[dateStr] || [];
+    
+    if (dayEvents.length === 0) {
+        eventList.innerHTML = '<div class="no-events">Keine Termine für diesen Tag</div>';
+        return;
+    }
+    
+    eventList.innerHTML = dayEvents.map(event => `
+        <div class="event-item">
+            <div class="event-time">${event.time || '--:--'}</div>
+            <div class="event-title">${event.title}</div>
+            ${event.location ? `<div class="event-location">📍 ${event.location}</div>` : ''}
+        </div>
+    `).join('');
+}
+
+// Navigation
+const prevMonthBtn = document.getElementById('btn-prev-month');
+const nextMonthBtn = document.getElementById('btn-next-month');
+const todayBtn = document.getElementById('btn-today');
+
+if (prevMonthBtn) {
+    prevMonthBtn.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar();
+    });
+}
+
+if (nextMonthBtn) {
+    nextMonthBtn.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar();
+    });
+}
+
+if (todayBtn) {
+    todayBtn.addEventListener('click', () => {
+        currentDate = new Date();
+        selectedDate = new Date();
+        renderCalendar();
+        updateEventList();
+    });
+}
+
+// Update last sync time
+function updateSyncTime() {
+    const now = new Date();
+    const time = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    const date = now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+    document.getElementById('last-sync').textContent = `${time} ${date}`;
+}
+
+// Initial render nur wenn Kalender-Widget existiert
+const isCalendarWidget =
+    document.getElementById('calendar-days') &&
+    document.getElementById('current-month') &&
+    document.getElementById('event-list');
+
+if (isCalendarWidget) {
+    renderCalendar();
+    updateEventList();
+    updateSyncTime();
+
+    // Sync every hour
+    setInterval(updateSyncTime, 60 * 60 * 1000);
+}
+
+// Example events (test data)
+function addTestEvents() {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    events[formatDateString(today)] = [
+        { time: '10:00', title: 'Team Meeting', location: 'Besprechungsraum' },
+        { time: '14:30', title: 'Projekt Review' }
+    ];
+    
+    events[formatDateString(tomorrow)] = [
+        { time: '09:00', title: 'Client Call' }
+    ];
+    
+    localStorage.setItem('calendar-events', JSON.stringify(events));
+    renderCalendar();
+}
+
+// Uncomment to add test events
+// addTestEvents();
+
+function applySpotifyData(data) {
+    if (!data) {
+        console.log('[Spotify] Keine Daten zu applizieren');
+        return;
+    }
+    
+    console.log('[Spotify] Appliziere Daten:', data.title, '-', data.artist);
+    
+    // Update Track-Info (Main Widget)
+    const trackTitle = document.getElementById('track-title');
+    const trackArtist = document.getElementById('track-artist');
+    const trackCover = document.getElementById('track-cover');
+    const trackProgress = document.getElementById('track-progress');
+    
+    if (trackTitle) trackTitle.textContent = data.title || '';
+    if (trackArtist) trackArtist.textContent = data.artist || '';
+    if (trackCover && data.albumImg) trackCover.src = data.albumImg;
+    
+    if (data.progress !== undefined && data.duration !== undefined) {
+
+        spotifyCurrentProgress = data.progress;
+        spotifyCurrentDuration = data.duration;
+        spotifyLastUpdate = Date.now();
+
+        updateSpotifyProgressBars();
+
+        if (spotifyProgressInterval) {
+            clearInterval(spotifyProgressInterval);
+        }
+
+        spotifyProgressInterval = setInterval(() => {
+            spotifyCurrentProgress += 1000;
+
+            if (spotifyCurrentProgress > spotifyCurrentDuration) {
+                spotifyCurrentProgress = spotifyCurrentDuration;
+            }
+
+            updateSpotifyProgressBars();
+
+        }, 1000);
+    }
+
+    // Update Dashboard (spotify.html)
+    const dashTitle = document.getElementById('dash-track-title');
+    if (dashTitle) {
+        document.getElementById('dash-track-title').textContent = data.title || '';
+        document.getElementById('dash-track-artist').textContent = data.artist || '';
+        const dashCover = document.getElementById('dash-track-cover');
+        if (dashCover && data.albumImg) dashCover.src = data.albumImg;
+        document.getElementById('dash-time-current').textContent = formatMs(data.progress || 0);
+        document.getElementById('dash-time-total').textContent = formatMs(data.duration || 0);
+        
+        if (data.progress !== undefined && data.duration !== undefined) {
+            const progressPercent = (data.progress / data.duration) * 100;
+            document.getElementById('dash-progress').style.width = `${progressPercent}%`;
+        }
+    
+        const queueContainer = document.getElementById('dash-queue');
+        if (queueContainer) {
+            if (data.queue && Array.isArray(data.queue) && data.queue.length > 0) {
+                queueContainer.innerHTML = data.queue.slice(0, 4).map(t => `
+                    <div class="queue-item">
+                        <div class="top-track-meta queue-meta">
+                            <div class="top-track-name" style="font-size: 1.1rem; font-weight: 600;">${t.title || 'Unbekannter Titel'}</div>
+                            <div class="top-track-artist" style="font-size: 0.9rem; color: rgba(255,255,255,0.5);">${t.artist || 'Unbekannter Interpret'}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+    
+        const topContainer = document.getElementById('dash-top-tracks');
+        if (topContainer && data.topTracks && Array.isArray(data.topTracks) && data.topTracks.length > 0) {
+            topContainer.innerHTML = data.topTracks.slice(0, 10).map((t, idx) => `
+                <div class="top-track-item" style="display: flex; align-items: center; gap: 15px; background: rgba(255, 255, 255, 0.02); padding: 10px 14px; border-radius: 16px; margin-bottom: 8px;">
+                    <div class="top-track-rank" style="font-size: 1.1rem; font-weight: 700; color: #1db954; width: 25px; text-align: center;">${idx + 1}</div>
+                    ${t.albumImg ? `<img class="top-track-img" src="${t.albumImg}" alt="Cover" style="width: 45px; height: 45px; border-radius: 8px; object-fit: cover;">` : ''}
+                    <div class="top-track-meta" style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+                        <div class="top-track-name" style="font-size: 1rem; font-weight: 600; text-overflow: ellipsis; overflow: hidden;">${t.title}</div>
+                        <div class="top-track-artist" style="font-size: 0.85rem; color: rgba(255,255,255,0.5); text-overflow: ellipsis; overflow: hidden;">${t.artist}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+}
+
+function updateSpotifyProgressBars() {
+    const progressPercent =
+        (spotifyCurrentProgress / spotifyCurrentDuration) * 100;
+
+    // Main Widget
+    const trackProgress = document.getElementById('track-progress');
+
+    if (trackProgress) {
+        trackProgress.style.width = `${progressPercent}%`;
+    }
+
+    // Dashboard
+    const dashProgress = document.getElementById('dash-progress');
+
+    if (dashProgress) {
+        dashProgress.style.width = `${progressPercent}%`;
+    }
+
+    // Zeiten Dashboard
+    const currentTime = document.getElementById('dash-time-current');
+
+    if (currentTime) {
+        currentTime.textContent = formatMs(spotifyCurrentProgress);
+    }
+}
+
+// Lade Spotify-Cache aus localhost direkt
+async function initSpotifyCache() {
+    console.log('[Spotify] Lade spotify-cache.json...');
+    
+    try {
+        const response = await fetch('/spotify-cache.json');
+        const data = await response.json();
+        
+        if (data && data.currentPlayback) {
+            console.log('[Spotify] Daten geladen:', data.currentPlayback.title);
+            applySpotifyData(data.currentPlayback);
+            saveSpotifyCacheToStorage(data.currentPlayback);
+        }
+    } catch (e) {
+        console.error('[Spotify] Fehler beim Laden von spotify-cache.json:', e);
+    }
+}
+
+async function fetchSpotifyDataWithRetry(attempt = 1) {
+    try {
+        console.log(`[Spotify] Fetch Versuch ${attempt}/5...`);
+        const response = await fetch('/spotify-cache.json');
+        const data = await response.json();
+        console.log('[Spotify] Server antwortet:', data);
+        
+        // Prüfe ob echte Daten vorhanden sind (nicht nur Fallback)
+        if (data && data.title && data.title !== 'Keine Wiedergabe aktiv' && data.title !== 'Warte auf erste Wiedergabe') {
+            console.log('[Spotify] ✓ Gültige Daten vom Server erhalten!');
+            applySpotifyData(data);
+            saveSpotifyCacheToStorage(data);
+            return; // Erfolgreich!
+        } else {
+            // Keine echten Daten - versuche später nochmal
+            if (attempt < 5) {
+                console.log(`[Spotify] Noch keine Daten, versuche in 1s nochmal...`);
+                setTimeout(() => fetchSpotifyDataWithRetry(attempt + 1), 1000);
+            } else {
+                console.log('[Spotify] Max Versuche erreicht, verwende Fallback');
+            }
+        }
+    } catch (e) {
+        console.error('[Spotify Cache] Fehler beim Abrufen vom Server:', e);
+        if (attempt < 5) {
+            setTimeout(() => fetchSpotifyDataWithRetry(attempt + 1), 1000);
+        }
+    }
+}
+
 const eventSource = new EventSource('/events');
 let currentSlot = 'a';
+
+// Initialisiere Spotify-Cache beim Start
+initSpotifyCache();
 
 eventSource.onmessage = function(event) {
     try {
@@ -513,12 +933,11 @@ eventSource.onmessage = function(event) {
 
         // --- SPOTIFY SSE LOGIK ---
         if (data.action === 'spotify-playing') {
-            document.getElementById('track-title').textContent = data.title;
-            document.getElementById('track-artist').textContent = data.artist;
-            document.getElementById('track-cover').src = data.albumImg;
+            // Speichere in localStorage für späteren Zugriff
+            saveSpotifyCacheToStorage(data);
             
-            const progressPercent = (data.progress / data.duration) * 100;
-            document.getElementById('track-progress').style.width = `${progressPercent}%`;
+            // Wende Daten an
+            applySpotifyData(data);
         
             const spotifyWidget = document.getElementById('spotify-widget');
             const countdownBar = document.getElementById('spotify-semi-countdown');
@@ -554,54 +973,8 @@ eventSource.onmessage = function(event) {
                         }
                     }, 10050);
                 }
-            }
-
-            const dashTitle = document.getElementById('dash-track-title');
-            if (dashTitle) {
-                document.getElementById('dash-track-title').textContent = data.title;
-                document.getElementById('dash-track-artist').textContent = data.artist;
-                document.getElementById('dash-track-cover').src = data.albumImg;
-                document.getElementById('dash-time-current').textContent = formatMs(data.progress);
-                document.getElementById('dash-time-total').textContent = formatMs(data.duration);
-                document.getElementById('dash-progress').style.width = `${progressPercent}%`;
-            
-                const queueContainer = document.getElementById('dash-queue');
-                if (queueContainer) {
-                    if (data.queue && Array.isArray(data.queue) && data.queue.length > 0) {
-                        queueContainer.innerHTML = data.queue.slice(0, 4).map(t => `
-                            <div class="queue-item">
-                                <div class="top-track-meta queue-meta">
-                                    <div class="top-track-name" style="font-size: 1.1rem; font-weight: 600;">${t.title || 'Unbekannter Titel'}</div>
-                                    <div class="top-track-artist" style="font-size: 0.9rem; color: rgba(255,255,255,0.5);">${t.artist || 'Unbekannter Interpret'}</div>
-                                </div>
-                            </div>
-                        `).join('');
-                    } else if (!data.queue) {
-                        queueContainer.innerHTML = '<div style="color:rgba(255,255,255,0.3); font-size:1.1rem;">Warte auf Warteschlangen-Daten...</div>';
-                    } else {
-                        queueContainer.innerHTML = '<div style="color:rgba(255,255,255,0.3); font-size:1.1rem;">Keine weiteren Titel in der Warteschlange</div>';
-                    }
-                }
-            
-                const topContainer = document.getElementById('dash-top-tracks');
-                if (topContainer) {
-                    if (data.topTracks && Array.isArray(data.topTracks) && data.topTracks.length > 0) {
-                        topContainer.innerHTML = data.topTracks.slice(0, 10).map((t, idx) => `
-                            <div class="top-track-item" style="display: flex; align-items: center; gap: 15px; background: rgba(255, 255, 255, 0.02); padding: 10px 14px; border-radius: 16px; margin-bottom: 8px;">
-                                <div class="top-track-rank" style="font-size: 1.1rem; font-weight: 700; color: #1db954; width: 25px; text-align: center;">${idx + 1}</div>
-                                ${t.albumImg ? `<img class="top-track-img" src="${t.albumImg}" alt="Cover" style="width: 45px; height: 45px; border-radius: 8px; object-fit: cover;">` : ''}
-                                <div class="top-track-meta" style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
-                                    <div class="top-track-name" style="font-size: 1rem; font-weight: 600; text-overflow: ellipsis; overflow: hidden;">${t.title}</div>
-                                    <div class="top-track-artist" style="font-size: 0.85rem; color: rgba(255,255,255,0.5); text-overflow: ellipsis; overflow: hidden;">${t.artist}</div>
-                                </div>
-                            </div>
-                        `).join('');
-                    } else if (!data.topTracks) {
-                        topContainer.innerHTML = '<div style="color:rgba(255,255,255,0.3); font-size:1.1rem; padding: 20px 0;">Warte auf Top-Songs...</div>';
-                    }
-                }
-            }
-        }
+            };
+        };
 
         // --- REMINDER & WIDGET LOGIK ---
         if (data.action === 'show-widget') {
@@ -643,6 +1016,22 @@ eventSource.onmessage = function(event) {
         if (data.action === 'show-reminder') {
             wakeDisplay('reminder');
             const level = parseInt(data.stufe) || 1;
+            
+            // If it has time/days info, save as scheduled reminder
+            if (data.time || data.days) {
+                const newReminder = {
+                    text: data.text,
+                    level: level,
+                    time: data.time || null,
+                    days: data.days || '',
+                    dayName: data.dayName || null,
+                    lastTriggered: null
+                };
+                scheduledReminders.push(newReminder);
+                localStorage.setItem('scheduled-reminders', JSON.stringify(scheduledReminders));
+                console.log('[Reminder] Saved scheduled reminder:', newReminder);
+            }
+            
             if (level === 3) {
                 document.getElementById('adhs-message-text').textContent = data.text || 'Aufstehen!';
                 document.getElementById('adhs-overlay').classList.add('active');
@@ -666,7 +1055,8 @@ eventSource.onmessage = function(event) {
                 clearInterval(timerInterval);
                 timerRunning = false;
                 tPopup.classList.remove('timer-alarm', 'popup-hide', 'popup-show');
-                document.getElementById('timer-label-text').textContent = "⏱️ Timer";
+                timerName = data.name || 'Timer'; // Use timer name from server
+                document.getElementById('timer-label-text').textContent = `⏱️ ${timerName}`;
                 timerTime = parseInt(data.value) || 0;
                 document.getElementById('timer-display').textContent = formatTime(timerTime);
                 showPopup('timer-popup');
@@ -679,7 +1069,7 @@ eventSource.onmessage = function(event) {
                 if (timerTime > 0) {
                     wakeDisplay('timer-finished', true);
                     tPopup.classList.remove('timer-alarm');
-                    document.getElementById('timer-label-text').textContent = "⏱️ Timer";
+                    document.getElementById('timer-label-text').textContent = `⏱️ ${timerName}`;
                 }
             }
             else if (action === 'start') {
@@ -704,7 +1094,7 @@ eventSource.onmessage = function(event) {
                         } else {
                             if (tPopup.classList.contains('timer-alarm')) {
                                 tPopup.classList.remove('timer-alarm');
-                                document.getElementById('timer-label-text').textContent = "⏱️ Timer";
+                                document.getElementById('timer-label-text').textContent = `⏱️ ${timerName}`;
                             }
                         }
                     }, 1000);
@@ -720,6 +1110,7 @@ eventSource.onmessage = function(event) {
                 clearInterval(timerInterval);
                 timerRunning = false;
                 timerTime = 0;
+                timerName = 'Timer'; // Reset to default
                 
                 tPopup.classList.remove('timer-alarm', 'popup-show');
                 tPopup.classList.add('popup-hide');
@@ -753,3 +1144,204 @@ eventSource.onmessage = function(event) {
         }
     } catch(err) { console.error(err); }
 };
+
+// ========== SPOTIFY WIDGET NAMESPACE ==========
+(function() {
+    'use strict';
+    
+    // Private Variablen
+    const spotify_spotifyCache = {};
+    const spotify_updateInterval = 2000; // 1 Sekunde Update-Intervall
+    let spotify_updateTimer = null;
+    
+    // Helper: Zeit formatieren (MM:SS)
+    function spotify_formatTime(seconds) {
+        const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const secs = (seconds % 60).toString().padStart(2, '0');
+        return `${mins}:${secs}`;
+    }
+    
+    // Hauptfunktion: Daten laden
+    async function spotify_fetchAndUpdateWidget() {
+        try {
+            console.log('[Spotify Widget] Lade Daten aus spotify-cache.json...');
+            
+            const response = await fetch(`/spotify-cache.json?t=${Date.now()}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const cache = await response.json();
+            if (!cache) {
+                throw new Error('Cache-Datei ist leer');
+            }
+            
+            Object.assign(spotify_spotifyCache, cache);
+            spotify_renderUI();
+            
+        } catch (error) {
+            console.error('[Spotify Widget] Fehler:', error);
+            spotify_showError(error.message);
+        }
+    }
+    
+    // Render UI mit aktuellen Daten
+    function spotify_renderUI() {
+        const spotify_currentPlayback = spotify_spotifyCache.currentPlayback;
+        
+        if (!spotify_currentPlayback) {
+            spotify_showError('Keine Playback-Daten verfügbar');
+            return;
+        }
+        
+        // === CURRENTLY PLAYING ===
+        spotify_updateCurrentTrack(spotify_currentPlayback);
+        
+        // === QUEUE ===
+        spotify_updateQueue(spotify_currentPlayback.queue);
+        
+        // === TOP TRACKS ===
+        spotify_updateTopTracks(spotify_spotifyCache.topTracks);
+    }
+    
+    // Update: Aktueller Song
+    function spotify_updateCurrentTrack(spotify_playback) {
+        // Cover
+        const spotify_coverEl = document.getElementById('spotify-track-cover');
+        if (spotify_coverEl && spotify_playback.albumImg) {
+            spotify_coverEl.src = spotify_playback.albumImg;
+        }
+        
+        // Title
+        const spotify_titleEl = document.getElementById('spotify-track-title');
+        if (spotify_titleEl) {
+            spotify_titleEl.textContent = spotify_playback.title || 'Unbekannter Titel';
+        }
+        
+        // Artist
+        const spotify_artistEl = document.getElementById('spotify-track-artist');
+        if (spotify_artistEl) {
+            spotify_artistEl.textContent = spotify_playback.artist || 'Unbekannter Künstler';
+        }
+        
+        // Progress Bar & Zeit
+        if (spotify_playback.progress !== undefined && spotify_playback.duration !== undefined) {
+            const spotify_progressPercent = (spotify_playback.progress / spotify_playback.duration) * 100;
+            
+            const spotify_progressBar = document.getElementById('spotify-progress');
+            if (spotify_progressBar) {
+                spotify_progressBar.style.width = `${spotify_progressPercent}%`;
+            }
+            
+            const spotify_currentTimeEl = document.getElementById('spotify-time-current');
+            if (spotify_currentTimeEl) {
+                spotify_currentTimeEl.textContent = spotify_formatTime(Math.floor(spotify_playback.progress / 1000));
+            }
+            
+            const spotify_totalTimeEl = document.getElementById('spotify-time-total');
+            if (spotify_totalTimeEl) {
+                spotify_totalTimeEl.textContent = spotify_formatTime(Math.floor(spotify_playback.duration / 1000));
+            }
+        }
+    }
+    
+    // Update: Warteschlange
+    function spotify_updateQueue(spotify_queueData) {
+        const spotify_queueEl = document.getElementById('spotify-queue');
+        if (!spotify_queueEl) return;
+        
+        if (!spotify_queueData || !Array.isArray(spotify_queueData) || spotify_queueData.length === 0) {
+            spotify_queueEl.innerHTML = '<div style="color:rgba(255,255,255,0.3); font-size:1.1rem; padding: 10px 0;">Warteschlange leer</div>';
+            return;
+        }
+        
+        spotify_queueEl.innerHTML = spotify_queueData.slice(0, 4).map(spotify_track => `
+            <div class="queue-item">
+                <div class="top-track-meta queue-meta">
+                    <div class="top-track-name" style="font-size: 1.1rem; font-weight: 600;">${spotify_track.title || 'Unbekannt'}</div>
+                    <div class="top-track-artist" style="font-size: 0.9rem; color: rgba(255,255,255,0.5);">${spotify_track.artist || 'Unbekannt'}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Update: Top Tracks
+    function spotify_updateTopTracks(spotify_topTracksData) {
+        const spotify_topEl = document.getElementById('spotify-top-tracks');
+        if (!spotify_topEl) return;
+        
+        if (!spotify_topTracksData || !Array.isArray(spotify_topTracksData) || spotify_topTracksData.length === 0) {
+            spotify_topEl.innerHTML = '<div style="color:rgba(255,255,255,0.3); font-size:1.1rem; padding: 10px 0;">Keine Charts vorhanden</div>';
+            return;
+        }
+        
+        spotify_topEl.innerHTML = spotify_topTracksData.slice(0, 10).map((spotify_track, spotify_idx) => `
+            <div class="top-track-item" style="display: flex; align-items: center; gap: 15px; background: rgba(255, 255, 255, 0.02); padding: 10px 14px; border-radius: 16px; margin-bottom: 8px;">
+                <div class="top-track-rank" style="font-size: 1.1rem; font-weight: 700; color: #1db954; width: 25px; text-align: center;">${spotify_idx + 1}</div>
+                ${spotify_track.albumImg ? `<img class="top-track-img" src="${spotify_track.albumImg}" alt="Cover" style="width: 45px; height: 45px; border-radius: 8px; object-fit: cover;">` : ''}
+                <div class="top-track-meta" style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+                    <div class="top-track-name" style="font-size: 1rem; font-weight: 600; text-overflow: ellipsis; overflow: hidden;">${spotify_track.title}</div>
+                    <div class="top-track-artist" style="font-size: 0.85rem; color: rgba(255,255,255,0.5); text-overflow: ellipsis; overflow: hidden;">${spotify_track.artist}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Fehler anzeigen
+    function spotify_showError(spotify_message) {
+        const spotify_topEl = document.getElementById('spotify-top-tracks');
+        if (spotify_topEl) {
+            spotify_topEl.innerHTML = `<div style="color: #ff6b6b; font-size:1rem; padding: 10px 0;">⚠️ ${spotify_message}</div>`;
+        }
+    }
+    
+    // Initiale Ladung
+    function spotify_init() {
+        console.log('[Spotify Widget] Initialisiere...');
+        spotify_fetchAndUpdateWidget();
+        
+        // Auto-Refresh jede Sekunde
+        if (spotify_updateTimer) clearInterval(spotify_updateTimer);
+        spotify_updateTimer = setInterval(() => {
+            spotify_fetchAndUpdateWidget();
+        }, spotify_updateInterval);
+    }
+    
+    // MutationObserver um zu erkennen, wenn das Widget geladen wird
+    function spotify_setupObserver() {
+        const observer = new MutationObserver((mutations) => {
+            // Prüfe ob die Spotify-Elemente nun vorhanden sind
+            if (document.getElementById('spotify-track-cover')) {
+                console.log('[Spotify Widget] Elemente gefunden - starte Init');
+                observer.disconnect(); // Stoppe Observer
+                spotify_init();
+            }
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: false
+        });
+        
+        console.log('[Spotify Widget] MutationObserver aktiviert');
+    }
+    
+    // Starte bei DOM-Ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            if (document.getElementById('spotify-track-cover')) {
+                spotify_init();
+            } else {
+                spotify_setupObserver();
+            }
+        });
+    } else {
+        if (document.getElementById('spotify-track-cover')) {
+            spotify_init();
+        } else {
+            spotify_setupObserver();
+        }
+    }
+    
+})();

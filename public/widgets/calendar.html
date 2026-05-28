@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalender</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a0a3e 50%, #0f0f2e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, #00ffff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        /* CALENDAR GRID */
+        .calendar-wrapper {
+            background: rgba(0, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 10px;
+        }
+
+        .calendar-nav button {
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: #00ffff;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .calendar-nav button:hover {
+            background: rgba(0, 255, 255, 0.2);
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .current-month {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        /* Day names */
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .weekday-name {
+            text-align: center;
+            font-weight: 600;
+            color: #00ffff;
+            opacity: 0.7;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Days grid */
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+        }
+
+        .day-cell {
+            aspect-ratio: 1;
+            background: rgba(0, 255, 255, 0.02);
+            border: 1px solid rgba(0, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 8px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .day-cell:hover {
+            background: rgba(0, 255, 255, 0.1);
+            border-color: rgba(0, 255, 255, 0.3);
+        }
+
+        .day-cell.other-month {
+            opacity: 0.3;
+        }
+
+        .day-cell.today {
+            background: rgba(0, 255, 255, 0.2);
+            border-color: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+        }
+
+        .day-cell.has-event {
+            border-color: #1db954;
+            background: rgba(29, 185, 84, 0.15);
+        }
+
+        .day-cell.selected {
+            background: rgba(255, 0, 255, 0.2);
+            border-color: #ff00ff;
+        }
+
+        .day-number {
+            font-size: 1rem;
+            margin-bottom: 3px;
+        }
+
+        .event-dot {
+            width: 4px;
+            height: 4px;
+            background: #1db954;
+            border-radius: 50%;
+            margin-top: 2px;
+        }
+
+        /* EVENTS SECTION */
+        .events-section {
+            background: rgba(0, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .events-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #00ffff;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .event-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .event-item {
+            background: rgba(0, 255, 255, 0.08);
+            border-left: 3px solid #1db954;
+            padding: 12px 15px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .event-item:hover {
+            background: rgba(0, 255, 255, 0.12);
+            transform: translateX(5px);
+        }
+
+        .event-time {
+            font-size: 0.85rem;
+            color: #00ffff;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .event-title {
+            font-weight: 600;
+            color: #e0e0e0;
+            margin-bottom: 3px;
+        }
+
+        .event-location {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .no-events {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.4);
+            padding: 20px;
+            font-style: italic;
+        }
+
+        /* ICLOUD SECTION */
+        .icloud-section {
+            background: rgba(0, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .icloud-info {
+            margin-bottom: 15px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .icloud-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #00ffff, #00aa88);
+            border: none;
+            color: #000;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .icloud-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+
+        .sync-status {
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📅 Kalender</h1>
+            <p>Deine Termine im Überblick</p>
+        </div>
+
+        <!-- CALENDAR -->
+        <div class="calendar-wrapper">
+            <div class="calendar-header">
+                <div class="calendar-nav">
+                    <button id="btn-prev-month">← Zurück</button>
+                    <button id="btn-today">Heute</button>
+                </div>
+                <div class="current-month" id="current-month"></div>
+                <div class="calendar-nav">
+                    <button id="btn-next-month">Weiter →</button>
+                </div>
+            </div>
+
+            <!-- Weekday names -->
+            <div class="calendar-weekdays">
+                <div class="weekday-name">Mo</div>
+                <div class="weekday-name">Di</div>
+                <div class="weekday-name">Mi</div>
+                <div class="weekday-name">Do</div>
+                <div class="weekday-name">Fr</div>
+                <div class="weekday-name">Sa</div>
+                <div class="weekday-name">So</div>
+            </div>
+
+            <!-- Days grid -->
+            <div class="calendar-days" id="calendar-days"></div>
+        </div>
+
+        <!-- EVENTS -->
+        <div class="events-section">
+            <div class="events-title">📌 Events für <span id="selected-date">heute</span></div>
+            <div class="event-list" id="event-list">
+                <div class="no-events">Keine Termine</div>
+            </div>
+        </div>
+
+        <!-- ICLOUD CONNECTION -->
+        <div class="icloud-section">
+            <div class="icloud-info">
+                🍎 iCloud Kalender Synchronisierung
+            </div>
+            <p style="font-size: 0.9rem; margin-bottom: 15px; color: rgba(255, 255, 255, 0.6);">
+                Verbinde deinen iCloud Kalender um automatische Updates zu erhalten.
+            </p>
+            <a href="https://www.icloud.com/calendar" class="icloud-btn" target="_blank">
+                ☁️ iCloud Kalender öffnen
+            </a>
+            <div class="sync-status">
+                ⏱️ Letzte Synchronisierung: <span id="last-sync">--:-- --</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+ // Kalender-Widget Skript
+    </script>
+</body>
+</html>

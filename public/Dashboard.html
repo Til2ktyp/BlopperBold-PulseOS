@@ -546,6 +546,7 @@
                                 <option value="">-- Wähle ein Widget...</option>
                                 <option value="spotify">🎵 Spotify</option>
                                 <option value="homeassistant">🏠 Home Assistant</option>
+                                <option value="calendar">📅 Kalender</option>
                                 <option value="info">ℹ️ Info</option>
                                 <option value="settings">⚙️ Einstellungen</option>
                                 <option value="vim">📝 Vim</option>
@@ -565,6 +566,11 @@
         <div id="tab-timer" class="tab-content">
             <div class="control-section">
                 <div class="section-title">⏱️ Timer</div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 0.85rem; margin-bottom: 8px; color: #00ffff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Timer-Name:</label>
+                    <input type="text" id="timer-name" placeholder="z.B. Kochen, Workout..." style="width: 100%; padding: 10px; border: 1px solid rgba(0, 255, 255, 0.3); background: rgba(0, 255, 255, 0.05); color: #e0e0e0; border-radius: 8px; margin-bottom: 15px;">
+                </div>
                 
                 <div style="margin-bottom: 15px;">
                     <label style="display: block; font-size: 0.85rem; margin-bottom: 8px; color: #00ffff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Zeit eingeben:</label>
@@ -612,6 +618,22 @@
                     </div>
                 </div>
 
+                <label style="display: block; font-size: 0.85rem; margin-bottom: 8px; color: #00ffff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Zeitplan (optional):</label>
+                <div style="margin-bottom: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label style="font-size: 0.75rem; color: #00ffff; opacity: 0.7;">Uhrzeit:</label>
+                        <input type="time" id="reminder-time" style="width: 100%; padding: 8px; border: 1px solid rgba(0, 255, 255, 0.3); background: rgba(0, 255, 255, 0.05); color: #e0e0e0; border-radius: 8px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; color: #00ffff; opacity: 0.7;">Tage:</label>
+                        <select id="reminder-days" style="width: 100%; padding: 8px; border: 1px solid rgba(0, 255, 255, 0.3); background: rgba(0, 255, 255, 0.05); color: #e0e0e0; border-radius: 8px;">
+                            <option value="">Einmalig</option>
+                            <option value="täglich">Täglich</option>
+                            <option value="wöchentlich">Wöchentlich</option>
+                        </select>
+                    </div>
+                </div>
+
                 <label style="display: block; font-size: 0.85rem; margin-bottom: 10px; color: #00ffff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Prioritätsstufe:</label>
                 <div class="reminder-levels">
                     <button class="level-btn active" data-level="1">🟢 Stufe 1</button>
@@ -625,6 +647,22 @@
         <div id="tab-settings" class="tab-content">
             <div class="control-section">
                 <div class="section-title">⚙️ Systemsteuerung</div>
+                
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(0, 255, 255, 0.05); border: 1px solid rgba(0, 255, 255, 0.2); border-radius: 8px;">
+                        <div>
+                            <div style="font-weight: 600; color: #00ffff;">🌙 Automatisches Standby</div>
+                            <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); margin-top: 3px;">Nachtmodus-Standby deaktivieren</div>
+                        </div>
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" id="standby-toggle" style="cursor: pointer;">
+                            <span style="display: inline-block; width: 40px; height: 24px; background: rgba(0, 255, 255, 0.2); border-radius: 12px; margin-left: 10px; position: relative; transition: all 0.3s;">
+                                <span style="display: inline-block; width: 20px; height: 20px; background: #00ffff; border-radius: 10px; position: absolute; top: 2px; left: 2px; transition: left 0.3s;"></span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                
                 <div class="button-group">
                     <button class="btn danger" id="btn-reload">🔄 Neu laden</button>
                     <button class="btn secondary" id="btn-popups">👁️ Popups</button>
@@ -831,11 +869,12 @@
 
         document.getElementById('btn-timer-set').addEventListener('click', () => {
             const value = document.getElementById('timer-value').value;
+            const name = document.getElementById('timer-name').value || 'Timer';
             if (!value || value < 1) {
                 showToast('Gültige Zeit eingeben', true);
                 return;
             }
-            apiCall(`/display/${selectedDisplayId}/timer/set/${value}`);
+            apiCall(`/display/${selectedDisplayId}/timer/set/${value}?name=${encodeURIComponent(name)}`);
         });
 
         document.getElementById('btn-timer-start').addEventListener('click', () => {
@@ -879,21 +918,43 @@
             });
         });
 
-        // Reminder
+        // Reminder with scheduling
         document.getElementById('btn-reminder').addEventListener('click', () => {
             const text = document.getElementById('reminder-text').value;
+            const time = document.getElementById('reminder-time').value;
+            const days = document.getElementById('reminder-days').value;
+            
             if (!text) {
                 showToast('Text eingeben', true);
                 return;
             }
-            apiCall(`/display/${selectedDisplayId}/reminder?text=${encodeURIComponent(text)}&stufe=${reminderLevel}`);
+            
+            let endpoint = `/display/${selectedDisplayId}/reminder?text=${encodeURIComponent(text)}&stufe=${reminderLevel}`;
+            if (time) endpoint += `&time=${encodeURIComponent(time)}`;
+            if (days) endpoint += `&days=${encodeURIComponent(days)}`;
+            
+            apiCall(endpoint);
             document.getElementById('reminder-text').value = '';
+            document.getElementById('reminder-time').value = '';
+            document.getElementById('reminder-days').value = '';
         });
 
         // Andere Befehle
         document.getElementById('btn-standby').addEventListener('click', () => {
             apiCall(`/display/${selectedDisplayId}/standby`);
         });
+
+        // Standby Toggle
+        document.getElementById('standby-toggle').addEventListener('change', (e) => {
+            const isDisabled = e.target.checked;
+            localStorage.setItem('standby-disabled', isDisabled ? 'true' : 'false');
+            apiCall(`/display/${selectedDisplayId}/standby/toggle/${isDisabled ? 'disable' : 'enable'}`);
+            showToast(isDisabled ? '🌙 Standby deaktiviert' : '🌙 Standby aktiviert');
+        });
+
+        // Load standby state
+        const standbyDisabled = localStorage.getItem('standby-disabled') === 'true';
+        document.getElementById('standby-toggle').checked = standbyDisabled;
 
         document.getElementById('btn-reload').addEventListener('click', () => {
             apiCall(`/display/${selectedDisplayId}/reload`);

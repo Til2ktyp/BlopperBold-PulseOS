@@ -14,7 +14,7 @@
 
 body {
     font-family: var(--font-apple);
-    background: #010a3a;
+    background: #07003c;
     color: #ffffff;
     height: 100vh;
     overflow: hidden;
@@ -245,8 +245,8 @@ body.animation-low .popup-box.timer-alarm {
     text-shadow: 0 0 25px rgba(255, 71, 87, 0.6) !important;
 }
 
-.popup-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255, 255, 255, 0.4); font-weight: 700; text-align: center; margin-bottom: 2px; }
-.popup-value { font-size: 1.6rem; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; }
+.popup-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255, 255, 255, 0.4); font-weight: 700; text-align: center; margin-bottom: 2px; color: #ffffff}
+.popup-value { font-size: 1.6rem; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; color: #ffffff}
 
 .timer-btn-container {
     max-height: 0;
@@ -773,7 +773,7 @@ body.standby-active #reminder-container, body.standby-active .reminder.box, body
     }
 }
 
-#clock { font-size: var(--clock-size); font-weight: 500; letter-spacing: -3px; line-height: 1; margin-bottom: 10px; font-variant-numeric: tabular-nums; }
+#clock { font-size: var(--clock-size); font-weight: 500; letter-spacing: -3px; line-height: 1; margin-bottom: 10px; font-variant-numeric: tabular-nums; color: #ffffff}
 #weather { font-size: 2rem; font-weight: 400; color: rgba(255, 255, 255, 0.85); background: rgba(255, 255, 255, 0.05); padding: 8px 20px; border-radius: 30px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
 
 body.animation-low #weather {

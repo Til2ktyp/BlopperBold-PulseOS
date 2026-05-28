@@ -380,7 +380,7 @@ app.get('/display/:displayId/stopwatch/reset', (req, res) => {
 });
 
 // --- ANIMATIONS QUALITY ENDPOINT ---
-let animationQuality = 'auto'; // Globale Fallback
+let animationQuality = 'medium'; // Globale Fallback
 
 app.get('/quality/animations', (req, res) => {
     // Hole IP des Clients
@@ -594,8 +594,61 @@ const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
 const SPOTIFY_REDIRECT_URI = 'http://127.0.0.1:3000/callback';
 let SPOTIFY_REFRESH_TOKEN = process.env.SPOTIFY_REFRESH_TOKEN;
+const SPOTIFY_CACHE_FILE = path.join(__dirname, 'public', 'spotify-cache.json'); // Im public Ordner!
 
 let cachedTopTracks = [];
+let cachedCurrentPlayback = null; // Cache für aktuellen Track
+
+// Lade Spotify-Cache aus Datei
+function loadSpotifyCacheFromFile() {
+    try {
+        if (fs.existsSync(SPOTIFY_CACHE_FILE)) {
+            const data = fs.readFileSync(SPOTIFY_CACHE_FILE, 'utf8');
+            const cache = JSON.parse(data);
+            cachedTopTracks = cache.topTracks || [];
+            cachedCurrentPlayback = cache.currentPlayback || null;
+            console.log("📁 Spotify-Cache aus Datei geladen");
+            return cache;
+        }
+    } catch (err) {
+        console.error("Fehler beim Laden des Spotify-Caches:", err.message);
+    }
+    return null;
+}
+
+// Speichere Spotify-Cache in Datei
+function saveSpotifyCacheToFile() {
+    try {
+        const cache = {
+            topTracks: cachedTopTracks,
+            currentPlayback: cachedCurrentPlayback,
+            lastUpdate: new Date().toISOString()
+        };
+        fs.writeFileSync(SPOTIFY_CACHE_FILE, JSON.stringify(cache, null, 2));
+    } catch (err) {
+        console.error("Fehler beim Speichern des Spotify-Caches:", err.message);
+    }
+}
+
+// Lade Cache beim Start
+loadSpotifyCacheFromFile();
+
+// Initialisiere Cache-Datei mit Standardwerten wenn noch nicht vorhanden
+if (!fs.existsSync(SPOTIFY_CACHE_FILE)) {
+    console.log("⚠️ Spotify-Cache-Datei existiert nicht, erstelle mit Standardwerten...");
+    cachedCurrentPlayback = {
+        action: 'spotify-playing',
+        title: 'Warte auf erste Wiedergabe',
+        artist: 'Starten Sie ein Lied in Spotify',
+        albumImg: '',
+        progress: 0,
+        duration: 0,
+        queue: [],
+        topTracks: []
+    };
+    cachedTopTracks = [];
+    saveSpotifyCacheToFile();
+}
 
 app.get('/spotify/login', (req, res) => {
     const scopes = 'user-read-playback-state user-modify-playback-state user-read-currently-playing user-top-read';
@@ -667,6 +720,7 @@ async function updateTopTracksCache() {
                     artist: track.artists.map(a => a.name).join(', '),
                     albumImg: track.album.images[2]?.url || track.album.images[0]?.url || ''
                 }));
+                saveSpotifyCacheToFile();
                 console.log("🔥 Spotify Top 5 erfolgreich aktualisiert.");
             }
         }
@@ -680,55 +734,63 @@ function startSpotifyPolling() {
     updateTopTracksCache();
     setInterval(updateTopTracksCache, 30 * 60 * 1000);
 
-    setInterval(async () => {
-        if (!SPOTIFY_REFRESH_TOKEN) return;
-        try {
-            const token = await getSpotifyAccessToken();
-            const resPlayback = await fetch('https://api.spotify.com/v1/me/player', {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
+    // Sofort erste Wiedergabe-Daten fetchen (nicht 12 Sekunden warten!)
+    fetchAndCacheCurrentPlayback();
+    
+    // Danach regelmäßig updaten
+    setInterval(fetchAndCacheCurrentPlayback, 12000);
+}
 
-            if (resPlayback.status === 204 || resPlayback.status > 400) {
-                console.log("ℹ️ Spotify sagt: Kein aktives Gerät oder Wiedergabe pausiert (Status " + resPlayback.status + ")");
-                return;
-            }
+async function fetchAndCacheCurrentPlayback() {
+    if (!SPOTIFY_REFRESH_TOKEN) return;
+    try {
+        const token = await getSpotifyAccessToken();
+        const resPlayback = await fetch('https://api.spotify.com/v1/me/player', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
 
-            const playback = await resPlayback.json();
-            if (playback && playback.is_playing) {
-                let queueData = [];
-                try {
-                    const resQueue = await fetch('https://api.spotify.com/v1/me/player/queue', {
-                        headers: { 'Authorization': 'Bearer ' + token }
-                    });
-                    if (resQueue.status === 200) {
-                        const queueJson = await resQueue.json();
-                        if (queueJson && queueJson.queue) {
-                            queueData = queueJson.queue.slice(0, 3).map(track => ({
-                                title: track.name,
-                                artist: track.artists.map(a => a.name).join(', ')
-                            }));
-                        }
-                    }
-                } catch (qErr) {
-                    console.error("Fehler beim Einlesen der Warteschlange:", qErr.message);
-                }
-
-                const spotifyData = {
-                    action: 'spotify-playing',
-                    title: playback.item.name,
-                    artist: playback.item.artists.map(a => a.name).join(', '),
-                    albumImg: playback.item.album.images[0].url,
-                    progress: playback.progress_ms,
-                    duration: playback.item.duration_ms,
-                    queue: queueData,
-                    topTracks: cachedTopTracks
-                };
-                sendToClients(spotifyData);
-            }
-        } catch (err) {
-            console.error("Spotify-Polling Fehler:", err.message);
+        if (resPlayback.status === 204 || resPlayback.status > 400) {
+            console.log("ℹ️ Spotify sagt: Kein aktives Gerät oder Wiedergabe pausiert (Status " + resPlayback.status + ")");
+            return;
         }
-    }, 9000); // Intervall korrigiert auf sinnvolle 5 Sekunden statt Max_Int
+
+        const playback = await resPlayback.json();
+        if (playback && playback.is_playing) {
+            let queueData = [];
+            try {
+                const resQueue = await fetch('https://api.spotify.com/v1/me/player/queue', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (resQueue.status === 200) {
+                    const queueJson = await resQueue.json();
+                    if (queueJson && queueJson.queue) {
+                        queueData = queueJson.queue.slice(0, 3).map(track => ({
+                            title: track.name,
+                            artist: track.artists.map(a => a.name).join(', ')
+                        }));
+                    }
+                }
+            } catch (qErr) {
+                console.error("Fehler beim Einlesen der Warteschlange:", qErr.message);
+            }
+
+            const spotifyData = {
+                action: 'spotify-playing',
+                title: playback.item.name,
+                artist: playback.item.artists.map(a => a.name).join(', '),
+                albumImg: playback.item.album.images[0].url,
+                progress: playback.progress_ms,
+                duration: playback.item.duration_ms,
+                queue: queueData,
+                topTracks: cachedTopTracks
+            };
+            cachedCurrentPlayback = spotifyData; // Cache aktualisieren
+            saveSpotifyCacheToFile(); // Cache speichern
+            sendToClients(spotifyData);
+        }
+    } catch (err) {
+        console.error("Spotify-Polling Fehler:", err.message);
+    }
 }
 
 // --- POPUP / WIDGET TOGGLE SYSTEM (STREAM DECK) ---
