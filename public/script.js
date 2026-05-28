@@ -9,7 +9,7 @@ const NIGHT_END = 6 * 60 + 0; // 6:00
 // --- 🌙 NIGHT MODE AUTO-STANDBY SYSTEM ---
 let isNightMode = false;
 let lastActivityTime = Date.now();
-let standbyDisabled = localStorage.getItem('standby-disabled'); // Standby-Toggle State
+let standbyDisabled = localStorage.getItem('standby-disabled') === "true"; // Standby-Toggle State
 
 function isCurrentlyNight() {
     const now = new Date();
