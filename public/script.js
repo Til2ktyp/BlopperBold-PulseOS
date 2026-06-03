@@ -139,9 +139,11 @@ updateNightMode(); // Initial check
 
 // --- 🎵 SPOTIFY WIDGET OPENING ---
 async function openSpotifyWidget() {
+    console.log('[openSpotifyWidget] Funktion aufgerufen');
     try {
         const response = await fetch('/widgets/spotify.html');
         const html = await response.text();
+        console.log('[openSpotifyWidget] HTML geladen');
         
         // Die SSE-Nachricht emulieren um das Widget zu zeigen
         const event = new Event('show-widget');

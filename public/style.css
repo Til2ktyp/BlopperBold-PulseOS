@@ -320,6 +320,12 @@ body.standby-active #status-bar {
     opacity: 0.4;
 }
 
+.status-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .status-back-btn {
     padding: 6px 12px;
     background: rgba(0, 255, 255, 0.2);
@@ -332,7 +338,7 @@ body.standby-active #status-bar {
     transition: all 0.3s ease;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-left: 15px;
+    white-space: nowrap;
 }
 
 .status-back-btn:hover {
