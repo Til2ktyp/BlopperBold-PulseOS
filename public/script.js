@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const isClickingOverlay = e.target.classList.contains('settings-overlay');
         const isClickingSpotifyWidget = e.target.closest('#spotify-widget');
         const isClickingStatusBar = e.target.closest('#status-bar');
+        const isClickingUpdateBtn = e.target.closest('#updateBtn');
         
         // Wenn Panel bereits offen und man clickt auf Overlay, schließen
         if (settingsPanel.classList.contains('active') && isClickingOverlay) {
@@ -41,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Button wird vom onclick Handler behandelt
         }
         // Wenn Panel nicht offen und man clickt nicht auf ausgeschlossene Elemente, öffnen
-        else if (!settingsPanel.classList.contains('active') && !isClickingSettingsPanel && !isClickingSpotifyWidget && !isClickingStatusBar) {
+        else if (!settingsPanel.classList.contains('active') && !isClickingSettingsPanel && !isClickingSpotifyWidget && !isClickingStatusBar && !isClickingUpdateBtn) {
             toggleSettingsPanel();
         }
     }, true); // Capture Phase
