@@ -210,6 +210,14 @@ setInterval(updateNightMode, 30000);
 updateNightMode(); // Initial check
 
 // --- 🎵 WIDGET OPENING ---
+function replaceWidgetPlaceholders(html) {
+    return html
+        .replace(/{{SERIAL}}/g, displaySerial)
+        .replace(/{{DISPLAY_ID}}/g, displayId)
+        .replace(/{{DISPLAY_NAME}}/g, displayName)
+        .replace(/{{VERSION}}/g, 'BlopperBold 26.06');
+}
+
 function openWidget(widgetName) {
     console.log(`[openWidget] ${widgetName}`);
     toggleSettingsPanel(); // Panel schließen
@@ -218,7 +226,10 @@ function openWidget(widgetName) {
         try {
             const widgetFile = (widgetName === 'spotify') ? 'spotify.html' : `${widgetName}.html`;
             const response = await fetch(`/widgets/${widgetFile}`);
-            const html = await response.text();
+            let html = await response.text();
+            
+            // Ersetze Platzhalter
+            html = replaceWidgetPlaceholders(html);
             
             const slotA = document.getElementById('widget-slot-a');
             const slotB = document.getElementById('widget-slot-b');
@@ -268,6 +279,7 @@ function closeWidget() {
 // --- 📺 DISPLAY ID & CONFIGURATION ---
 let displayId = localStorage.getItem('display-id') || null;
 let displayName = localStorage.getItem('display-name') || 'Unknown';
+let displaySerial = localStorage.getItem('display-serial') || 'UNKNOWN';
 
 let lat = localStorage.getItem('hub-lat') || '53.5653';
 let lon = localStorage.getItem('hub-lon') || '11.3653';
@@ -965,13 +977,15 @@ eventSource.onmessage = function(event) {
         if (data.action === 'init-display') {
             displayId = data.displayId;
             displayName = data.name;
+            displaySerial = data.serial || 'UNKNOWN';
             animationQuality = data.quality || 'auto';
             
             localStorage.setItem('display-id', displayId);
             localStorage.setItem('display-name', displayName);
+            localStorage.setItem('display-serial', displaySerial);
             localStorage.setItem('animation-quality', animationQuality);
             
-            console.log(`[Display] Initialisiert - ID: ${displayId} | Name: ${displayName} | Quality: ${animationQuality}`);
+            console.log(`[Display] Initialisiert - ID: ${displayId} | Name: ${displayName} | Serial: ${displaySerial} | Quality: ${animationQuality}`);
             
             // Auto-detect für Low-Power-Devices wenn auto
             if (animationQuality === 'auto') {
