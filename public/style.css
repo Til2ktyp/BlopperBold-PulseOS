@@ -1084,10 +1084,12 @@ body.widget-active #init-toast {
     z-index: 8888;
     pointer-events: none;
     transition: all 0.3s ease;
+    opacity: 0;
 }
 
 #settings-panel.active {
     pointer-events: all;
+    opacity: 1;
 }
 
 .settings-overlay {
