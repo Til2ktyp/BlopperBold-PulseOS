@@ -535,6 +535,37 @@
                 </div>
             </div>
 
+            <!-- Brightness Control -->
+            <div class="control-section">
+                <div class="section-title">☀️ Helligkeit</div>
+                <div class="form-group">
+                    <label for="brightnessSlider">Display-Helligkeit: <span id="brightness-value">50</span>%</label>
+                    <input type="range" id="brightnessSlider" min="0" max="100" value="50" style="width: 100%; height: 8px; border-radius: 4px; background: linear-gradient(90deg, rgba(0, 255, 255, 0.3), #00ffff); outline: none; cursor: pointer; -webkit-appearance: none; appearance: none;">
+                    <style>
+                        input[type=range]::-webkit-slider-thumb {
+                            -webkit-appearance: none;
+                            appearance: none;
+                            width: 20px;
+                            height: 20px;
+                            border-radius: 50%;
+                            background: linear-gradient(135deg, #00ffff, #00cc99);
+                            cursor: pointer;
+                            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+                            border: 2px solid #00ffff;
+                        }
+                        input[type=range]::-moz-range-thumb {
+                            width: 20px;
+                            height: 20px;
+                            border-radius: 50%;
+                            background: linear-gradient(135deg, #00ffff, #00cc99);
+                            cursor: pointer;
+                            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+                            border: 2px solid #00ffff;
+                        }
+                    </style>
+                </div>
+            </div>
+
             <!-- Widget Control -->
             <div class="control-section">
                 <div class="section-title">🎨 Widgets & Anzeige</div>
