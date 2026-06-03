@@ -109,13 +109,13 @@ document.addEventListener('DOMContentLoaded', function() {
 // --- 🔄 UPDATE BUTTON HANDLER ---
 async function handleUpdateButtonClick(button) {
     button.disabled = true;
-    button.textContent = '⏳ Updating...';
+    button.textContent = 'Updating...';
     try {
         const response = await fetch('/update');
         if (response.ok) {
-            button.textContent = '✅ Update started!';
+            button.textContent = 'Update wurde abgeschlossen!';
             setTimeout(() => {
-                button.textContent = '🔄 UPDATE SYSTEM';
+                button.textContent = 'UPDATE SYSTEM';
                 button.disabled = false;
             }, 3000);
         }
@@ -123,7 +123,7 @@ async function handleUpdateButtonClick(button) {
         console.error('Update error:', error);
         button.textContent = '❌ Error!';
         setTimeout(() => {
-            button.textContent = '🔄 UPDATE SYSTEM';
+            button.textContent = 'UPDATE SYSTEM';
             button.disabled = false;
         }, 3000);
     }
