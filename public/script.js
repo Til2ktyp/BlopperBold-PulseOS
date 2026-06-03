@@ -8,24 +8,74 @@ const NIGHT_END = 6 * 60 + 0; // 6:00
 
 // Helligkeit-Slider Setup (wartet bis DOM geladen ist)
 document.addEventListener('DOMContentLoaded', function() {
+    // Dashboard Slider (alt)
     const slider = document.getElementById('brightnessSlider');
     const brightnessValue = document.getElementById('brightness-value');
     
     if (slider && brightnessValue) {
         slider.oninput = function() {
-            // Wert von 0-100 auf 0.0-1.0 umrechnen
             const brightness = this.value / 100;
-            
-            // Anzeige des Wertes aktualisieren
             brightnessValue.textContent = this.value;
-            
-            // Den Befehl an die Android App senden
+            if (window.AndroidInterface) {
+                window.AndroidInterface.setBrightness(brightness);
+            }
+        };
+    }
+    
+    // Settings Panel Slider
+    const panelSlider = document.getElementById('panelBrightnessSlider');
+    const panelValue = document.getElementById('panelBrightnessValue');
+    
+    if (panelSlider && panelValue) {
+        panelSlider.oninput = function() {
+            const brightness = this.value / 100;
+            panelValue.textContent = this.value + '%';
             if (window.AndroidInterface) {
                 window.AndroidInterface.setBrightness(brightness);
             }
         };
     }
 });
+
+// --- ⚙️ SETTINGS PANEL FUNCTIONS ---
+let reloadTimer = null;
+let reloadProgress = 0;
+
+function toggleSettingsPanel() {
+    const panel = document.getElementById('settings-panel');
+    panel.classList.toggle('active');
+    document.body.classList.toggle('settings-active');
+    console.log('[Settings Panel] Toggle:', panel.classList.contains('active'));
+}
+
+function startReloadTimer() {
+    reloadProgress = 0;
+    const progressBar = document.getElementById('reload-progress');
+    
+    reloadTimer = setInterval(() => {
+        reloadProgress += 3.33; // 100 / 30 (30 iterationen in 3 sekunden)
+        if (progressBar) {
+            progressBar.style.height = reloadProgress + '%';
+        }
+        
+        if (reloadProgress >= 100) {
+            clearInterval(reloadTimer);
+            console.log('[Reload] Seite wird neu geladen');
+            location.reload();
+        }
+    }, 100);
+}
+
+function cancelReloadTimer() {
+    if (reloadTimer) {
+        clearInterval(reloadTimer);
+        const progressBar = document.getElementById('reload-progress');
+        if (progressBar) {
+            progressBar.style.height = '0';
+        }
+        reloadProgress = 0;
+    }
+}
 
 // --- 🌙 NIGHT MODE AUTO-STANDBY SYSTEM ---
 let isNightMode = false;
@@ -137,49 +187,45 @@ function setupActivityListeners() {
 setInterval(updateNightMode, 30000);
 updateNightMode(); // Initial check
 
-// --- 🎵 SPOTIFY WIDGET OPENING ---
-async function openSpotifyWidget() {
-    console.log('[openSpotifyWidget] Funktion aufgerufen');
-    try {
-        const response = await fetch('/widgets/spotify.html');
-        const html = await response.text();
-        console.log('[openSpotifyWidget] HTML geladen');
-        
-        // Die SSE-Nachricht emulieren um das Widget zu zeigen
-        const event = new Event('show-widget');
-        event.html = html;
-        event.action = 'show-widget';
-        
-        // Widget-Logik aus dem SSE-Handler verwenden
-        const slotA = document.getElementById('widget-slot-a');
-        const slotB = document.getElementById('widget-slot-b');
-        const nextSlot = (currentSlot === 'a') ? slotB : slotA;
-        const activeSlot = (currentSlot === 'a') ? slotA : slotB;
-        
-        nextSlot.innerHTML = html;
-        
-        document.getElementById('spotify-widget').classList.remove('active');
-        
-        if (document.body.classList.contains('widget-active')) {
-            activeSlot.classList.remove('slot-active');
-            nextSlot.classList.add('slot-active');
-        } else {
-            slotA.classList.remove('slot-active');
-            slotB.classList.remove('slot-active');
-            nextSlot.classList.add('slot-active');
-            document.body.classList.add('widget-active');
+// --- 🎵 WIDGET OPENING ---
+function openWidget(widgetName) {
+    console.log(`[openWidget] ${widgetName}`);
+    toggleSettingsPanel(); // Panel schließen
+    
+    setTimeout(async () => {
+        try {
+            const widgetFile = (widgetName === 'spotify') ? 'spotify.html' : `${widgetName}.html`;
+            const response = await fetch(`/widgets/${widgetFile}`);
+            const html = await response.text();
+            
+            const slotA = document.getElementById('widget-slot-a');
+            const slotB = document.getElementById('widget-slot-b');
+            const nextSlot = (currentSlot === 'a') ? slotB : slotA;
+            const activeSlot = (currentSlot === 'a') ? slotA : slotB;
+            
+            nextSlot.innerHTML = html;
+            document.getElementById('spotify-widget').classList.remove('active');
+            
+            if (document.body.classList.contains('widget-active')) {
+                activeSlot.classList.remove('slot-active');
+                nextSlot.classList.add('slot-active');
+            } else {
+                slotA.classList.remove('slot-active');
+                slotB.classList.remove('slot-active');
+                nextSlot.classList.add('slot-active');
+                document.body.classList.add('widget-active');
+            }
+            
+            currentSlot = (currentSlot === 'a') ? 'b' : 'a';
+            
+            const backBtn = document.getElementById('status-back-btn');
+            if (backBtn) backBtn.style.display = 'block';
+            
+            console.log(`[Widget] ${widgetName} geöffnet`);
+        } catch (error) {
+            console.error(`[Widget] Fehler beim Laden ${widgetName}:`, error);
         }
-        
-        currentSlot = (currentSlot === 'a') ? 'b' : 'a';
-        
-        // Zurück-Button in Statusleiste anzeigen
-        const backBtn = document.getElementById('status-back-btn');
-        if (backBtn) backBtn.style.display = 'block';
-        
-        console.log('[Spotify Widget] Geöffnet');
-    } catch (error) {
-        console.error('[Spotify Widget] Fehler beim Laden:', error);
-    }
+    }, 150);
 }
 
 function closeWidget() {
@@ -191,7 +237,6 @@ function closeWidget() {
     slotA.classList.remove('slot-active');
     slotB.classList.remove('slot-active');
     
-    // Zurück-Button verstecken
     const backBtn = document.getElementById('status-back-btn');
     if (backBtn) backBtn.style.display = 'none';
     
