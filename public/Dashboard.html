@@ -995,6 +995,25 @@
             apiCall(`/display/${selectedDisplayId}/popup/alle`);
         });
 
+        // Brightness Control - synchronisiert mit localStorage und index.html
+        document.getElementById('brightnessSlider').addEventListener('input', (e) => {
+            const value = e.target.value;
+            document.getElementById('brightness-value').textContent = value;
+            localStorage.setItem('brightness-value', value);
+            
+            // Sende auch Helligkeit zu Displays
+            if (selectedDisplayId) {
+                apiCall(`/display/${selectedDisplayId}/brightness/${value}`);
+            }
+        });
+
+        // Lade Helligkeit aus localStorage beim Start
+        const savedBrightness = localStorage.getItem('brightness-value');
+        if (savedBrightness) {
+            document.getElementById('brightnessSlider').value = savedBrightness;
+            document.getElementById('brightness-value').textContent = savedBrightness;
+        }
+
         // Auto-refresh displays (weniger häufig für bessere Performance)
         loadDisplays();
         autoRefreshInterval = setInterval(loadDisplays, 10);

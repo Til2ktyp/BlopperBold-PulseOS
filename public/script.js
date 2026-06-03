@@ -22,19 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
     
-    // Settings Panel Slider
-    const panelSlider = document.getElementById('panelBrightnessSlider');
-    const panelValue = document.getElementById('panelBrightnessValue');
-    
-    if (panelSlider && panelValue) {
-        panelSlider.oninput = function() {
-            const brightness = this.value / 100;
-            panelValue.textContent = this.value + '%';
-            if (window.AndroidInterface) {
-                window.AndroidInterface.setBrightness(brightness);
-            }
-        };
-    }
+    // Settings Panel Slider - wird in syncBrightnessSliders() initialisiert
     
     // Global Click Handler für Settings Panel
     document.addEventListener('click', function(e) {
@@ -78,6 +66,33 @@ document.addEventListener('DOMContentLoaded', function() {
             e.target.style.boxShadow = '0 8px 32px rgba(102, 126, 234, 0.4)';
         }
     }, true);
+    
+    // --- 🔆 STORAGE LISTENER FÜR BRIGHTNESS SYNC (von Dashboard.html) ---
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'brightness-value') {
+            const newValue = e.newValue;
+            if (newValue) {
+                const panelSlider = document.getElementById('panelBrightnessSlider');
+                const popupSlider = document.getElementById('brightnessPopupSlider');
+                const panelValue = document.getElementById('panelBrightnessValue');
+                const popupValue = document.getElementById('brightnessPopupValue');
+                
+                // Update all sliders
+                if (panelSlider) panelSlider.value = newValue;
+                if (popupSlider) popupSlider.value = newValue;
+                if (panelValue) panelValue.textContent = newValue + '%';
+                if (popupValue) popupValue.textContent = newValue + '%';
+                
+                // Send to Android Interface
+                const brightness = newValue / 100;
+                if (window.AndroidInterface) {
+                    window.AndroidInterface.setBrightness(brightness);
+                }
+                
+                console.log(`[Storage Sync] Helligkeit aktualisiert: ${newValue}%`);
+            }
+        }
+    });
 });
 
 // --- 🔄 UPDATE BUTTON HANDLER ---
@@ -1372,6 +1387,73 @@ eventSource.onmessage = function(event) {
         }
     } catch(err) { console.error(err); }
 };
+
+// ========== 🔆 BRIGHTNESS POPUP SYSTEM ==========
+let brightnessPopupTimeout;
+
+function showBrightnessPopup() {
+    const popup = document.getElementById('brightness-popup');
+    if (popup) {
+        popup.classList.add('active');
+        clearTimeout(brightnessPopupTimeout);
+        brightnessPopupTimeout = setTimeout(() => {
+            popup.classList.remove('active');
+        }, 2000);
+    }
+}
+
+function syncBrightnessSliders() {
+    const panelSlider = document.getElementById('panelBrightnessSlider');
+    const popupSlider = document.getElementById('brightnessPopupSlider');
+    const panelValue = document.getElementById('panelBrightnessValue');
+    const popupValue = document.getElementById('brightnessPopupValue');
+    
+    if (panelSlider && popupSlider && panelValue && popupValue) {
+        // Lade initialen Wert aus localStorage
+        const savedBrightness = localStorage.getItem('brightness-value');
+        if (savedBrightness) {
+            panelSlider.value = savedBrightness;
+            popupSlider.value = savedBrightness;
+            panelValue.textContent = savedBrightness + '%';
+            popupValue.textContent = savedBrightness + '%';
+            const brightness = savedBrightness / 100;
+            if (window.AndroidInterface) {
+                window.AndroidInterface.setBrightness(brightness);
+            }
+        }
+        
+        panelSlider.addEventListener('input', function() {
+            popupSlider.value = this.value;
+            panelValue.textContent = this.value + '%';
+            popupValue.textContent = this.value + '%';
+            localStorage.setItem('brightness-value', this.value);
+            const brightness = this.value / 100;
+            if (window.AndroidInterface) {
+                window.AndroidInterface.setBrightness(brightness);
+            }
+            showBrightnessPopup();
+        });
+        
+        popupSlider.addEventListener('input', function() {
+            panelSlider.value = this.value;
+            panelValue.textContent = this.value + '%';
+            popupValue.textContent = this.value + '%';
+            localStorage.setItem('brightness-value', this.value);
+            const brightness = this.value / 100;
+            if (window.AndroidInterface) {
+                window.AndroidInterface.setBrightness(brightness);
+            }
+            showBrightnessPopup();
+        });
+    }
+}
+
+// Initialisiere Brightness Slider Sync wenn DOM ready ist
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', syncBrightnessSliders);
+} else {
+    syncBrightnessSliders();
+}
 
 // ========== SPOTIFY WIDGET NAMESPACE ==========
 (function() {
