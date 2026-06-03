@@ -7,7 +7,7 @@ const NIGHT_START = 22 * 60 + 30; // 22:30
 const NIGHT_END = 6 * 60 + 0; // 6:00
 const slider = document.getElementById('brightnessSlider');
 const brightnessValue = document.getElementById('brightness-value');
-    
+
 slider.oninput = function() {
     // Wert von 0-100 auf 0.0-1.0 umrechnen
     const brightness = this.value / 100;
@@ -20,7 +20,6 @@ slider.oninput = function() {
         window.AndroidInterface.setBrightness(brightness);
     }
 };
-
 
 // --- 🌙 NIGHT MODE AUTO-STANDBY SYSTEM ---
 let isNightMode = false;
