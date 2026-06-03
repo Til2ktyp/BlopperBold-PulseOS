@@ -1316,9 +1316,6 @@ body.settings-active #brightness-popup {
 #spotify-widget.settings-active .spotify-card.active {
     filter: blur(3px);
     opacity: 1 !important;
-    position: fixed !important;
-    bottom: 30px;
-    left: 50%;
     transform: translateX(-50%) scale(0.95) !important;
 }
 
@@ -1331,7 +1328,7 @@ body.settings-active #brightness-popup {
     z-index: 99999;
     opacity: 0;
     pointer-events: none;
-    transition: all 0.2s ease-out;
+    transition: opacity 0.15s ease-out;
 }
 
 #brightness-popup.active {

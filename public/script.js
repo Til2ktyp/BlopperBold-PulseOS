@@ -1431,6 +1431,10 @@ function syncBrightnessSliders() {
     if (popupSlider) {
         popupSlider.addEventListener('input', function() {
             const value = this.value;
+            isUserAdjustingBrightness = true;
+            clearTimeout(brightnessAdjustmentTimeout);
+            brightnessAdjustmentTimeout = setTimeout(() => { isUserAdjustingBrightness = false; }, 800);
+            
             popupValue.textContent = value + '%';
             if (panelSlider) panelSlider.value = value;
             if (panelValue) panelValue.textContent = value + '%';
@@ -1449,6 +1453,10 @@ function syncBrightnessSliders() {
     if (panelSlider) {
         panelSlider.addEventListener('input', function() {
             const value = this.value;
+            isUserAdjustingBrightness = true;
+            clearTimeout(brightnessAdjustmentTimeout);
+            brightnessAdjustmentTimeout = setTimeout(() => { isUserAdjustingBrightness = false; }, 800);
+            
             panelValue.textContent = value + '%';
             if (popupSlider) popupSlider.value = value;
             if (popupValue) popupValue.textContent = value + '%';
@@ -1474,8 +1482,13 @@ if (document.readyState === 'loading') {
 
 // --- 🔆 BRIGHTNESS POLLING (abfragen vom Server) ---
 let lastBrightnessValue = null;
+let isUserAdjustingBrightness = false;
+let brightnessAdjustmentTimeout;
 
 function pollBrightness() {
+    // Skip polling while user is actively adjusting
+    if (isUserAdjustingBrightness) return;
+    
     fetch('/brightness')
         .then(res => res.json())
         .then(data => {
@@ -1505,8 +1518,8 @@ function pollBrightness() {
         .catch(e => console.debug('Brightness poll error:', e));
 }
 
-// Poll every 100ms
-setInterval(pollBrightness, 100);
+// Poll every 500ms (less aggressive to prevent reset)
+setInterval(pollBrightness, 500);
 
 // ========== SPOTIFY WIDGET NAMESPACE ==========
 (function() {
