@@ -46,7 +46,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, true); // Capture Phase
     
-    // --- 🔄 UPDATE BUTTON EVENT LISTENERS (delegiert für dynamisch geladene Widgets) ---
+    // --- � BRIGHTNESS POPUP CLOSE ON OUTSIDE CLICK ---
+    document.addEventListener('click', function(e) {
+        const popup = document.getElementById('brightness-popup');
+        const brightnessBtn = document.getElementById('brightness-btn');
+        const isClickingPopup = e.target.closest('#brightness-popup');
+        const isClickingButton = e.target.closest('#brightness-btn');
+        
+        if (popup && popup.classList.contains('active') && !isClickingPopup && !isClickingButton) {
+            popup.classList.remove('active');
+        }
+    });
+    
+    // --- �🔄 UPDATE BUTTON EVENT LISTENERS (delegiert für dynamisch geladene Widgets) ---
     document.addEventListener('click', function(e) {
         if (e.target.id === 'updateBtn') {
             handleUpdateButtonClick(e.target);
@@ -123,10 +135,7 @@ let reloadTimer = null;
 let reloadProgress = 0;
 
 function toggleBrightnessSlider() {
-    const container = document.getElementById('brightness-slider-container');
-    if (container) {
-        container.style.display = container.style.display === 'none' ? 'flex' : 'none';
-    }
+    showBrightnessPopup();
 }
 
 function toggleSettingsPanel() {
@@ -1408,38 +1417,40 @@ function syncBrightnessSliders() {
     const panelValue = document.getElementById('panelBrightnessValue');
     const popupValue = document.getElementById('brightnessPopupValue');
     
-    if (panelSlider && popupSlider && panelValue && popupValue) {
-        // Lade initialen Wert aus localStorage
-        const savedBrightness = localStorage.getItem('brightness-value');
-        if (savedBrightness) {
-            panelSlider.value = savedBrightness;
-            popupSlider.value = savedBrightness;
-            panelValue.textContent = savedBrightness + '%';
-            popupValue.textContent = savedBrightness + '%';
-            const brightness = savedBrightness / 100;
-            if (window.AndroidInterface) {
-                window.AndroidInterface.setBrightness(brightness);
-            }
-        }
-        
-        panelSlider.addEventListener('input', function() {
-            popupSlider.value = this.value;
-            panelValue.textContent = this.value + '%';
-            popupValue.textContent = this.value + '%';
-            localStorage.setItem('brightness-value', this.value);
-            const brightness = this.value / 100;
+    // Lade initialen Wert aus localStorage
+    const savedBrightness = localStorage.getItem('brightness-value');
+    if (savedBrightness) {
+        if (popupSlider) popupSlider.value = savedBrightness;
+        if (panelSlider) panelSlider.value = savedBrightness;
+        if (popupValue) popupValue.textContent = savedBrightness + '%';
+        if (panelValue) panelValue.textContent = savedBrightness + '%';
+    }
+    
+    // HAUPTINTERFACE: Popup-Slider
+    if (popupSlider) {
+        popupSlider.addEventListener('input', function() {
+            const value = this.value;
+            popupValue.textContent = value + '%';
+            if (panelSlider) panelSlider.value = value;
+            if (panelValue) panelValue.textContent = value + '%';
+            localStorage.setItem('brightness-value', value);
+            const brightness = value / 100;
             if (window.AndroidInterface) {
                 window.AndroidInterface.setBrightness(brightness);
             }
             showBrightnessPopup();
         });
-        
-        popupSlider.addEventListener('input', function() {
-            panelSlider.value = this.value;
-            panelValue.textContent = this.value + '%';
-            popupValue.textContent = this.value + '%';
-            localStorage.setItem('brightness-value', this.value);
-            const brightness = this.value / 100;
+    }
+    
+    // Backup: Panel-Slider
+    if (panelSlider) {
+        panelSlider.addEventListener('input', function() {
+            const value = this.value;
+            panelValue.textContent = value + '%';
+            if (popupSlider) popupSlider.value = value;
+            if (popupValue) popupValue.textContent = value + '%';
+            localStorage.setItem('brightness-value', value);
+            const brightness = value / 100;
             if (window.AndroidInterface) {
                 window.AndroidInterface.setBrightness(brightness);
             }
@@ -1447,6 +1458,7 @@ function syncBrightnessSliders() {
         });
     }
 }
+
 
 // Initialisiere Brightness Slider Sync wenn DOM ready ist
 if (document.readyState === 'loading') {

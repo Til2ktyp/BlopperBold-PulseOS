@@ -1307,9 +1307,9 @@ body.settings-active > div:not(#settings-panel) {
     transform: scale(0.95);
 }
 
-#spotify-widget.settings-active {
+#spotify-widget.settings-active .spotify-card.active {
     filter: blur(3px);
-    transform: scale(0.95) translateX(-50%);
+    transform: scale(0.95) translateX(-50%) !important;
     transform-origin: center center;
 }
 
