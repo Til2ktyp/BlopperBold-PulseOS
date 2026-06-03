@@ -1431,15 +1431,10 @@ function syncBrightnessSliders() {
     if (popupSlider) {
         popupSlider.addEventListener('input', function() {
             const value = this.value;
-            isUserAdjustingBrightness = true;
-            clearTimeout(brightnessAdjustmentTimeout);
-            brightnessAdjustmentTimeout = setTimeout(() => { isUserAdjustingBrightness = false; }, 800);
-            
             popupValue.textContent = value + '%';
             if (panelSlider) panelSlider.value = value;
             if (panelValue) panelValue.textContent = value + '%';
             localStorage.setItem('brightness-value', value);
-            lastBrightnessValue = value;
             fetch(`/brightness/${value}`).catch(e => console.error('Failed to update server brightness:', e));
             const brightness = value / 100;
             if (window.AndroidInterface) {
@@ -1453,15 +1448,10 @@ function syncBrightnessSliders() {
     if (panelSlider) {
         panelSlider.addEventListener('input', function() {
             const value = this.value;
-            isUserAdjustingBrightness = true;
-            clearTimeout(brightnessAdjustmentTimeout);
-            brightnessAdjustmentTimeout = setTimeout(() => { isUserAdjustingBrightness = false; }, 800);
-            
             panelValue.textContent = value + '%';
             if (popupSlider) popupSlider.value = value;
             if (popupValue) popupValue.textContent = value + '%';
             localStorage.setItem('brightness-value', value);
-            lastBrightnessValue = value;
             fetch(`/brightness/${value}`).catch(e => console.error('Failed to update server brightness:', e));
             const brightness = value / 100;
             if (window.AndroidInterface) {
@@ -1480,48 +1470,7 @@ if (document.readyState === 'loading') {
     syncBrightnessSliders();
 }
 
-// --- 🔆 BRIGHTNESS POLLING (abfragen vom Server) ---
-let lastBrightnessValue = null;
-let isUserAdjustingBrightness = false;
-let brightnessAdjustmentTimeout;
-
-function pollBrightness() {
-    // Skip polling while user is actively adjusting
-    if (isUserAdjustingBrightness) return;
-    
-    fetch('/brightness')
-        .then(res => res.json())
-        .then(data => {
-            if (data.brightness !== undefined && data.brightness !== lastBrightnessValue) {
-                lastBrightnessValue = data.brightness;
-                
-                // Update all sliders
-                const panelSlider = document.getElementById('panelBrightnessSlider');
-                const popupSlider = document.getElementById('brightnessPopupSlider');
-                const panelValue = document.getElementById('panelBrightnessValue');
-                const popupValue = document.getElementById('brightnessPopupValue');
-                
-                if (panelSlider) panelSlider.value = data.brightness;
-                if (popupSlider) popupSlider.value = data.brightness;
-                if (panelValue) panelValue.textContent = data.brightness + '%';
-                if (popupValue) popupValue.textContent = data.brightness + '%';
-                
-                localStorage.setItem('brightness-value', data.brightness);
-                const brightness = data.brightness / 100;
-                if (window.AndroidInterface) {
-                    window.AndroidInterface.setBrightness(brightness);
-                }
-                
-                console.log(`[Brightness Poll] Updated from server: ${data.brightness}%`);
-            }
-        })
-        .catch(e => console.debug('Brightness poll error:', e));
-}
-
-// Poll every 500ms (less aggressive to prevent reset)
-setInterval(pollBrightness, 500);
-
-// ========== SPOTIFY WIDGET NAMESPACE ==========
+// ========== SPOTIFY WIDGET NAMESPACE ===========
 (function() {
     'use strict';
     
