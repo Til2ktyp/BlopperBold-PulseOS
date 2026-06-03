@@ -456,7 +456,7 @@ function hideLoadingScreen() {
     if (randomValue < 0.005) {
         totalLoadTime = 20000;
     } else {
-        totalLoadTime = Math.random() * 100 + 100; //3000 + 4000
+        totalLoadTime = Math.random() * 2000 + 1000; //3000 + 4000
     }
     
     const stage2Delay = Math.random() * 200 + 400;
