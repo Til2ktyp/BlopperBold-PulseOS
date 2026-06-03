@@ -581,6 +581,7 @@ body.standby-active .spotify-card {
     opacity: 1;
     transform: translateX(-50%);
     pointer-events: auto;
+    transform-origin: center bottom;
 }
 
 #track-cover {
@@ -1309,8 +1310,7 @@ body.settings-active > div:not(#settings-panel) {
 
 #spotify-widget.settings-active .spotify-card.active {
     filter: blur(3px);
-    transform: scale(0.95) translateX(-50%) !important;
-    transform-origin: center center;
+    transform: translateX(-50%) scale(0.95);
 }
 
 /* --- 🔆 BRIGHTNESS POPUP (iOS-Style Volume Control) --- */
