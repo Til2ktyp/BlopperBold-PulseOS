@@ -115,7 +115,7 @@ async function handleUpdateButtonClick(button) {
         if (response.ok) {
             button.textContent = 'Update wurde abgeschlossen!';
             setTimeout(() => {
-                button.textContent = 'UPDATE SYSTEM';
+                button.textContent = 'System wird neu geladen...';
                 button.disabled = false;
             }, 3000);
         }
