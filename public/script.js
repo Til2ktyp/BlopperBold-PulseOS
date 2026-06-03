@@ -35,6 +35,28 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         };
     }
+    
+    // Global Click Handler für Settings Panel
+    document.addEventListener('click', function(e) {
+        const settingsPanel = document.getElementById('settings-panel');
+        const isClickingSettingsPanel = e.target.closest('#settings-panel');
+        const isClickingOverlay = e.target.classList.contains('settings-overlay');
+        const isClickingSpotifyWidget = e.target.closest('#spotify-widget');
+        const isClickingStatusBar = e.target.closest('#status-bar');
+        
+        // Wenn Panel bereits offen und man clickt auf Overlay, schließen
+        if (settingsPanel.classList.contains('active') && isClickingOverlay) {
+            toggleSettingsPanel();
+        }
+        // Wenn Panel offen und man clickt auf Button im Panel, nicht nötig
+        else if (settingsPanel.classList.contains('active') && isClickingSettingsPanel) {
+            // Button wird vom onclick Handler behandelt
+        }
+        // Wenn Panel nicht offen und man clickt nicht auf ausgeschlossene Elemente, öffnen
+        else if (!settingsPanel.classList.contains('active') && !isClickingSettingsPanel && !isClickingSpotifyWidget && !isClickingStatusBar) {
+            toggleSettingsPanel();
+        }
+    }, true); // Capture Phase
 });
 
 // --- ⚙️ SETTINGS PANEL FUNCTIONS ---
