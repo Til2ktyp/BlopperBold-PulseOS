@@ -751,11 +751,24 @@ async function fetchAndCacheCurrentPlayback() {
 
         if (resPlayback.status === 204 || resPlayback.status > 400) {
             console.log("ℹ️ Spotify sagt: Kein aktives Gerät oder Wiedergabe pausiert (Status " + resPlayback.status + ")");
+            sendToClients({
+                action: 'spotify-unavailable',
+                reason: resPlayback.status === 204 ? 'no_device' : 'playback_error'
+            });
             return;
         }
 
         const playback = await resPlayback.json();
-        if (playback && playback.is_playing) {
+        if (!playback) {
+            console.log("ℹ️ Spotify: Keine Playback-Daten verfügbar");
+            sendToClients({
+                action: 'spotify-unavailable',
+                reason: 'no_playback'
+            });
+            return;
+        }
+
+        if (playback.is_playing) {
             let queueData = [];
             try {
                 const resQueue = await fetch('https://api.spotify.com/v1/me/player/queue', {
@@ -787,6 +800,13 @@ async function fetchAndCacheCurrentPlayback() {
             cachedCurrentPlayback = spotifyData; // Cache aktualisieren
             saveSpotifyCacheToFile(); // Cache speichern
             sendToClients(spotifyData);
+        } else {
+            // Wenn Musik gestoppt/pausiert ist
+            console.log("ℹ️ Spotify: Musik ist pausiert oder gestoppt");
+            sendToClients({
+                action: 'spotify-unavailable',
+                reason: 'paused'
+            });
         }
     } catch (err) {
         console.error("Spotify-Polling Fehler:", err.message);

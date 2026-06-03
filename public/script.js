@@ -151,7 +151,7 @@ function startReloadTimer() {
     const progressBar = document.getElementById('reload-progress');
     
     reloadTimer = setInterval(() => {
-        reloadProgress += 3.33; // 100 / 30 (30 iterationen in 3 sekunden)
+        reloadProgress += 10.33; // 100 / 30 (30 iterationen in 3 sekunden)
         if (progressBar) {
             progressBar.style.height = reloadProgress + '%';
         }
@@ -458,7 +458,7 @@ function hideLoadingScreen() {
     if (randomValue < 0.005) {
         totalLoadTime = 20000;
     } else {
-        totalLoadTime = Math.random() * 3000 + 4000; //3000 + 4000
+        totalLoadTime = Math.random() * 100 + 100; //3000 + 4000
     }
     
     const stage2Delay = Math.random() * 200 + 400;
@@ -1175,6 +1175,13 @@ eventSource.onmessage = function(event) {
         }
 
 
+
+        // --- SPOTIFY UNAVAILABLE ---
+        if (data.action === 'spotify-unavailable') {
+            const spotifyWidget = document.getElementById('spotify-widget');
+            spotifyWidget.classList.remove('active');
+            console.log('🔇 Spotify nicht verfügbar:', data.reason);
+        }
 
         // --- SPOTIFY SSE LOGIK ---
         if (data.action === 'spotify-playing') {

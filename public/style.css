@@ -554,12 +554,13 @@ body.standby-active .widget-title {
     bottom: 30px;
     right: auto;
     left: 50%;
-    margin-left: -190px;
+    transform: translateX(-50%);
     opacity: 0;
     transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     pointer-events: none;
     position: absolute;
     box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+    z-index: 8887;
 }
 
 body.animation-low .spotify-card {
@@ -579,7 +580,7 @@ body.standby-active .spotify-card {
 
 .spotify-card.active {
     opacity: 1;
-    pointer-events: auto;
+    transform: translateX(-50%);
 }
 
 #track-cover {
@@ -989,7 +990,7 @@ body.standby-active .spotify-dashboard-layout{
     font-size: 0.95rem;
     font-weight: 600;
     letter-spacing: 1.5px;
-    z-index: 9998;
+    z-index: 10;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2);
     min-width: 280px;
@@ -1293,13 +1294,6 @@ body.widget-active #init-toast {
     box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
 }
 
-/* Zoom Animation für Main Content */
-body.settings-active > div:not(#settings-panel) {
-    filter: blur(3px);
-    transform: scale(0.95);
-    transform-origin: center top;
-}
-
 /* Brightness Popup Exception - kein Blur! */
 body.settings-active #brightness-popup {
     filter: none !important;
@@ -1309,11 +1303,6 @@ body.settings-active #brightness-popup {
 #widget-container.settings-active {
     filter: blur(3px);
     transform: scale(0.95);
-}
-
-#spotify-widget.settings-active .spotify-card.active {
-    filter: blur(3px);
-    opacity: 0.5 !important;
 }
 
 /* --- 🔆 BRIGHTNESS POPUP (iOS-Style Volume Control) --- */
