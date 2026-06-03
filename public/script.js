@@ -57,7 +57,51 @@ document.addEventListener('DOMContentLoaded', function() {
             toggleSettingsPanel();
         }
     }, true); // Capture Phase
+    
+    // --- 🔄 UPDATE BUTTON EVENT LISTENERS (delegiert für dynamisch geladene Widgets) ---
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'updateBtn') {
+            handleUpdateButtonClick(e.target);
+        }
+    });
+    
+    document.addEventListener('mouseenter', function(e) {
+        if (e.target.id === 'updateBtn' && !e.target.disabled) {
+            e.target.style.transform = 'scale(1.05)';
+            e.target.style.boxShadow = '0 12px 48px rgba(102, 126, 234, 0.6)';
+        }
+    }, true);
+    
+    document.addEventListener('mouseleave', function(e) {
+        if (e.target.id === 'updateBtn' && !e.target.disabled) {
+            e.target.style.transform = 'scale(1)';
+            e.target.style.boxShadow = '0 8px 32px rgba(102, 126, 234, 0.4)';
+        }
+    }, true);
 });
+
+// --- 🔄 UPDATE BUTTON HANDLER ---
+async function handleUpdateButtonClick(button) {
+    button.disabled = true;
+    button.textContent = '⏳ Updating...';
+    try {
+        const response = await fetch('/update');
+        if (response.ok) {
+            button.textContent = '✅ Update started!';
+            setTimeout(() => {
+                button.textContent = '🔄 UPDATE SYSTEM';
+                button.disabled = false;
+            }, 3000);
+        }
+    } catch (error) {
+        console.error('Update error:', error);
+        button.textContent = '❌ Error!';
+        setTimeout(() => {
+            button.textContent = '🔄 UPDATE SYSTEM';
+            button.disabled = false;
+        }, 3000);
+    }
+}
 
 // --- ⚙️ SETTINGS PANEL FUNCTIONS ---
 let reloadTimer = null;

@@ -124,11 +124,11 @@
                     <button class="settings-btn" onclick="openWidget('calendar')">📅 Kalender</button>
                     <button class="settings-btn" onclick="openWidget('vim')">📝 Vim</button>
                     <button class="settings-btn" onclick="openWidget('info')">ℹ️ Info</button>
+                    <button class="settings-btn" onclick="closeWidget()">🏠 HOME</button>
                 </div>
 
                 <!-- Buttons Rechts -->
                 <div class="settings-section settings-right-buttons">
-                    <button class="settings-btn" onclick="closeWidget()">🏠 HOME</button>
                     <button class="settings-btn settings-reload-btn" id="reload-btn" onmousedown="startReloadTimer()" onmouseup="cancelReloadTimer()" onmouseleave="cancelReloadTimer()" ontouchstart="startReloadTimer()" ontouchend="cancelReloadTimer()">
                         <span class="reload-text">⟲</span>
                         <span class="reload-progress" id="reload-progress"></span>
