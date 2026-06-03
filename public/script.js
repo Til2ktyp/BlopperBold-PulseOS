@@ -28,21 +28,19 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', function(e) {
         const settingsPanel = document.getElementById('settings-panel');
         const isClickingSettingsPanel = e.target.closest('#settings-panel');
-        const isClickingOverlay = e.target.classList.contains('settings-overlay');
         const isClickingSpotifyWidget = e.target.closest('#spotify-widget');
         const isClickingStatusBar = e.target.closest('#status-bar');
         const isClickingUpdateBtn = e.target.closest('#updateBtn');
         
-        // Wenn Panel bereits offen und man clickt auf Overlay, schließen
-        if (settingsPanel.classList.contains('active') && isClickingOverlay) {
+        // Prüfe ob Click im unteren 1/4 des Bildschirms ist
+        const isInBottomQuarter = e.clientY > (window.innerHeight * 0.75);
+        
+        // Wenn Panel offen und man clickt NICHT auf dem Panel selbst, schließen
+        if (settingsPanel.classList.contains('active') && !isClickingSettingsPanel) {
             toggleSettingsPanel();
         }
-        // Wenn Panel offen und man clickt auf Button im Panel, nicht nötig
-        else if (settingsPanel.classList.contains('active') && isClickingSettingsPanel) {
-            // Button wird vom onclick Handler behandelt
-        }
-        // Wenn Panel nicht offen und man clickt nicht auf ausgeschlossene Elemente, öffnen
-        else if (!settingsPanel.classList.contains('active') && !isClickingSettingsPanel && !isClickingSpotifyWidget && !isClickingStatusBar && !isClickingUpdateBtn) {
+        // Wenn Panel nicht offen und man clickt nicht auf ausgeschlossene Elemente UND im unteren 1/4 ist, öffnen
+        else if (!settingsPanel.classList.contains('active') && !isClickingSettingsPanel && !isClickingSpotifyWidget && !isClickingStatusBar && !isClickingUpdateBtn && isInBottomQuarter) {
             toggleSettingsPanel();
         }
     }, true); // Capture Phase
