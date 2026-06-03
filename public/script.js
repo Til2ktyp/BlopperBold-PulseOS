@@ -5,21 +5,27 @@ const IDLE_TIME = 20 * 1000; // 20 sekunden
 const STANDBY_TIME = 5 * 1000; // 5 sekunden nach Idle
 const NIGHT_START = 22 * 60 + 30; // 22:30
 const NIGHT_END = 6 * 60 + 0; // 6:00
-const slider = document.getElementById('brightnessSlider');
-const brightnessValue = document.getElementById('brightness-value');
 
-slider.oninput = function() {
-    // Wert von 0-100 auf 0.0-1.0 umrechnen
-    const brightness = this.value / 100;
+// Helligkeit-Slider Setup (wartet bis DOM geladen ist)
+document.addEventListener('DOMContentLoaded', function() {
+    const slider = document.getElementById('brightnessSlider');
+    const brightnessValue = document.getElementById('brightness-value');
     
-    // Anzeige des Wertes aktualisieren
-    brightnessValue.textContent = this.value;
-    
-    // Den Befehl an die Android App senden
-    if (window.AndroidInterface) {
-        window.AndroidInterface.setBrightness(brightness);
+    if (slider && brightnessValue) {
+        slider.oninput = function() {
+            // Wert von 0-100 auf 0.0-1.0 umrechnen
+            const brightness = this.value / 100;
+            
+            // Anzeige des Wertes aktualisieren
+            brightnessValue.textContent = this.value;
+            
+            // Den Befehl an die Android App senden
+            if (window.AndroidInterface) {
+                window.AndroidInterface.setBrightness(brightness);
+            }
+        };
     }
-};
+});
 
 // --- 🌙 NIGHT MODE AUTO-STANDBY SYSTEM ---
 let isNightMode = false;
