@@ -63,6 +63,13 @@ document.addEventListener('DOMContentLoaded', function() {
 let reloadTimer = null;
 let reloadProgress = 0;
 
+function toggleBrightnessSlider() {
+    const container = document.getElementById('brightness-slider-container');
+    if (container) {
+        container.style.display = container.style.display === 'none' ? 'flex' : 'none';
+    }
+}
+
 function toggleSettingsPanel() {
     const panel = document.getElementById('settings-panel');
     panel.classList.toggle('active');
@@ -272,6 +279,12 @@ function closeWidget() {
     
     const backBtn = document.getElementById('status-back-btn');
     if (backBtn) backBtn.style.display = 'none';
+    
+    // Schließe auch das Settings Panel wenn es offen ist
+    const panel = document.getElementById('settings-panel');
+    if (panel && panel.classList.contains('active')) {
+        toggleSettingsPanel();
+    }
     
     console.log('[Widget] Geschlossen');
 }

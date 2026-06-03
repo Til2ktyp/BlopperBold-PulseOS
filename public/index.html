@@ -78,7 +78,7 @@
         <div id="weather">Lade Wetter...</div>
     </div>
 
-    <div id="spotify-widget" class="spotify-card" onclick="openSpotifyWidget()">
+    <div id="spotify-widget" class="spotify-card" onclick="openWidget('spotify')">
       <img id="track-cover" src="" alt="Album Cover">
       <div class="track-info">
           <h2 id="track-title">Songtitel</h2>
@@ -111,24 +111,26 @@
             <div class="settings-content">
                 <!-- Helligkeit Links -->
                 <div class="settings-section settings-brightness">
-                    <div class="settings-label">☀️ Helligkeit</div>
-                    <input type="range" id="panelBrightnessSlider" min="0" max="100" value="50" class="brightness-slider">
-                    <div class="brightness-value" id="panelBrightnessValue">50%</div>
+                    <button class="settings-btn settings-brightness-btn" id="brightness-btn" onclick="toggleBrightnessSlider()" title="Helligkeit">☀️</button>
+                    <div class="brightness-slider-container" id="brightness-slider-container" style="display: none;">
+                        <input type="range" id="panelBrightnessSlider" min="0" max="100" value="50" class="brightness-slider">
+                        <div class="brightness-value" id="panelBrightnessValue">50%</div>
+                    </div>
                 </div>
 
                 <!-- Buttons Mitte -->
                 <div class="settings-section settings-buttons">
-                    <button class="settings-btn" id="btn-open-spotify" onclick="openWidget('spotify')">🎵 Spotify</button>
-                    <button class="settings-btn" onclick="openWidget('homeassistant')">🏠 Home</button>
+                    <button class="settings-btn" onclick="openWidget('spotify')">🎵 Spotify</button>
                     <button class="settings-btn" onclick="openWidget('calendar')">📅 Kalender</button>
                     <button class="settings-btn" onclick="openWidget('vim')">📝 Vim</button>
                     <button class="settings-btn" onclick="openWidget('info')">ℹ️ Info</button>
                 </div>
 
-                <!-- Reload Rechts -->
-                <div class="settings-section settings-reload">
+                <!-- Buttons Rechts -->
+                <div class="settings-section settings-right-buttons">
+                    <button class="settings-btn" onclick="closeWidget()">🏠 HOME</button>
                     <button class="settings-btn settings-reload-btn" id="reload-btn" onmousedown="startReloadTimer()" onmouseup="cancelReloadTimer()" onmouseleave="cancelReloadTimer()" ontouchstart="startReloadTimer()" ontouchend="cancelReloadTimer()">
-                        <span class="reload-text">⟲ Halten</span>
+                        <span class="reload-text">⟲</span>
                         <span class="reload-progress" id="reload-progress"></span>
                     </button>
                 </div>
