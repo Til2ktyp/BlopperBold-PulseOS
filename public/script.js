@@ -169,6 +169,11 @@ async function openSpotifyWidget() {
         }
         
         currentSlot = (currentSlot === 'a') ? 'b' : 'a';
+        
+        // Zurück-Button in Statusleiste anzeigen
+        const backBtn = document.getElementById('status-back-btn');
+        if (backBtn) backBtn.style.display = 'block';
+        
         console.log('[Spotify Widget] Geöffnet');
     } catch (error) {
         console.error('[Spotify Widget] Fehler beim Laden:', error);
@@ -183,6 +188,11 @@ function closeWidget() {
     slotB.innerHTML = '';
     slotA.classList.remove('slot-active');
     slotB.classList.remove('slot-active');
+    
+    // Zurück-Button verstecken
+    const backBtn = document.getElementById('status-back-btn');
+    if (backBtn) backBtn.style.display = 'none';
+    
     console.log('[Widget] Geschlossen');
 }
 
@@ -1067,17 +1077,25 @@ eventSource.onmessage = function(event) {
                 document.body.classList.add('widget-active');
             }
             currentSlot = (currentSlot === 'a') ? 'b' : 'a';
+            
+            // Zurück-Button anzeigen
+            const backBtn = document.getElementById('status-back-btn');
+            if (backBtn) backBtn.style.display = 'block';
         }
         
         if (data.action === 'go-idle') { 
             document.body.classList.remove('widget-active'); 
             document.getElementById('spotify-widget').classList.remove('active');
+            const backBtn = document.getElementById('status-back-btn');
+            if (backBtn) backBtn.style.display = 'none';
         }
 
         if (data.action === 'toggle-standby') {
             wakeDisplay('toggle-standby', true);
             document.body.classList.remove('widget-active');
             document.getElementById('spotify-widget').classList.remove('active');
+            const backBtn = document.getElementById('status-back-btn');
+            if (backBtn) backBtn.style.display = 'none';
             
             document.body.classList.toggle('standby-active');
             console.log("Standby-Modus getoggelt. Aktiv:", document.body.classList.contains('standby-active'));

@@ -98,7 +98,10 @@
     <div id="status-bar">
         <div class="status-left" id="status-weather">☁️ --°C</div>
         <div class="status-center" id="status-time">00:00</div>
-        <div class="status-right" id="status-date">Mo, 25. Mai</div>
+        <div class="status-right">
+            <span id="status-date">Mo, 25. Mai</span>
+            <button id="status-back-btn" class="status-back-btn" onclick="closeWidget()" style="display: none;">← Zurück</button>
+        </div>
     </div>
 
     <script src="script.js"></script>

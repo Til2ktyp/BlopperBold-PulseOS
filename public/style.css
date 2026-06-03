@@ -303,6 +303,7 @@ body.animation-low .popup-box.timer-alarm {
     opacity: 0;
     transform: translateY(-40px);
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    box-sizing: border-box;
 }
 
 body.animation-low #status-bar {
@@ -316,7 +317,32 @@ body.widget-active #status-bar {
 }
 
 body.standby-active #status-bar {
-    opacity: 0.4
+    opacity: 0.4;
+}
+
+.status-back-btn {
+    padding: 6px 12px;
+    background: rgba(0, 255, 255, 0.2);
+    border: 1px solid rgba(0, 255, 255, 0.4);
+    border-radius: 4px;
+    color: #00ffff;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 15px;
+}
+
+.status-back-btn:hover {
+    background: rgba(0, 255, 255, 0.3);
+    border-color: #00ffff;
+    box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+.status-back-btn:active {
+    transform: scale(0.95);
 }
 
 .status-center {
