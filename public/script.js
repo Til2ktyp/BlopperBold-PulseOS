@@ -137,6 +137,55 @@ function setupActivityListeners() {
 setInterval(updateNightMode, 30000);
 updateNightMode(); // Initial check
 
+// --- 🎵 SPOTIFY WIDGET OPENING ---
+async function openSpotifyWidget() {
+    try {
+        const response = await fetch('/widgets/spotify.html');
+        const html = await response.text();
+        
+        // Die SSE-Nachricht emulieren um das Widget zu zeigen
+        const event = new Event('show-widget');
+        event.html = html;
+        event.action = 'show-widget';
+        
+        // Widget-Logik aus dem SSE-Handler verwenden
+        const slotA = document.getElementById('widget-slot-a');
+        const slotB = document.getElementById('widget-slot-b');
+        const nextSlot = (currentSlot === 'a') ? slotB : slotA;
+        const activeSlot = (currentSlot === 'a') ? slotA : slotB;
+        
+        nextSlot.innerHTML = html;
+        
+        document.getElementById('spotify-widget').classList.remove('active');
+        
+        if (document.body.classList.contains('widget-active')) {
+            activeSlot.classList.remove('slot-active');
+            nextSlot.classList.add('slot-active');
+        } else {
+            slotA.classList.remove('slot-active');
+            slotB.classList.remove('slot-active');
+            nextSlot.classList.add('slot-active');
+            document.body.classList.add('widget-active');
+        }
+        
+        currentSlot = (currentSlot === 'a') ? 'b' : 'a';
+        console.log('[Spotify Widget] Geöffnet');
+    } catch (error) {
+        console.error('[Spotify Widget] Fehler beim Laden:', error);
+    }
+}
+
+function closeWidget() {
+    document.body.classList.remove('widget-active');
+    const slotA = document.getElementById('widget-slot-a');
+    const slotB = document.getElementById('widget-slot-b');
+    slotA.innerHTML = '';
+    slotB.innerHTML = '';
+    slotA.classList.remove('slot-active');
+    slotB.classList.remove('slot-active');
+    console.log('[Widget] Geschlossen');
+}
+
 // --- 📺 DISPLAY ID & CONFIGURATION ---
 let displayId = localStorage.getItem('display-id') || null;
 let displayName = localStorage.getItem('display-name') || 'Unknown';
