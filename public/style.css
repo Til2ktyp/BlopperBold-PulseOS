@@ -1313,16 +1313,16 @@ body.settings-active > div:not(#settings-panel) {
     transform-origin: center center;
 }
 
-/* --- 🔆 BRIGHTNESS POPUP (iPhone-Style) --- */
+/* --- 🔆 BRIGHTNESS POPUP (iOS-Style Volume Control) --- */
 #brightness-popup {
     position: fixed;
     left: 20px;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 10000;
+    z-index: 99999;
     opacity: 0;
     pointer-events: none;
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: all 0.2s ease-out;
 }
 
 #brightness-popup.active {
@@ -1334,19 +1334,22 @@ body.settings-active > div:not(#settings-panel) {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
-    background: rgba(0, 0, 0, 0.95);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 20px;
-    padding: 20px 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 200, 0, 0.2);
-    min-width: 75px;
+    justify-content: center;
+    gap: 14px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 24px;
+    padding: 20px 14px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.1);
+    min-width: 60px;
+    backdrop-filter: blur(40px) saturate(180%);
 }
 
 .brightness-popup-icon {
-    font-size: 2rem;
+    font-size: 2.2rem;
+    filter: drop-shadow(0 2px 4px rgba(255, 200, 0, 0.3));
 }
 
 .brightness-popup-slider-container {
@@ -1354,56 +1357,68 @@ body.settings-active > div:not(#settings-panel) {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    width: 100%;
+    gap: 8px;
+    height: 140px;
+    position: relative;
 }
 
 .brightness-popup-slider {
-    width: 120px;
-    height: 8px;
+    width: 8px;
+    height: 130px;
+    -webkit-appearance: slider-vertical;
+    appearance: slider-vertical;
+    writing-mode: bt-lr;
     border-radius: 4px;
-    background: linear-gradient(90deg, rgba(255, 200, 0, 0.3), rgba(255, 200, 0, 0.6));
+    background: linear-gradient(180deg, rgba(255, 200, 0, 0.4) 0%, rgba(255, 200, 0, 0.2) 100%);
     outline: none;
     cursor: pointer;
-    -webkit-appearance: none;
-    appearance: none;
 }
 
 .brightness-popup-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #ffc800, #ffaa00);
+    background: linear-gradient(135deg, #ffc800 0%, #ffaa00 100%);
     cursor: pointer;
-    box-shadow: 0 0 12px rgba(255, 200, 0, 0.8);
-    border: 2px solid #ffc800;
-    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(255, 200, 0, 0.5), inset 0 1px 3px rgba(255, 255, 255, 0.3);
+    border: none;
+    transition: all 0.15s ease;
 }
 
 .brightness-popup-slider::-webkit-slider-thumb:hover {
-    box-shadow: 0 0 20px rgba(255, 200, 0, 1);
-    transform: scale(1.2);
+    box-shadow: 0 6px 16px rgba(255, 200, 0, 0.7), inset 0 1px 3px rgba(255, 255, 255, 0.4);
+    transform: scale(1.15);
+}
+
+.brightness-popup-slider::-webkit-slider-thumb:active {
+    box-shadow: 0 4px 12px rgba(255, 200, 0, 0.8), inset 0 2px 4px rgba(255, 255, 255, 0.2);
 }
 
 .brightness-popup-slider::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #ffc800, #ffaa00);
+    background: linear-gradient(135deg, #ffc800 0%, #ffaa00 100%);
     cursor: pointer;
-    box-shadow: 0 0 12px rgba(255, 200, 0, 0.8);
-    border: 2px solid #ffc800;
-    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(255, 200, 0, 0.5), inset 0 1px 3px rgba(255, 255, 255, 0.3);
+    border: none;
+    transition: all 0.15s ease;
+}
+
+.brightness-popup-slider::-moz-range-track {
+    background: transparent;
+    border: none;
 }
 
 .brightness-popup-value {
     text-align: center;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 700;
     color: #ffc800;
     letter-spacing: 1px;
     text-transform: uppercase;
     min-width: 45px;
+    opacity: 0.9;
 }

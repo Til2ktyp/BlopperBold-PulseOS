@@ -1001,10 +1001,8 @@
             document.getElementById('brightness-value').textContent = value;
             localStorage.setItem('brightness-value', value);
             
-            // Sende auch Helligkeit zu Displays
-            if (selectedDisplayId) {
-                apiCall(`/display/${selectedDisplayId}/brightness/${value}`);
-            }
+            // Sende Helligkeit zum Server (global für alle Displays)
+            fetch(`/brightness/${value}`).catch(e => console.error('Brightness update failed:', e));
         });
 
         // Lade Helligkeit aus localStorage beim Start

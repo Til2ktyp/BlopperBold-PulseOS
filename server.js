@@ -869,6 +869,19 @@ app.get('/config/displays/status', (req, res) => {
     res.json(status);
 });
 
+// --- 🔆 BRIGHTNESS ENDPOINTS ---
+let brightnessValue = 50; // Default Helligkeit
+
+app.get('/brightness', (req, res) => {
+    res.json({ brightness: brightnessValue });
+});
+
+app.post('/brightness/:value', (req, res) => {
+    const value = Math.max(0, Math.min(100, parseInt(req.params.value)));
+    brightnessValue = value;
+    console.log(`[Brightness] Updated: ${value}%`);
+    res.json({ brightness: brightnessValue });
+});
 
 // --- SERVER START ---
 app.listen(PORT, () => {

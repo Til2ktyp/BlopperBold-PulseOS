@@ -1434,6 +1434,8 @@ function syncBrightnessSliders() {
             if (panelSlider) panelSlider.value = value;
             if (panelValue) panelValue.textContent = value + '%';
             localStorage.setItem('brightness-value', value);
+            lastBrightnessValue = value;
+            fetch(`/brightness/${value}`).catch(e => console.error('Failed to update server brightness:', e));
             const brightness = value / 100;
             if (window.AndroidInterface) {
                 window.AndroidInterface.setBrightness(brightness);
@@ -1450,6 +1452,8 @@ function syncBrightnessSliders() {
             if (popupSlider) popupSlider.value = value;
             if (popupValue) popupValue.textContent = value + '%';
             localStorage.setItem('brightness-value', value);
+            lastBrightnessValue = value;
+            fetch(`/brightness/${value}`).catch(e => console.error('Failed to update server brightness:', e));
             const brightness = value / 100;
             if (window.AndroidInterface) {
                 window.AndroidInterface.setBrightness(brightness);
@@ -1466,6 +1470,42 @@ if (document.readyState === 'loading') {
 } else {
     syncBrightnessSliders();
 }
+
+// --- 🔆 BRIGHTNESS POLLING (abfragen vom Server) ---
+let lastBrightnessValue = null;
+
+function pollBrightness() {
+    fetch('/brightness')
+        .then(res => res.json())
+        .then(data => {
+            if (data.brightness !== undefined && data.brightness !== lastBrightnessValue) {
+                lastBrightnessValue = data.brightness;
+                
+                // Update all sliders
+                const panelSlider = document.getElementById('panelBrightnessSlider');
+                const popupSlider = document.getElementById('brightnessPopupSlider');
+                const panelValue = document.getElementById('panelBrightnessValue');
+                const popupValue = document.getElementById('brightnessPopupValue');
+                
+                if (panelSlider) panelSlider.value = data.brightness;
+                if (popupSlider) popupSlider.value = data.brightness;
+                if (panelValue) panelValue.textContent = data.brightness + '%';
+                if (popupValue) popupValue.textContent = data.brightness + '%';
+                
+                localStorage.setItem('brightness-value', data.brightness);
+                const brightness = data.brightness / 100;
+                if (window.AndroidInterface) {
+                    window.AndroidInterface.setBrightness(brightness);
+                }
+                
+                console.log(`[Brightness Poll] Updated from server: ${data.brightness}%`);
+            }
+        })
+        .catch(e => console.debug('Brightness poll error:', e));
+}
+
+// Poll every 100ms
+setInterval(pollBrightness, 100);
 
 // ========== SPOTIFY WIDGET NAMESPACE ==========
 (function() {
