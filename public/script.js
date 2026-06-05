@@ -1,8 +1,9 @@
 let idleTimeout;
 let standbyTimeout;
 
-const IDLE_TIME = 20 * 1000; // 20 sekunden
-const STANDBY_TIME = 5 * 1000; // 5 sekunden nach Idle
+const IDLE_TIME = 10 * 1000; // 10 sekunden - Standby Aktivierung ohne Widget
+const IDLE_TIME_WIDGET = 30 * 1000; // 30 sekunden - Standby Aktivierung mit offenenem Widget
+const STANDBY_TIME = 0 * 1000; // Keine zusätzliche Verzögerung nach Idle
 const NIGHT_START = 22 * 60 + 30; // 22:30
 const NIGHT_END = 6 * 60 + 0; // 6:00
 
@@ -139,8 +140,18 @@ function toggleBrightnessSlider() {
 
 function toggleSettingsPanel() {
     const panel = document.getElementById('settings-panel');
+    const wasActive = panel.classList.contains('active');
+    
     panel.classList.toggle('active');
     document.body.classList.toggle('settings-active');
+    
+    // Wenn Panel geschlossen wird (war active, ist jetzt nicht mehr), schließe Popups
+    if (wasActive && !panel.classList.contains('active')) {
+        closeTimerPopup();
+        closeStopwatchPopup();
+        console.log('[Settings Panel] Popups geschlossen');
+    }
+    
     console.log('[Settings Panel] Toggle:', panel.classList.contains('active'));
 }
 
@@ -218,23 +229,21 @@ function resetIdleTimer() {
 
     // Nur nachts aktiv UND wenn Standby nicht deaktiviert ist
     if (isNightMode && standbyDisabled) {
+        
+        // Bestimme die Idle-Zeit basierend darauf, ob ein Widget offen ist
+        const hasWidgetActive = document.body.classList.contains('widget-active');
+        const currentIdleTime = hasWidgetActive ? IDLE_TIME_WIDGET : IDLE_TIME;
 
         // Erst Idle
         idleTimeout = setTimeout(() => {
-            console.log('[Idle] Wechsel zu Idle-Screen');
+            console.log('[Idle] Wechsel zu Idle-Screen/Standby nach ' + (currentIdleTime / 1000) + 's');
 
+            // Standby direkt aktivieren
+            document.body.classList.add('standby-active');
             document.body.classList.remove('widget-active');
             document.getElementById('spotify-widget').classList.remove('active');
 
-            // Danach Standby Timer starten
-            standbyTimeout = setTimeout(() => {
-                console.log('[Standby] Standby aktivieren');
-
-                document.body.classList.add('standby-active');
-
-            }, STANDBY_TIME);
-
-        }, IDLE_TIME);
+        }, currentIdleTime);
     }
 }
 
@@ -272,11 +281,41 @@ function setupActivityListeners() {
                     document.body.classList.remove('standby-active');
                 }
                 
+                // Status-Back-Button wieder anzeigen
+                showStatusBackButton();
+                
                 // Timer resetten (nur nachts)
                 resetIdleTimer();
             }
         }, { passive: true });
     });
+}
+
+// --- 📱 STATUS BAR AUTO-HIDE SYSTEM ---
+let backButtonHideTimeout = null;
+let lastBackButtonActivityTime = Date.now();
+
+function showStatusBackButton() {
+    const backBtn = document.getElementById('status-back-btn');
+    if (!backBtn) return;
+    
+    // Zeige den Button
+    backBtn.classList.remove('hidden');
+    lastBackButtonActivityTime = Date.now();
+    
+    // Clear existing timeout
+    if (backButtonHideTimeout) {
+        clearTimeout(backButtonHideTimeout);
+    }
+    
+    // Hide nach 2 Sekunden Inaktivität
+    backButtonHideTimeout = setTimeout(() => {
+        const backBtnCheck = document.getElementById('status-back-btn');
+        if (backBtnCheck && document.body.classList.contains('widget-active')) {
+            backBtnCheck.classList.add('hidden');
+            console.log('[StatusBar] Back-Button versteckt nach 2s Inaktivität');
+        }
+    }, 2000);
 }
 
 // Nachtmodus alle 30 Sekunden prüfen
@@ -294,7 +333,12 @@ function replaceWidgetPlaceholders(html) {
 
 function openWidget(widgetName) {
     console.log(`[openWidget] ${widgetName}`);
-    toggleSettingsPanel(); // Panel schließen
+    
+    // Schließe das Settings Panel nur wenn es offen ist
+    const settingsPanel = document.getElementById('settings-panel');
+    if (settingsPanel && settingsPanel.classList.contains('active')) {
+        toggleSettingsPanel();
+    }
     
     setTimeout(async () => {
         try {
@@ -325,8 +369,8 @@ function openWidget(widgetName) {
             
             currentSlot = (currentSlot === 'a') ? 'b' : 'a';
             
-            const backBtn = document.getElementById('status-back-btn');
-            if (backBtn) backBtn.style.display = 'block';
+            // Zeige Status-Back-Button und starte Auto-Hide Timer
+            showStatusBackButton();
             
             console.log(`[Widget] ${widgetName} geöffnet`);
         } catch (error) {
@@ -344,8 +388,15 @@ function closeWidget() {
     slotA.classList.remove('slot-active');
     slotB.classList.remove('slot-active');
     
+    // Verstecke Back-Button und leere Timeout
+    if (backButtonHideTimeout) {
+        clearTimeout(backButtonHideTimeout);
+        backButtonHideTimeout = null;
+    }
     const backBtn = document.getElementById('status-back-btn');
-    if (backBtn) backBtn.style.display = 'none';
+    if (backBtn) {
+        backBtn.classList.add('hidden');
+    }
     
     // Schließe auch das Settings Panel wenn es offen ist
     const panel = document.getElementById('settings-panel');
@@ -511,13 +562,14 @@ setupActivityListeners();
 
 async function fetchWeather() {
     try {
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+        // Nutze den Server-Proxy für Weather API
+        const res = await fetch(`http://localhost:3000/api/weather?latitude=${lat}&longitude=${lon}`);
         const data = await res.json();
         const temp = Math.round(data.current_weather.temperature);
         
         document.getElementById('weather').innerHTML = `☁️ ${temp}°C · ${locName}`;
         document.getElementById('status-weather').innerHTML = `☁️ ${temp}°C`;
-    } catch (e) { console.log("Wetter Fehler"); }
+    } catch (e) { console.log("Wetter Fehler", e); }
 }
 
 setInterval(fetchWeather, 30 * 60 * 1000);
@@ -564,6 +616,62 @@ let scheduledReminders = JSON.parse(localStorage.getItem('scheduled-reminders') 
 // Check reminders every minute
 setInterval(checkScheduledReminders, 60000);
 checkScheduledReminders(); // Initial check
+
+// --- 🔔 SERVER REMINDERS CHECK ---
+async function checkRemindersFromServer() {
+    try {
+        const response = await fetch('/reminders');
+        const data = await response.json();
+        
+        if (data && data.reminders && Array.isArray(data.reminders)) {
+            const now = new Date();
+            const currentTime = now.getHours().toString().padStart(2, '0') + ':' + 
+                               now.getMinutes().toString().padStart(2, '0');
+            const dayName = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'][now.getDay()];
+            
+            data.reminders.forEach((reminder) => {
+                // Prüfe ob Erinnerung jetzt trigger sollte
+                const isTimeMatch = reminder.time === currentTime;
+                const isDayMatch = !reminder.days || reminder.days === 'täglich' || 
+                                  (reminder.days === 'wöchentlich' && reminder.dayName === dayName);
+                
+                if (isTimeMatch && isDayMatch && !reminder.triggered) {
+                    console.log('[ServerReminder] Triggering:', reminder.text);
+                    showReminderPopup(reminder);
+                    wakeDisplay('reminder-triggered', true);
+                    
+                    // Mark as triggered
+                    reminder.triggered = true;
+                    
+                    // Reset nach 60 Sekunden
+                    setTimeout(() => {
+                        reminder.triggered = false;
+                    }, 60000);
+                }
+            });
+        }
+    } catch (e) {
+        console.log('[ServerReminder] Fehler beim Abrufen:', e.message);
+    }
+}
+
+function showReminderPopup(reminder) {
+    const reminderPopup = document.getElementById('reminder-popup');
+    if (reminderPopup) {
+        document.getElementById('reminder-label-text').textContent = `🔔 Erinnerung - Level ${reminder.level || 1}`;
+        document.getElementById('reminder-content').textContent = reminder.text;
+        reminderPopup.classList.add('reminder-show');
+        
+        // Auto-hide nach 10 Sekunden
+        setTimeout(() => {
+            reminderPopup.classList.remove('reminder-show');
+        }, 10000);
+    }
+}
+
+// Check reminders from server every minute
+setInterval(checkRemindersFromServer, 60000);
+checkRemindersFromServer(); // Initial check
 
 // --- AUTARKE FRONTEND-ENGINE ---
 let timerInterval, timerTime = 0, timerRunning = false;
@@ -1467,12 +1575,279 @@ function syncBrightnessSliders() {
     }
 }
 
+// --- ⏲️ QUICK TIMER POPUP FUNCTIONS ---
+function openTimerPopup() {
+    const popup = document.getElementById('timer-quick-popup');
+    if (popup) {
+        popup.style.display = 'block';
+        document.getElementById('timer-quick-min').focus();
+    }
+}
+
+function closeTimerPopup() {
+    const popup = document.getElementById('timer-quick-popup');
+    if (popup) {
+        popup.style.display = 'none';
+    }
+}
+
+function setQuickTimerPreset(minutes) {
+    document.getElementById('timer-quick-min').value = minutes;
+    document.getElementById('timer-quick-sec').value = '00';
+}
+
+function startQuickTimer() {
+    const minutes = parseInt(document.getElementById('timer-quick-min').value) || 0;
+    const seconds = parseInt(document.getElementById('timer-quick-sec').value) || 0;
+    const totalSeconds = minutes * 60 + seconds;
+    
+    if (totalSeconds > 0) {
+        // Verstecke Input-Section und Start-Button, zeige Display und Kontrolls
+        document.getElementById('timer-quick-inputs-section').style.display = 'none';
+        document.querySelector('.timer-quick-presets').style.display = 'none';
+        document.querySelector('.timer-quick-start').style.display = 'none';
+        document.getElementById('timer-quick-display').style.display = 'block';
+        document.getElementById('timer-quick-controls').style.display = 'flex';
+        
+        setTimerDuration(totalSeconds);
+        console.log(`[QuickTimer] Gestartet: ${totalSeconds}s`);
+    }
+}
+
+function stopQuickTimer() {
+    // Stoppe den Main Timer
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    timerRunning = false;
+    
+    console.log('[QuickTimer] Pausiert');
+}
+
+function resetQuickTimer() {
+    // Stoppe den Main Timer
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    timerRunning = false;
+    timerTime = 0;
+    
+    // Update UI zurück zu Input-Mode
+    document.getElementById('timer-quick-inputs-section').style.display = 'flex';
+    document.querySelector('.timer-quick-presets').style.display = 'grid';
+    document.querySelector('.timer-quick-start').style.display = 'block';
+    document.getElementById('timer-quick-display').style.display = 'none';
+    document.getElementById('timer-quick-controls').style.display = 'none';
+    
+    // Reset Input Values
+    document.getElementById('timer-quick-min').value = '5';
+    document.getElementById('timer-quick-sec').value = '00';
+    
+    console.log('[QuickTimer] Zurückgesetzt');
+}
+
+function startQuickStopwatch() {
+    closeTimerPopup();
+    startStopwatch();
+    showStopwatchPopup();
+    console.log('[QuickStopwatch] Gestartet');
+}
+
+function showStopwatchPopup() {
+    const popup = document.getElementById('stopwatch-quick-popup');
+    if (popup) {
+        popup.style.display = 'block';
+    }
+}
+
+function closeStopwatchPopup() {
+    const popup = document.getElementById('stopwatch-quick-popup');
+    if (popup) {
+        popup.style.display = 'none';
+    }
+}
+
+function stopQuickStopwatch() {
+    stopStopwatch();
+    console.log('[QuickStopwatch] Gestoppt');
+}
+
+function resetQuickStopwatch() {
+    resetStopwatch();
+    closeStopwatchPopup();
+    console.log('[QuickStopwatch] Zurückgesetzt');
+}
+
+// Update stopwatch display im Popup
+let stopwatchDisplayInterval = null;
+const originalStartStopwatch = startStopwatch;
+startStopwatch = function() {
+    originalStartStopwatch.call(this);
+    
+    // Update popup display
+    if (stopwatchDisplayInterval) clearInterval(stopwatchDisplayInterval);
+    stopwatchDisplayInterval = setInterval(() => {
+        const display = document.getElementById('stopwatch-quick-display');
+        const mainDisplay = document.getElementById('stopwatch-display');
+        if (display && mainDisplay) {
+            display.textContent = mainDisplay.textContent;
+        }
+    }, 100);
+};
+
+function toggleQuickStandby() {
+    const standbyDisabled = localStorage.getItem('standby-disabled') === 'true';
+    const newState = !standbyDisabled;
+    localStorage.setItem('standby-disabled', newState.toString());
+    console.log(`[QuickStandby] ${newState ? 'DEAKTIVIERT' : 'AKTIVIERT'}`);
+}
+
+// Close timer/stopwatch popups wenn außerhalb geklickt wird
+document.addEventListener('click', function(e) {
+    const timerPopup = document.getElementById('timer-quick-popup');
+    const stopwatchPopup = document.getElementById('stopwatch-quick-popup');
+    const settingsPanel = document.getElementById('settings-panel');
+    
+    const isClickInTimerPopup = e.target.closest('#timer-quick-popup');
+    const isClickInStopwatchPopup = e.target.closest('#stopwatch-quick-popup');
+    const isClickInPanel = e.target.closest('#settings-panel');
+    
+    if (timerPopup && timerPopup.style.display !== 'none' && !isClickInTimerPopup && !isClickInPanel) {
+        closeTimerPopup();
+    }
+    
+    if (stopwatchPopup && stopwatchPopup.style.display !== 'none' && !isClickInStopwatchPopup && !isClickInPanel) {
+        closeStopwatchPopup();
+    }
+});
 
 // Initialisiere Brightness Slider Sync wenn DOM ready ist
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', syncBrightnessSliders);
 } else {
     syncBrightnessSliders();
+}
+
+// --- ⏱️ TIMER & STOPWATCH QUICK CONTROL FUNCTIONS ---
+function setTimerDuration(seconds) {
+    console.log(`[Timer] Starte Timer mit ${seconds} Sekunden`);
+    
+    // Clear existing timer if running
+    if (timerRunning) {
+        clearInterval(timerInterval);
+    }
+    
+    timerTime = seconds;
+    timerRunning = true;
+    timerName = formatTime(seconds);
+    
+    // Show timer popup
+    const timerPopup = document.getElementById('timer-popup');
+    if (timerPopup) {
+        timerPopup.style.display = 'block';
+        timerPopup.classList.add('popup-show');
+        timerPopup.classList.remove('popup-hide', 'timer-alarm');
+    }
+    
+    // Update display
+    document.getElementById('timer-display').textContent = formatTime(timerTime);
+    document.getElementById('timer-label-text').textContent = '⏱️ Timer';
+    
+    // Update Quick Timer Display
+    const quickDisplay = document.getElementById('timer-quick-display');
+    if (quickDisplay) {
+        quickDisplay.textContent = formatTime(timerTime);
+    }
+    
+    // Start timer interval
+    timerInterval = setInterval(() => {
+        timerTime--;
+        document.getElementById('timer-display').textContent = formatTime(timerTime);
+        
+        // Update Quick Timer Display auch
+        if (quickDisplay) {
+            quickDisplay.textContent = formatTime(timerTime);
+        }
+        
+        if (timerTime <= 0) {
+            clearInterval(timerInterval);
+            timerRunning = false;
+            
+            // Show alarm state
+            const tPopup = document.getElementById('timer-popup');
+            if (tPopup) {
+                tPopup.classList.add('timer-alarm');
+            }
+            
+            console.log('[Timer] Timer abgelaufen!');
+            
+            // Auto-reset nach 5 Sekunden
+            setTimeout(() => {
+                localTimerReset();
+            }, 5000);
+        }
+    }, 1000);
+}
+
+function startStopwatch() {
+    console.log('[Stopwatch] Starten');
+    
+    // Clear existing stopwatch if running
+    if (swRunning) {
+        clearInterval(swInterval);
+    }
+    
+    swTime = 0;
+    swStartTime = Date.now();
+    swRunning = true;
+    
+    // Show stopwatch popup
+    const swPopup = document.getElementById('stopwatch-popup');
+    if (swPopup) {
+        swPopup.style.display = 'block';
+        swPopup.classList.add('popup-show');
+        swPopup.classList.remove('popup-hide');
+    }
+    
+    // Update display
+    document.getElementById('stopwatch-display').textContent = formatStopwatch(swTime);
+    
+    // Start stopwatch interval
+    swInterval = setInterval(() => {
+        swTime = Date.now() - swStartTime;
+        document.getElementById('stopwatch-display').textContent = formatStopwatch(swTime);
+    }, 100);
+}
+
+function stopStopwatch() {
+    if (swRunning) {
+        clearInterval(swInterval);
+        swRunning = false;
+        console.log('[Stopwatch] Gestoppt bei ' + formatStopwatch(swTime));
+    }
+}
+
+function resetStopwatch() {
+    clearInterval(swInterval);
+    swRunning = false;
+    swTime = 0;
+    
+    const swPopup = document.getElementById('stopwatch-popup');
+    if (swPopup) {
+        swPopup.classList.remove('popup-show');
+        swPopup.classList.add('popup-hide');
+        setTimeout(() => {
+            if (swPopup.classList.contains('popup-hide')) {
+                swPopup.style.display = 'none';
+                swPopup.classList.remove('popup-hide');
+            }
+        }, 300);
+    }
+    
+    document.getElementById('stopwatch-display').textContent = '00:00.0';
+    console.log('[Stopwatch] Zurückgesetzt');
 }
 
 // ========== SPOTIFY WIDGET NAMESPACE ===========

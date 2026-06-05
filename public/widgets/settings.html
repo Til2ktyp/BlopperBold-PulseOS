@@ -4,68 +4,216 @@
         margin: 0 auto;
         display: flex;
         flex-direction: column;
-        gap: 30px;
+        gap: 20px;
     }
     h1 { font-size: 2.5rem; font-weight: 600; margin-bottom: 10px; letter-spacing: -1px; }
     .setting-row {
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255,255,255,0.1);
         padding: 20px;
-        border-radius: 20px;
+        border-radius: 16px;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 12px;
     }
-    label { font-size: 0.9rem; font-weight: 600; text-transform: uppercase; color: rgba(255,255,255,0.4); letter-spacing: 0.5px; }
-    input[type="range"] { width: 100%; accent-color: #0369a1; margin-top: 5px; }
-    input[type="text"] {
+    .setting-row-horizontal {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+    }
+    label { 
+        font-size: 0.9rem; 
+        font-weight: 600; 
+        text-transform: uppercase; 
+        color: rgba(255,255,255,0.5); 
+        letter-spacing: 0.5px; 
+    }
+    input[type="range"] { 
+        width: 100%; 
+        accent-color: rgba(255,255,255,0.4); 
+        margin-top: 5px; 
+    }
+    input[type="text"], input[type="number"] {
         background: rgba(0,0,0,0.2);
         border: 1px solid rgba(255,255,255,0.15);
-        padding: 12px 16px;
-        border-radius: 12px;
-        color: white;
-        font-size: 1.1rem;
+        padding: 10px 14px;
+        border-radius: 10px;
+        color: rgba(255,255,255,0.9);
+        font-size: 1rem;
         font-family: inherit;
     }
-    .save-btn {
-        background: #ffffff;
-        color: #000000;
-        border: none;
-        padding: 14px;
+    
+    /* Toggle Switch */
+    .toggle-switch {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .toggle-checkbox {
+        width: 50px;
+        height: 28px;
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
         border-radius: 14px;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.3s ease;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    .toggle-checkbox:checked {
+        background: rgba(255,255,255,0.4);
+    }
+    .toggle-checkbox::after {
+        content: '';
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 22px;
+        height: 22px;
+        background: rgba(255,255,255,0.9);
+        border-radius: 11px;
+        transition: left 0.3s ease;
+    }
+    .toggle-checkbox:checked::after {
+        left: 25px;
+    }
+    
+    /* Action Buttons */
+    .action-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    .action-btn {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: rgba(255,255,255,0.9);
+        padding: 14px;
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .action-btn:hover {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255,255,255,0.3);
+    }
+    .action-btn:active {
+        transform: scale(0.97);
+    }
+    
+    .save-btn {
+        background: rgba(255, 255, 255, 0.15);
+        color: rgba(255,255,255,0.9);
+        border: 1px solid rgba(255,255,255,0.2);
+        padding: 14px;
+        border-radius: 12px;
         font-size: 1.1rem;
         font-weight: 600;
         cursor: pointer;
-        transition: transform 0.2s;
+        transition: all 0.2s ease;
+        width: 100%;
     }
-    .save-btn:active { transform: scale(0.97); }
+    .save-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+    .save-btn:active { 
+        transform: scale(0.98); 
+    }
+    
+    .quick-timer-controls {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    .quick-timer-controls input {
+        max-width: 80px;
+    }
+    .quick-timer-btn {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: rgba(255,255,255,0.9);
+        padding: 8px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+    }
+    .quick-timer-btn:hover {
+        background: rgba(255, 255, 255, 0.15);
+    }
+    .quick-timer-btn:active {
+        transform: scale(0.96);
+    }
 </style>
 
 <div class="settings-container">
     <div>
         <h1 style="color: #ffffff">System-Einstellungen</h1>
-        <p style="color: rgba(255,255,255,0.5)">Passe das Aussehen deines Smart Hub Displays an.</p>
+        <p style="color: rgba(255,255,255,0.5)">Passe dein Display an. PulseOS v26.5+</p>
     </div>
 
+    <!-- Standby Mode Toggle -->
     <div class="setting-row">
-        <label for="size-slider">Fontgröße der Uhr (<span id="size-val">11</span>rem)</label>
+        <div class="setting-row-horizontal">
+            <label>🌙 Standby Mode</label>
+            <div class="toggle-switch">
+                <input type="checkbox" id="standby-toggle" class="toggle-checkbox" onchange="toggleStandbyMode()">
+                <span id="standby-status" style="font-size: 0.85rem; color: rgba(255,255,255,0.6);">Aus</span>
+            </div>
+        </div>
+        <p style="font-size: 0.8rem; color: rgba(255,255,255,0.4); margin: 0;">Der Display wechselt nachts in den Standby-Modus</p>
+    </div>
+
+    <!-- Display Settings -->
+    <div class="setting-row">
+        <label for="size-slider">⏰ Uhrgröße (<span id="size-val">11</span>rem)</label>
         <input type="range" id="size-slider" min="6" max="16" step="0.5">
     </div>
 
     <div class="setting-row">
-        <label for="location-input">Wetter Standort (Stadtname)</label>
+        <label for="location-input">📍 Wetter Standort</label>
         <input type="text" id="location-input" placeholder="z.B. Pampow oder Schwerin">
     </div>
 
-    <button class="save-btn" onclick="saveSettings()">Änderungen Speichern & Schließen</button>
+    <!-- Timer & Stopwatch Quick Actions -->
+    <div class="setting-row">
+        <label>⏱️ Timer & Stoppuhr</label>
+        <div class="action-buttons">
+            <button class="action-btn" onclick="quickStartTimer()">⏲️ Timer</button>
+            <button class="action-btn" onclick="quickStartStopwatch()">⏱️ Stoppuhr</button>
+        </div>
+    </div>
+
+    <!-- Quick Timer Setup -->
+    <div class="setting-row" style="display: none;" id="quick-timer-setup">
+        <label>Schnell Timer setzen</label>
+        <div class="quick-timer-controls">
+            <input type="number" id="timer-minutes" min="0" max="99" value="5" placeholder="Min">
+            <span>:</span>
+            <input type="number" id="timer-seconds" min="0" max="59" value="00" placeholder="Sek">
+            <button class="quick-timer-btn" onclick="setQuickTimer()">Start</button>
+        </div>
+    </div>
+
+    <button class="save-btn" onclick="saveSettingsAndClose()">💾 Speichern & Schließen</button>
 </div>
 
 <script>
-    // Lädt die aktuellen Werte direkt in die Maske
     function initSettingsPage() {
+        // Lade gespeicherte Werte
         document.getElementById('size-slider').value = localStorage.getItem('hub-clock-size') || '11';
         document.getElementById('size-val').textContent = localStorage.getItem('hub-clock-size') || '11';
         document.getElementById('location-input').value = localStorage.getItem('hub-city') || 'Pampow';
+        
+        // Standby-Status laden
+        const standbyDisabled = localStorage.getItem('standby-disabled') === "true";
+        document.getElementById('standby-toggle').checked = !standbyDisabled;
+        document.getElementById('standby-status').textContent = standbyDisabled ? 'Aus' : 'An';
 
         // Slider Echtzeit-Anzeige
         document.getElementById('size-slider').oninput = function() {
@@ -73,8 +221,37 @@
         };
     }
 
-    // Sucht via Open-Meteo API die Geodaten zur eingegebenen Stadt
-    async function saveSettings() {
+    function toggleStandbyMode() {
+        const isEnabled = document.getElementById('standby-toggle').checked;
+        localStorage.setItem('standby-disabled', (!isEnabled).toString());
+        document.getElementById('standby-status').textContent = isEnabled ? 'An' : 'Aus';
+        console.log('[Settings] Standby Mode:', isEnabled ? 'AKTIVIERT' : 'DEAKTIVIERT');
+    }
+
+    function quickStartTimer() {
+        document.getElementById('quick-timer-setup').style.display = document.getElementById('quick-timer-setup').style.display === 'none' ? 'block' : 'none';
+    }
+
+    function quickStartStopwatch() {
+        // Starte Stoppuhr direkt
+        if (typeof startStopwatch === 'function') {
+            startStopwatch();
+            closeWidget();
+        }
+    }
+
+    function setQuickTimer() {
+        const minutes = parseInt(document.getElementById('timer-minutes').value) || 0;
+        const seconds = parseInt(document.getElementById('timer-seconds').value) || 0;
+        const totalSeconds = minutes * 60 + seconds;
+        
+        if (totalSeconds > 0 && typeof setTimerDuration === 'function') {
+            setTimerDuration(totalSeconds);
+            closeWidget();
+        }
+    }
+
+    async function saveSettingsAndClose() {
         const targetCity = document.getElementById('location-input').value.trim();
         const newSize = document.getElementById('size-slider').value;
 
@@ -102,9 +279,9 @@
 
         // Wetter re-fetchen & schliessen
         fetchWeather();
-        goIdle();
+        closeWidget();
     }
 
-    // Falls das Widget gerade erst reinfliegt, direkt triggern
+    // Initialisiere beim Laden
     initSettingsPage();
 </script>
