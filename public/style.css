@@ -911,7 +911,7 @@ body.animation-medium #widget-container {
     height: 100%;
     background: rgba(10, 11, 16, 0.25);
     backdrop-filter: var(--glass-blur);
-    padding: 25px;
+    padding: 10px;
     overflow-y: auto;
     opacity: 0;
     transform: scale(0.95);
