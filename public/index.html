@@ -89,14 +89,20 @@
         <div id="weather">Lade Wetter...</div>
     </div>
 
-    <div id="spotify-widget" class="spotify-card" onclick="openWidget('spotify')">
-      <img id="track-cover" src="" alt="Album Cover">
+    <div id="spotify-widget" class="spotify-card">
+      <img id="track-cover" src="" alt="Album Cover" onclick="openWidget('spotify')">
       <div class="track-info">
+          <div id="track-source" class="track-source">Quelle: --</div>
           <h2 id="track-title">Songtitel</h2>
           <h3 id="track-artist">Interpret</h3>
           <div class="progress-bar-container">
               <div id="track-progress" class="progress-bar"></div>
           </div>
+      </div>
+      <div class="spotify-controls">
+          <button class="spotify-control-btn" type="button" title="Vorheriger Song" data-spotify-previous-track>⏮</button>
+          <button id="spotify-toggle-play" class="spotify-control-btn spotify-toggle-play" type="button" title="Play/Pause" data-spotify-toggle-play>⏯</button>
+          <button class="spotify-control-btn" type="button" title="Nächster Song" data-spotify-next-track>⏭</button>
       </div>
       <div id="spotify-semi-countdown"></div>
     </div>
@@ -131,6 +137,7 @@
 
                 <!-- Buttons Mitte -->
                 <div class="settings-section settings-buttons">
+                    <button class="settings-btn spotify-quick-toggle" type="button" title="Spotify Play/Pause" data-spotify-toggle-play>⏯</button>
                     <button class="settings-btn" onclick="openWidget('spotify')">🎵 Spotify</button>
                     <button class="settings-btn" onclick="openWidget('vim')">📝 Vim</button>
                     <button class="settings-btn" onclick="openWidget('info')">ℹ️ Info</button>
@@ -149,5 +156,7 @@
         </div>
     </div>
     <script src="script.js"></script>
+    <script src="spotify.js"></script>
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
 </body>
 </html>

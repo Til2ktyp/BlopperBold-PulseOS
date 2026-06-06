@@ -1,13 +1,13 @@
-<div class="spotify-dashboard-layout" data-spotify-widget data-top-limit="5" data-queue-limit="3">
+<div class="spotify-dashboard-layout desktop-spotify-dashboard" data-spotify-widget data-top-limit="10" data-queue-limit="10" data-playlist-limit="12">
     <div class="spotify-dash-left">
-        <div class="dash-section-title">🔥 Deine Top 5</div>
+        <div class="dash-section-title">Top 10</div>
         <div class="top-tracks-list" id="spotify-top-tracks">
             <div style="color:rgba(255,255,255,0.3); font-size:1.1rem; padding: 10px 0;">Lade Charts...</div>
         </div>
     </div>
-    
+
     <div class="spotify-dash-right">
-        <div class="dash-now-playing">
+        <div class="dash-now-playing desktop-now-playing">
             <img class="dash-cover" id="spotify-track-cover" src="" alt="Cover">
             <div class="dash-meta">
                 <div class="dash-title" id="spotify-track-title">Name des Songs</div>
@@ -26,12 +26,19 @@
                 </div>
             </div>
         </div>
-        
-        <div class="dash-bottom-row">
-            <div class="dash-box" style="grid-column: 1 / -1;">
-                <div class="dash-section-title">⏭️ Nächste 3 Titel</div>
+
+        <div class="desktop-spotify-grid">
+            <div class="dash-box">
+                <div class="dash-section-title">Nächste 10</div>
                 <div class="queue-list" id="spotify-queue">
                     <div style="color:rgba(255,255,255,0.3); font-size:1.1rem;">Lade Warteschlange...</div>
+                </div>
+            </div>
+
+            <div class="dash-box">
+                <div class="dash-section-title">Playlists</div>
+                <div class="playlist-list" id="spotify-playlists">
+                    <div style="color:rgba(255,255,255,0.3); font-size:1.1rem;">Lade Playlists...</div>
                 </div>
             </div>
         </div>

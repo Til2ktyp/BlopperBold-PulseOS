@@ -300,6 +300,27 @@ function replaceWidgetPlaceholders(html) {
         .replace(/{{VERSION}}/g, 'BlopperBold 26.06');
 }
 
+function setActiveWidgetSlot(activeSlot) {
+    const slotA = document.getElementById('widget-slot-a');
+    const slotB = document.getElementById('widget-slot-b');
+    if (!slotA || !slotB) return;
+
+    [slotA, slotB].forEach(slot => {
+        const isActive = slot === activeSlot;
+        slot.classList.toggle('slot-active', isActive);
+        slot.inert = !isActive;
+        slot.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+        if (!isActive) {
+            slot.scrollTop = 0;
+            setTimeout(() => {
+                if (!slot.classList.contains('slot-active')) {
+                    slot.innerHTML = '';
+                }
+            }, 550);
+        }
+    });
+}
+
 function openWidget(widgetName) {
     console.log(`[openWidget] ${widgetName}`);
     document.body.classList.remove('desktop-icons-returning');
@@ -325,15 +346,10 @@ function openWidget(widgetName) {
             nextSlot.innerHTML = html;
             document.getElementById('spotify-widget').classList.remove('active');
             
-            if (document.body.classList.contains('widget-active')) {
-                activeSlot.classList.remove('slot-active');
-                nextSlot.classList.add('slot-active');
-            } else {
-                slotA.classList.remove('slot-active');
-                slotB.classList.remove('slot-active');
-                nextSlot.classList.add('slot-active');
+            if (!document.body.classList.contains('widget-active')) {
                 document.body.classList.add('widget-active');
             }
+            setActiveWidgetSlot(nextSlot);
 
             initDynamicWidget(widgetName);
             
@@ -356,8 +372,7 @@ function closeWidget() {
     const slotB = document.getElementById('widget-slot-b');
     slotA.innerHTML = '';
     slotB.innerHTML = '';
-    slotA.classList.remove('slot-active');
-    slotB.classList.remove('slot-active');
+    setActiveWidgetSlot(null);
     
     const backBtn = document.getElementById('status-back-btn');
     if (backBtn) backBtn.style.display = 'none';
@@ -1306,11 +1321,16 @@ function applySpotifyData(data) {
     // Update Track-Info (Main Widget)
     const trackTitle = document.getElementById('track-title');
     const trackArtist = document.getElementById('track-artist');
+    const trackSource = document.getElementById('track-source');
     const trackCover = document.getElementById('track-cover');
     const trackProgress = document.getElementById('track-progress');
     
     if (trackTitle) trackTitle.textContent = data.title || '';
     if (trackArtist) trackArtist.textContent = data.artist || '';
+    if (trackSource) {
+        const source = data.deviceName ? `${data.deviceName}${data.deviceType ? ` · ${data.deviceType}` : ''}` : 'Keine aktive Quelle';
+        trackSource.textContent = `Quelle: ${source}`;
+    }
     if (trackCover && data.albumImg) trackCover.src = data.albumImg;
     
     if (data.progress !== undefined && data.duration !== undefined) {
@@ -1662,14 +1682,10 @@ eventSource.onmessage = function(event) {
             document.getElementById('spotify-widget').classList.remove('active');
             clearTimeout(spotifySemiTimeout);
 
-            if (document.body.classList.contains('widget-active')) {
-                activeSlot.classList.remove('slot-active');
-                nextSlot.classList.add('slot-active');
-            } else {
-                slotA.classList.remove('slot-active'); slotB.classList.remove('slot-active');
-                nextSlot.classList.add('slot-active');
+            if (!document.body.classList.contains('widget-active')) {
                 document.body.classList.add('widget-active');
             }
+            setActiveWidgetSlot(nextSlot);
             initDynamicWidget(data.name);
             currentSlot = (currentSlot === 'a') ? 'b' : 'a';
             
@@ -1918,12 +1934,31 @@ if (document.readyState === 'loading') {
     const spotify_spotifyCache = {};
     const spotify_updateInterval = 2000; // 1 Sekunde Update-Intervall
     let spotify_updateTimer = null;
+
+    function spotify_getRoot() {
+        return document.querySelector('[data-spotify-widget]') || document.querySelector('.spotify-dashboard-layout');
+    }
+
+    function spotify_getLimit(name, fallback) {
+        const root = spotify_getRoot();
+        const value = parseInt(root?.dataset?.[name], 10);
+        return Number.isFinite(value) ? value : fallback;
+    }
     
     // Helper: Zeit formatieren (MM:SS)
     function spotify_formatTime(seconds) {
         const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
         const secs = (seconds % 60).toString().padStart(2, '0');
         return `${mins}:${secs}`;
+    }
+
+    function spotify_escape(value = '') {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
     
     // Hauptfunktion: Daten laden
@@ -1967,6 +2002,9 @@ if (document.readyState === 'loading') {
         
         // === TOP TRACKS ===
         spotify_updateTopTracks(spotify_spotifyCache.topTracks);
+
+        // === PLAYLISTS ===
+        spotify_updatePlaylists();
     }
     
     // Update: Aktueller Song
@@ -2020,7 +2058,8 @@ if (document.readyState === 'loading') {
             return;
         }
         
-        spotify_queueEl.innerHTML = spotify_queueData.slice(0, 4).map(spotify_track => `
+        const queueLimit = spotify_getLimit('queueLimit', 3);
+        spotify_queueEl.innerHTML = spotify_queueData.slice(0, queueLimit).map(spotify_track => `
             <div class="queue-item">
                 <div class="top-track-meta queue-meta">
                     <div class="top-track-name" style="font-size: 1.1rem; font-weight: 600;">${spotify_track.title || 'Unbekannt'}</div>
@@ -2040,7 +2079,8 @@ if (document.readyState === 'loading') {
             return;
         }
         
-        spotify_topEl.innerHTML = spotify_topTracksData.slice(0, 10).map((spotify_track, spotify_idx) => `
+        const topLimit = spotify_getLimit('topLimit', 5);
+        spotify_topEl.innerHTML = spotify_topTracksData.slice(0, topLimit).map((spotify_track, spotify_idx) => `
             <div class="top-track-item" style="display: flex; align-items: center; gap: 15px; background: rgba(255, 255, 255, 0.02); padding: 10px 14px; border-radius: 16px; margin-bottom: 8px;">
                 <div class="top-track-rank" style="font-size: 1.1rem; font-weight: 700; color: #1db954; width: 25px; text-align: center;">${spotify_idx + 1}</div>
                 ${spotify_track.albumImg ? `<img class="top-track-img" src="${spotify_track.albumImg}" alt="Cover" style="width: 45px; height: 45px; border-radius: 8px; object-fit: cover;">` : ''}
@@ -2050,6 +2090,80 @@ if (document.readyState === 'loading') {
                 </div>
             </div>
         `).join('');
+    }
+
+    async function spotify_updatePlaylists() {
+        const playlistEl = document.getElementById('spotify-playlists');
+        if (!playlistEl) return;
+        if (playlistEl.dataset.loaded === 'true') return;
+
+        try {
+            const playlistLimit = spotify_getLimit('playlistLimit', 12);
+            const response = await fetch(`/spotify/playlists?limit=${playlistLimit}&t=${Date.now()}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            const playlists = data.playlists || [];
+
+            if (!playlists.length) {
+                playlistEl.innerHTML = '<div style="color:rgba(255,255,255,0.3); font-size:1.1rem;">Keine Playlists gefunden</div>';
+                playlistEl.dataset.loaded = 'true';
+                return;
+            }
+
+            playlistEl.innerHTML = playlists.map(playlist => `
+                <button class="playlist-item" type="button" data-spotify-play-context="${spotify_escape(playlist.uri)}">
+                    ${playlist.image ? `<img class="playlist-cover" src="${spotify_escape(playlist.image)}" alt="">` : '<div class="playlist-cover playlist-cover-empty">♫</div>'}
+                    <span class="playlist-meta">
+                        <span class="playlist-name">${spotify_escape(playlist.name || 'Unbenannte Playlist')}</span>
+                        <span class="playlist-count">${Number.isFinite(playlist.tracks) ? `${playlist.tracks} Titel` : 'Anzahl unbekannt'}</span>
+                    </span>
+                </button>
+            `).join('');
+            playlistEl.dataset.loaded = 'true';
+        } catch (error) {
+            playlistEl.innerHTML = `<div style="color:#ff6b6b; font-size:1rem;">⚠️ ${error.message}</div>`;
+        }
+    }
+
+    async function spotify_playContext(contextUri) {
+        if (!contextUri) return;
+
+        try {
+            const response = await fetch('/spotify/play', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contextUri })
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            setTimeout(spotify_fetchAndUpdateWidget, 1200);
+            setTimeout(() => {
+                document.querySelectorAll('.playlist-item-loading').forEach(button => {
+                    button.classList.remove('playlist-item-loading');
+                });
+            }, 1200);
+        } catch (error) {
+            console.error('[Spotify Widget] Playlist konnte nicht gestartet werden:', error);
+            spotify_showError(error.message);
+            document.querySelectorAll('.playlist-item-loading').forEach(button => {
+                button.classList.remove('playlist-item-loading');
+            });
+        }
+    }
+
+    async function spotify_remoteControl(action) {
+        try {
+            const response = await fetch('/spotify/control', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action })
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            setTimeout(spotify_fetchAndUpdateWidget, 1200);
+        } catch (error) {
+            console.error('[Spotify Widget] Remote-Control fehlgeschlagen:', error);
+            spotify_showError(error.message);
+        }
     }
     
     // Fehler anzeigen
@@ -2071,6 +2185,30 @@ if (document.readyState === 'loading') {
             spotify_fetchAndUpdateWidget();
         }, spotify_updateInterval);
     }
+
+    document.addEventListener('click', event => {
+        if (document.body.classList.contains('desktop-mode') && !window.pulseSpotifyPlayer) {
+            const toggleButton = event.target.closest('[data-spotify-toggle-play]');
+            const previousButton = event.target.closest('[data-spotify-previous-track]');
+            const nextButton = event.target.closest('[data-spotify-next-track]');
+
+            if (toggleButton || previousButton || nextButton) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (toggleButton) return spotify_remoteControl('toggle');
+                if (previousButton) return spotify_remoteControl('previous');
+                if (nextButton) return spotify_remoteControl('next');
+            }
+        }
+
+        const playlistButton = event.target.closest('[data-spotify-play-context]');
+        if (!playlistButton) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        playlistButton.classList.add('playlist-item-loading');
+        spotify_playContext(playlistButton.dataset.spotifyPlayContext);
+    });
     
     // MutationObserver um zu erkennen, wenn das Widget geladen wird
     function spotify_setupObserver() {

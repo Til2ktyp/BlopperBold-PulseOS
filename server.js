@@ -80,6 +80,19 @@ function getDisplayIdFromIp(ip) {
     return null;
 }
 
+function getClientIp(req) {
+    return req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+           req.socket.remoteAddress?.replace('::ffff:', '') ||
+           req.ip ||
+           'unknown';
+}
+
+function getDisplayNameFromRequest(req) {
+    const clientIp = getClientIp(req);
+    const displayId = getDisplayIdFromIp(clientIp);
+    return displayId ? CONFIGURED_DISPLAYS[displayId]?.name : process.env.SPOTIFY_DEVICE_NAME || clientIp;
+}
+
 // DAS ZENTRALE ARRAY FÜR ALLE OPENING DISPLAYS
 let clients = [];
 // Pro-Display Client Mapping: { displayId: { id, res, ip, displayId } }
@@ -881,6 +894,7 @@ app.get('/calendar/events', async (req, res) => {
 const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
 const SPOTIFY_REDIRECT_URI = 'http://127.0.0.1:3000/callback';
+const SPOTIFY_ACCESS_TOKEN = process.env.SPOTIFY_ACCESS_TOKEN;
 let SPOTIFY_REFRESH_TOKEN = process.env.SPOTIFY_REFRESH_TOKEN;
 const SPOTIFY_CACHE_FILE = path.join(__dirname, 'public', 'spotify-cache.json'); // Im public Ordner!
 
@@ -939,12 +953,13 @@ if (!fs.existsSync(SPOTIFY_CACHE_FILE)) {
 }
 
 app.get('/spotify/login', (req, res) => {
-    const scopes = 'user-read-playback-state user-modify-playback-state user-read-currently-playing user-top-read';
+    const scopes = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing user-top-read playlist-read-private playlist-read-collaborative';
     res.redirect('https://accounts.spotify.com/authorize' +
         '?response_type=code' +
         '&client_id=' + SPOTIFY_CLIENT_ID +
         '&scope=' + encodeURIComponent(scopes) +
-        '&redirect_uri=' + encodeURIComponent(SPOTIFY_REDIRECT_URI));
+        '&redirect_uri=' + encodeURIComponent(SPOTIFY_REDIRECT_URI) +
+        '&show_dialog=true');
 });
 
 app.get('/callback', async (req, res) => {
@@ -978,6 +993,14 @@ app.get('/callback', async (req, res) => {
 });
 
 async function getSpotifyAccessToken() {
+    if (SPOTIFY_ACCESS_TOKEN) {
+        return SPOTIFY_ACCESS_TOKEN;
+    }
+
+    if (!SPOTIFY_CLIENT_ID || !SPOTIFY_CLIENT_SECRET || !SPOTIFY_REFRESH_TOKEN) {
+        throw new Error('Spotify Credentials fehlen in .env');
+    }
+
     const response = await fetch('https://accounts.spotify.com/api/token', {
         method: 'POST',
         headers: {
@@ -990,14 +1013,32 @@ async function getSpotifyAccessToken() {
         })
     });
     const data = await response.json();
+    if (!response.ok || !data.access_token) {
+        throw new Error(data.error_description || data.error || `Spotify Token Fehler (${response.status})`);
+    }
     return data.access_token;
 }
+
+app.get('/spotify-token', async (req, res) => {
+    try {
+        const accessToken = await getSpotifyAccessToken();
+        res.json({ accessToken });
+    } catch (e) {
+        console.error('[Spotify SDK] Token konnte nicht geladen werden:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/spotify-device-name', (req, res) => {
+    const displayName = getDisplayNameFromRequest(req);
+    res.json({ name: `PulseOS - ${displayName}` });
+});
 
 async function updateTopTracksCache() {
     if (!SPOTIFY_REFRESH_TOKEN) return;
     try {
         const token = await getSpotifyAccessToken();
-        const res = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=5&time_range=short_term', {
+        const res = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=10&time_range=short_term', {
             headers: { 'Authorization': 'Bearer ' + token }
         });
         if (res.status === 200) {
@@ -1009,7 +1050,7 @@ async function updateTopTracksCache() {
                     albumImg: track.album.images[2]?.url || track.album.images[0]?.url || ''
                 }));
                 saveSpotifyCacheToFile();
-                console.log("🔥 Spotify Top 5 erfolgreich aktualisiert.");
+                console.log("🔥 Spotify Top 10 erfolgreich aktualisiert.");
             }
         }
     } catch (err) {
@@ -1043,7 +1084,7 @@ async function fetchAndCacheCurrentPlayback() {
                 action: 'spotify-unavailable',
                 reason: resPlayback.status === 204 ? 'no_device' : 'playback_error'
             });
-            return;
+            return null;
         }
 
         const playback = await resPlayback.json();
@@ -1053,10 +1094,10 @@ async function fetchAndCacheCurrentPlayback() {
                 action: 'spotify-unavailable',
                 reason: 'no_playback'
             });
-            return;
+            return null;
         }
 
-        if (playback.is_playing) {
+        if (playback.item) {
             let queueData = [];
             try {
                 const resQueue = await fetch('https://api.spotify.com/v1/me/player/queue', {
@@ -1065,7 +1106,7 @@ async function fetchAndCacheCurrentPlayback() {
                 if (resQueue.status === 200) {
                     const queueJson = await resQueue.json();
                     if (queueJson && queueJson.queue) {
-                        queueData = queueJson.queue.slice(0, 3).map(track => ({
+                        queueData = queueJson.queue.slice(0, 9).map(track => ({
                             title: track.name,
                             artist: track.artists.map(a => a.name).join(', ')
                         }));
@@ -1082,12 +1123,23 @@ async function fetchAndCacheCurrentPlayback() {
                 albumImg: playback.item.album.images[0].url,
                 progress: playback.progress_ms,
                 duration: playback.item.duration_ms,
+                isPlaying: playback.is_playing,
+                deviceName: playback.device?.name || '',
+                deviceType: playback.device?.type || '',
                 queue: queueData,
                 topTracks: cachedTopTracks
             };
             cachedCurrentPlayback = spotifyData; // Cache aktualisieren
             saveSpotifyCacheToFile(); // Cache speichern
-            sendToClients(spotifyData);
+            if (playback.is_playing) {
+                sendToClients(spotifyData);
+            } else {
+                sendToClients({
+                    action: 'spotify-unavailable',
+                    reason: 'paused'
+                });
+            }
+            return spotifyData;
         } else {
             // Wenn Musik gestoppt/pausiert ist
             console.log("ℹ️ Spotify: Musik ist pausiert oder gestoppt");
@@ -1095,11 +1147,135 @@ async function fetchAndCacheCurrentPlayback() {
                 action: 'spotify-unavailable',
                 reason: 'paused'
             });
+            return null;
         }
     } catch (err) {
         console.error("Spotify-Polling Fehler:", err.message);
+        return null;
     }
 }
+
+app.get('/spotify/refresh', async (req, res) => {
+    try {
+        const playback = await fetchAndCacheCurrentPlayback();
+        res.json({
+            ok: true,
+            currentPlayback: playback,
+            cached: cachedCurrentPlayback,
+            topTracks: cachedTopTracks
+        });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+app.get('/spotify/playlists', async (req, res) => {
+    try {
+        const limit = Math.max(1, Math.min(50, parseInt(req.query.limit, 10) || 12));
+        const token = await getSpotifyAccessToken();
+        const response = await fetch(`https://api.spotify.com/v1/me/playlists?limit=${limit}`, {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            return res.status(response.status).json({ error: errorText || `Spotify Playlist Fehler (${response.status})` });
+        }
+
+        const data = await response.json();
+        res.json({
+            playlists: (data.items || []).map(playlist => ({
+                name: playlist.name,
+                uri: playlist.uri,
+                tracks: Number.isFinite(playlist.tracks?.total) ? playlist.tracks.total : null,
+                image: playlist.images?.[0]?.url || ''
+            }))
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/spotify/control', async (req, res) => {
+    const action = req.body?.action;
+    if (!['toggle', 'next', 'previous'].includes(action)) {
+        return res.status(400).json({ error: 'Ungültige Spotify-Aktion' });
+    }
+
+    try {
+        const token = await getSpotifyAccessToken();
+        let endpoint = '';
+        let method = 'POST';
+
+        if (action === 'next') endpoint = 'https://api.spotify.com/v1/me/player/next';
+        if (action === 'previous') endpoint = 'https://api.spotify.com/v1/me/player/previous';
+
+        if (action === 'toggle') {
+            const playbackResponse = await fetch('https://api.spotify.com/v1/me/player', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (playbackResponse.status === 204) {
+                return res.status(404).json({ error: 'Kein aktives Spotify-Gerät' });
+            }
+
+            if (!playbackResponse.ok) {
+                const errorText = await playbackResponse.text();
+                return res.status(playbackResponse.status).json({ error: errorText || `Spotify Playback Fehler (${playbackResponse.status})` });
+            }
+
+            const playback = await playbackResponse.json();
+            endpoint = playback.is_playing
+                ? 'https://api.spotify.com/v1/me/player/pause'
+                : 'https://api.spotify.com/v1/me/player/play';
+            method = 'PUT';
+        }
+
+        const response = await fetch(endpoint, {
+            method,
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        if (!response.ok && response.status !== 204) {
+            const errorText = await response.text();
+            return res.status(response.status).json({ error: errorText || `Spotify Control Fehler (${response.status})` });
+        }
+
+        setTimeout(fetchAndCacheCurrentPlayback, 1000);
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/spotify/play', async (req, res) => {
+    const contextUri = req.body?.contextUri;
+    if (!contextUri) {
+        return res.status(400).json({ error: 'Spotify contextUri fehlt' });
+    }
+
+    try {
+        const token = await getSpotifyAccessToken();
+        const response = await fetch('https://api.spotify.com/v1/me/player/play', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ context_uri: contextUri })
+        });
+
+        if (!response.ok && response.status !== 204) {
+            const errorText = await response.text();
+            return res.status(response.status).json({ error: errorText || `Spotify Play Fehler (${response.status})` });
+        }
+
+        setTimeout(fetchAndCacheCurrentPlayback, 1000);
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 // --- POPUP / WIDGET TOGGLE SYSTEM (STREAM DECK) ---
 let allPopupsHidden = false;

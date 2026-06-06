@@ -84,7 +84,7 @@
 
     <main id="desktop-surface" aria-label="PulseOS Desktop">
         <section class="desktop-icon-grid" aria-label="Widgets">
-            <button class="desktop-icon desktop-icon-spotify" onclick="openWidget('spotify')" title="Spotify">
+            <button class="desktop-icon desktop-icon-spotify" onclick="openWidget('desktop-spotify')" title="Spotify">
                 <span class="desktop-icon-glyph">♫</span>
                 <span class="desktop-icon-label">Spotify</span>
             </button>
@@ -135,8 +135,8 @@
 
     <nav id="desktop-taskbar" aria-label="Desktop Schnellzugriff">
         <button class="desktop-taskbar-btn" onclick="closeWidget()" title="Desktop">⌂</button>
-        <div id="spotify-widget" class="spotify-card" onclick="openWidget('spotify')" title="Spotify">
-            <img id="track-cover" src="" alt="Album Cover">
+        <div id="spotify-widget" class="spotify-card" title="Spotify">
+            <img id="track-cover" src="" alt="Album Cover" onclick="openWidget('desktop-spotify')">
             <div class="track-info">
                 <h2 id="track-title">Songtitel</h2>
                 <h3 id="track-artist">Interpret</h3>
@@ -144,9 +144,14 @@
                     <div id="track-progress" class="progress-bar"></div>
                 </div>
             </div>
+            <div class="spotify-controls">
+                <button class="spotify-control-btn" type="button" title="Vorheriger Song" data-spotify-previous-track>⏮</button>
+                <button id="spotify-toggle-play" class="spotify-control-btn spotify-toggle-play" type="button" title="Play/Pause" data-spotify-toggle-play>⏯</button>
+                <button class="spotify-control-btn" type="button" title="Nächster Song" data-spotify-next-track>⏭</button>
+            </div>
             <div id="spotify-semi-countdown"></div>
         </div>
-        <button class="desktop-taskbar-btn desktop-spotify-fallback" onclick="openWidget('spotify')" title="Spotify">♫</button>
+        <button class="desktop-taskbar-btn desktop-spotify-fallback" onclick="openWidget('desktop-spotify')" title="Spotify">♫</button>
         <button class="desktop-taskbar-btn" onclick="openWidget('calendar')" title="Kalender">17</button>
         <button class="desktop-taskbar-btn" onclick="openWidget('timer')" title="Timer">⏱</button>
         <button id="desktop-control-toggle" class="desktop-taskbar-btn" onclick="toggleDesktopControlCenter()" title="Kontrollzentrum">☰</button>
@@ -245,7 +250,10 @@
                 </div>
 
                 <div class="settings-section settings-buttons">
-                    <button class="settings-btn" onclick="openWidget('spotify')">♫ Spotify</button>
+                    <button class="settings-btn spotify-quick-control" type="button" title="Spotify Zurück" data-spotify-previous-track>⏮</button>
+                    <button class="settings-btn spotify-quick-toggle" type="button" title="Spotify Play/Pause" data-spotify-toggle-play>⏯ Spotify</button>
+                    <button class="settings-btn spotify-quick-control" type="button" title="Spotify Weiter" data-spotify-next-track>⏭</button>
+                    <button class="settings-btn" onclick="openWidget('desktop-spotify')">♫ Spotify</button>
                     <button class="settings-btn" onclick="openWidget('vim')">⌘ Vim</button>
                     <button class="settings-btn" onclick="openWidget('info')">i Info</button>
                     <button class="settings-btn" onclick="closeWidget()">⌂ HOME</button>
