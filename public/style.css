@@ -192,7 +192,7 @@ body.animation-low #popup-container {
 }
 
 body.widget-active #popup-container {
-    top: -70px;
+    top: -80px;
 }
 
 body.desktop-mode #popup-container {
