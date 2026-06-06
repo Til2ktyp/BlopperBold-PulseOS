@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
 
-HOST = "127.0.0.1"
+HOST = "192.168.178.96"
 PORT = 8001
 HOME_ASSISTANT = "http://homeassistant.local:8123"
 SPOTIFY = "https://open.spotify.com"
