@@ -27,10 +27,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Global Click Handler für Settings Panel
     document.addEventListener('click', function(e) {
         const settingsPanel = document.getElementById('settings-panel');
+        const isDesktopMode = document.body.classList.contains('desktop-mode');
         const isClickingSettingsPanel = e.target.closest('#settings-panel');
         const isClickingSpotifyWidget = e.target.closest('#spotify-widget');
         const isClickingStatusBar = e.target.closest('#status-bar');
         const isClickingUpdateBtn = e.target.closest('#updateBtn');
+
+        if (isDesktopMode) {
+            if (settingsPanel && settingsPanel.classList.contains('active')) {
+                toggleSettingsPanel();
+            }
+            return;
+        }
         
         // Prüfe ob Click im unteren 1/4 des Bildschirms ist
         const isInBottomQuarter = e.clientY > (window.innerHeight * 0.75);
@@ -294,7 +302,11 @@ function replaceWidgetPlaceholders(html) {
 
 function openWidget(widgetName) {
     console.log(`[openWidget] ${widgetName}`);
-    toggleSettingsPanel(); // Panel schließen
+    document.body.classList.remove('desktop-icons-returning');
+    const panel = document.getElementById('settings-panel');
+    if (panel && panel.classList.contains('active')) {
+        toggleSettingsPanel();
+    }
     
     setTimeout(async () => {
         try {
@@ -322,6 +334,8 @@ function openWidget(widgetName) {
                 nextSlot.classList.add('slot-active');
                 document.body.classList.add('widget-active');
             }
+
+            initDynamicWidget(widgetName);
             
             currentSlot = (currentSlot === 'a') ? 'b' : 'a';
             
@@ -336,6 +350,7 @@ function openWidget(widgetName) {
 }
 
 function closeWidget() {
+    const wasWidgetActive = document.body.classList.contains('widget-active');
     document.body.classList.remove('widget-active');
     const slotA = document.getElementById('widget-slot-a');
     const slotB = document.getElementById('widget-slot-b');
@@ -351,6 +366,13 @@ function closeWidget() {
     const panel = document.getElementById('settings-panel');
     if (panel && panel.classList.contains('active')) {
         toggleSettingsPanel();
+    }
+    
+    if (wasWidgetActive && document.body.classList.contains('desktop-mode')) {
+        document.body.classList.add('desktop-icons-returning');
+        setTimeout(() => {
+            document.body.classList.remove('desktop-icons-returning');
+        }, 900);
     }
     
     console.log('[Widget] Geschlossen');
@@ -456,10 +478,10 @@ function hideLoadingScreen() {
     if (randomValue < 0.005) {
         totalLoadTime = 20000;
     } else {
-        totalLoadTime = Math.random() * 2000 + 1000; //3000 + 4000
+        totalLoadTime = Math.random() * 10 + 10; //3000 + 4000
     }
     
-    const stage2Delay = Math.random() * 200 + 400;
+    const stage2Delay = Math.random() * 2000 + 100;
     
     setTimeout(() => {
         // const subtitle = document.querySelector('.loading-subtitle');
@@ -508,6 +530,29 @@ if (document.readyState === 'loading') {
 
 // Setup night mode and activity detection
 setupActivityListeners();
+
+function triggerDesktopWakeAnimation() {
+    if (!document.body.classList.contains('desktop-mode')) return;
+
+    document.body.classList.remove('desktop-waking');
+    void document.body.offsetWidth;
+    document.body.classList.add('desktop-waking');
+
+    setTimeout(() => {
+        document.body.classList.remove('desktop-waking');
+    }, 1200);
+}
+
+let wasDesktopStandbyActive = document.body.classList.contains('standby-active');
+const desktopStandbyObserver = new MutationObserver(() => {
+    const isDesktopStandbyActive = document.body.classList.contains('standby-active');
+    if (wasDesktopStandbyActive && !isDesktopStandbyActive) {
+        triggerDesktopWakeAnimation();
+    }
+    wasDesktopStandbyActive = isDesktopStandbyActive;
+});
+
+desktopStandbyObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
 async function fetchWeather() {
     try {
@@ -694,14 +739,32 @@ function saveSpotifyCacheToStorage(data) {
 let selectedDate = new Date();
 let currentDate = new Date();
 let events = JSON.parse(localStorage.getItem('calendar-events') || '{}');
+let calendarSyncInterval = null;
+
+function hasCalendarWidget() {
+    return Boolean(
+        document.getElementById('calendar-days') &&
+        document.getElementById('current-month') &&
+        document.getElementById('event-list')
+    );
+}
+
+function getLocalDateKey(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
 // Kalender rendern
 function renderCalendar() {
+    if (!hasCalendarWidget()) return;
+
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     
     // Update header
-    document.getElementById('current-month').textContent = 
+    document.getElementById('current-month').textContent =
         currentDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
     
     // First day of month & number of days
@@ -738,12 +801,17 @@ function createDayCell(day, isOtherMonth) {
     const cell = document.createElement('div');
     cell.className = 'day-cell';
     if (isOtherMonth) cell.classList.add('other-month');
-            
-    const dateStr = formatDateString(new Date(currentDate.getFullYear(), currentDate.getMonth(), day));
-    const today = formatDateString(new Date());
+
+    const cellDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    const dateStr = getLocalDateKey(cellDate);
+    const today = getLocalDateKey(new Date());
             
     if (dateStr === today && !isOtherMonth) {
         cell.classList.add('today');
+    }
+
+    if (dateStr === getLocalDateKey(selectedDate) && !isOtherMonth) {
+        cell.classList.add('selected');
     }
             
     if (events[dateStr] && events[dateStr].length > 0) {
@@ -760,7 +828,7 @@ function createDayCell(day, isOtherMonth) {
 }
 
 function formatDateString(date) {
-    return date.toISOString().split('T')[0];
+    return getLocalDateKey(date);
 }
 
 function selectDate(day, isOtherMonth) {
@@ -777,6 +845,8 @@ function selectDate(day, isOtherMonth) {
 }
 
 function updateEventList() {
+    if (!hasCalendarWidget()) return;
+
     const dateStr = formatDateString(selectedDate);
     const dayName = selectedDate.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
     document.getElementById('selected-date').textContent = dayName;
@@ -798,55 +868,409 @@ function updateEventList() {
     `).join('');
 }
 
-// Navigation
-const prevMonthBtn = document.getElementById('btn-prev-month');
-const nextMonthBtn = document.getElementById('btn-next-month');
-const todayBtn = document.getElementById('btn-today');
-
-if (prevMonthBtn) {
-    prevMonthBtn.addEventListener('click', () => {
-        currentDate.setMonth(currentDate.getMonth() - 1);
-        renderCalendar();
-    });
-}
-
-if (nextMonthBtn) {
-    nextMonthBtn.addEventListener('click', () => {
-        currentDate.setMonth(currentDate.getMonth() + 1);
-        renderCalendar();
-    });
-}
-
-if (todayBtn) {
-    todayBtn.addEventListener('click', () => {
-        currentDate = new Date();
-        selectedDate = new Date();
-        renderCalendar();
-        updateEventList();
-    });
-}
-
 // Update last sync time
 function updateSyncTime() {
+    const lastSync = document.getElementById('last-sync');
+    if (!lastSync) return;
+
     const now = new Date();
     const time = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
     const date = now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
-    document.getElementById('last-sync').textContent = `${time} ${date}`;
+    lastSync.textContent = `${time} ${date}`;
 }
 
-// Initial render nur wenn Kalender-Widget existiert
-const isCalendarWidget =
-    document.getElementById('calendar-days') &&
-    document.getElementById('current-month') &&
-    document.getElementById('event-list');
+async function syncCalendarEvents() {
+    const syncState = document.getElementById('calendar-sync-state');
+    if (syncState) syncState.textContent = 'Synchronisiere...';
 
-if (isCalendarWidget) {
+    try {
+        const response = await fetch(`/calendar/events?t=${Date.now()}`);
+        const data = await response.json();
+
+        if (data && data.configured && data.eventsByDate) {
+            events = data.eventsByDate;
+            localStorage.setItem('calendar-events', JSON.stringify(events));
+            renderCalendar();
+            updateEventList();
+            updateSyncTime();
+        }
+
+        if (syncState) {
+            syncState.textContent = data.error
+                ? `Fehler: ${data.error}`
+                : data.configured
+                ? `${data.count || 0} Termine geladen`
+                : 'Kein Kalender-Feed konfiguriert';
+        }
+    } catch (e) {
+        console.error('[Calendar] Sync Fehler:', e);
+        if (syncState) syncState.textContent = 'Sync fehlgeschlagen';
+    }
+}
+
+function initCalendarWidget() {
+    if (!hasCalendarWidget()) return;
+
+    const calendarDays = document.getElementById('calendar-days');
+    if (calendarDays.dataset.initialized === 'true') return;
+    calendarDays.dataset.initialized = 'true';
+
+    const prevMonthBtn = document.getElementById('btn-prev-month');
+    const nextMonthBtn = document.getElementById('btn-next-month');
+    const todayBtn = document.getElementById('btn-today');
+    const syncBtn = document.getElementById('btn-calendar-sync');
+    const openBtn = document.getElementById('btn-calendar-open');
+
+    if (prevMonthBtn && !prevMonthBtn.dataset.bound) {
+        prevMonthBtn.dataset.bound = 'true';
+        prevMonthBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        });
+    }
+
+    if (nextMonthBtn && !nextMonthBtn.dataset.bound) {
+        nextMonthBtn.dataset.bound = 'true';
+        nextMonthBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        });
+    }
+
+    if (todayBtn && !todayBtn.dataset.bound) {
+        todayBtn.dataset.bound = 'true';
+        todayBtn.addEventListener('click', () => {
+            currentDate = new Date();
+            selectedDate = new Date();
+            renderCalendar();
+            updateEventList();
+        });
+    }
+
+    if (syncBtn && !syncBtn.dataset.bound) {
+        syncBtn.dataset.bound = 'true';
+        syncBtn.addEventListener('click', syncCalendarEvents);
+    }
+
+    if (openBtn && !openBtn.dataset.bound) {
+        openBtn.dataset.bound = 'true';
+        openBtn.addEventListener('click', () => {
+            window.open('https://www.icloud.com/calendar', '_blank', 'noopener');
+        });
+    }
+
     renderCalendar();
     updateEventList();
     updateSyncTime();
+    syncCalendarEvents();
 
-    // Sync every hour
-    setInterval(updateSyncTime, 60 * 60 * 1000);
+    if (calendarSyncInterval) clearInterval(calendarSyncInterval);
+    calendarSyncInterval = setInterval(syncCalendarEvents, 60 * 60 * 1000);
+}
+
+function initDynamicWidget(widgetName) {
+    if (widgetName === 'calendar' || hasCalendarWidget()) {
+        setTimeout(initCalendarWidget, 0);
+    }
+
+    if (widgetName === 'timer' || document.getElementById('timer-control-widget')) {
+        setTimeout(initTimerControlWidget, 0);
+    }
+}
+
+const calendarWidgetObserver = new MutationObserver(() => {
+    if (hasCalendarWidget()) initCalendarWidget();
+    if (document.getElementById('timer-control-widget')) initTimerControlWidget();
+});
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        calendarWidgetObserver.observe(document.body, { childList: true, subtree: true });
+        initCalendarWidget();
+        initDesktopControlCenter();
+    });
+} else {
+    calendarWidgetObserver.observe(document.body, { childList: true, subtree: true });
+    initCalendarWidget();
+    initDesktopControlCenter();
+}
+
+function getSelectedDesktopDisplayId() {
+    return localStorage.getItem('desktop-selected-display') || localStorage.getItem('selected-display') || displayId || '';
+}
+
+async function pulseApiCall(endpoint, statusElement) {
+    try {
+        const response = await fetch(endpoint);
+        const text = await response.text();
+        if (!response.ok) throw new Error(text || `HTTP ${response.status}`);
+        if (statusElement) statusElement.textContent = 'Befehl gesendet';
+        return true;
+    } catch (error) {
+        console.error('[Pulse API] Fehler:', error);
+        if (statusElement) statusElement.textContent = 'Fehler beim Senden';
+        return false;
+    }
+}
+
+async function loadPulseDisplays(selectElement, statusElement) {
+    if (!selectElement) return [];
+
+    try {
+        const response = await fetch(`/config/displays/status?t=${Date.now()}`);
+        const data = await response.json();
+        const displays = data.displays || [];
+        const previousValue = selectElement.value || getSelectedDesktopDisplayId();
+
+        selectElement.innerHTML = '';
+        if (!displays.length) {
+            selectElement.innerHTML = '<option value="">Keine Displays online</option>';
+            if (statusElement) statusElement.textContent = `0/${data.configuredCount || 0} Displays online`;
+            return [];
+        }
+
+        displays.forEach(display => {
+            const option = document.createElement('option');
+            option.value = display.displayId;
+            option.textContent = `${display.name} (${display.ip})`;
+            selectElement.appendChild(option);
+        });
+
+        if (previousValue && displays.some(display => String(display.displayId) === String(previousValue))) {
+            selectElement.value = previousValue;
+        }
+
+        localStorage.setItem('desktop-selected-display', selectElement.value);
+        if (statusElement) statusElement.textContent = `${data.onlineCount}/${data.configuredCount} Displays online`;
+        return displays;
+    } catch (error) {
+        console.error('[Displays] Fehler:', error);
+        selectElement.innerHTML = '<option value="">Fehler beim Laden</option>';
+        if (statusElement) statusElement.textContent = 'Display-Status nicht erreichbar';
+        return [];
+    }
+}
+
+async function refreshDesktopReminders() {
+    const list = document.getElementById('desktop-reminder-list');
+    const selectedId = document.getElementById('desktop-display-select')?.value || getSelectedDesktopDisplayId();
+    if (!list) return;
+
+    try {
+        const response = await fetch(`/reminders?t=${Date.now()}`);
+        const reminders = await response.json();
+        const visibleReminders = reminders.filter(reminder =>
+            reminder.active !== false && String(reminder.displayId) === String(selectedId)
+        );
+
+        if (!visibleReminders.length) {
+            list.textContent = 'Keine geplanten Reminder';
+            return;
+        }
+
+        list.innerHTML = visibleReminders.slice(0, 4).map(reminder => `
+            <div class="desktop-reminder-item">
+                <span>${reminder.time || '--:--'} · ${reminder.text}</span>
+                <button type="button" data-reminder-delete="${reminder.id}">×</button>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('[Reminder] Liste Fehler:', error);
+        list.textContent = 'Reminder konnten nicht geladen werden';
+    }
+}
+
+function toggleDesktopControlCenter(forceState) {
+    const shouldOpen = forceState === undefined
+        ? !document.body.classList.contains('control-center-open')
+        : Boolean(forceState);
+
+    if (shouldOpen) {
+        positionDesktopControlCenter();
+    }
+
+    document.body.classList.toggle('control-center-open', shouldOpen);
+    if (shouldOpen) {
+        refreshDesktopControlCenter();
+    }
+}
+
+window.toggleDesktopControlCenter = toggleDesktopControlCenter;
+
+function positionDesktopControlCenter() {
+    const toggle = document.getElementById('desktop-control-toggle');
+    const panel = document.getElementById('desktop-control-center');
+    if (!toggle || !panel) return;
+
+    const toggleRect = toggle.getBoundingClientRect();
+    const panelWidth = Math.min(360, window.innerWidth - 28);
+    const preferredCenter = toggleRect.left + (toggleRect.width / 2);
+    const halfWidth = panelWidth / 2;
+    const clampedCenter = Math.max(halfWidth + 14, Math.min(window.innerWidth - halfWidth - 14, preferredCenter));
+    const arrowX = Math.max(24, Math.min(panelWidth - 24, preferredCenter - clampedCenter + halfWidth));
+
+    document.documentElement.style.setProperty('--desktop-control-x', `${clampedCenter}px`);
+    document.documentElement.style.setProperty('--desktop-control-width', `${panelWidth}px`);
+    document.documentElement.style.setProperty('--desktop-control-arrow-x', `${arrowX}px`);
+}
+
+async function refreshDesktopControlCenter() {
+    const select = document.getElementById('desktop-display-select');
+    const status = document.getElementById('desktop-display-status');
+    await loadPulseDisplays(select, status);
+
+    const selectedId = select?.value;
+    const qualitySelect = document.getElementById('desktop-quality-select');
+    if (selectedId && qualitySelect) {
+        try {
+            const response = await fetch(`/display/${selectedId}/quality/animations`);
+            const data = await response.json();
+            qualitySelect.value = data.quality || 'auto';
+        } catch (error) {
+            console.error('[Quality] Fehler:', error);
+        }
+    }
+
+    refreshDesktopReminders();
+}
+
+function getDesktopControlEndpoint(command) {
+    const selectedId = document.getElementById('desktop-display-select')?.value || getSelectedDesktopDisplayId();
+    if (!selectedId) return null;
+
+    if (command === 'idle') return `/display/${selectedId}/idle`;
+    if (command === 'standby') return `/display/${selectedId}/standby`;
+    if (command === 'reload') return `/display/${selectedId}/reload`;
+    if (command === 'popups') return `/display/${selectedId}/popup/alle`;
+    if (command === 'widget') {
+        const widget = document.getElementById('desktop-widget-select')?.value || 'spotify';
+        return `/display/${selectedId}/widget/${widget}`;
+    }
+    if (command === 'timer-set') {
+        const seconds = Math.max(1, parseInt(document.getElementById('desktop-timer-seconds')?.value || '600', 10));
+        const name = document.getElementById('desktop-timer-name')?.value || 'Timer';
+        return `/display/${selectedId}/timer/set/${seconds}?name=${encodeURIComponent(name)}`;
+    }
+    if (command === 'timer-start') return `/display/${selectedId}/timer/start`;
+    if (command === 'timer-stop') return `/display/${selectedId}/timer/stop`;
+    if (command === 'timer-reset') return `/display/${selectedId}/timer/reset`;
+
+    return null;
+}
+
+function initDesktopControlCenter() {
+    const panel = document.getElementById('desktop-control-center');
+    if (!panel || panel.dataset.initialized === 'true') return;
+    panel.dataset.initialized = 'true';
+
+    const select = document.getElementById('desktop-display-select');
+    const status = document.getElementById('desktop-display-status');
+    const qualitySelect = document.getElementById('desktop-quality-select');
+
+    document.addEventListener('click', event => {
+        if (!document.body.classList.contains('desktop-mode')) return;
+        if (!document.body.classList.contains('control-center-open')) return;
+        if (event.target.closest('#desktop-control-center')) return;
+        if (event.target.closest('#desktop-control-toggle')) return;
+        toggleDesktopControlCenter(false);
+    });
+
+    window.addEventListener('resize', () => {
+        if (document.body.classList.contains('control-center-open')) {
+            positionDesktopControlCenter();
+        }
+    });
+
+    select?.addEventListener('change', () => {
+        localStorage.setItem('desktop-selected-display', select.value);
+        refreshDesktopControlCenter();
+    });
+
+    qualitySelect?.addEventListener('change', () => {
+        const selectedId = select?.value || getSelectedDesktopDisplayId();
+        if (!selectedId) return;
+        pulseApiCall(`/display/${selectedId}/quality/animations/set/${qualitySelect.value}`, status);
+    });
+
+    panel.addEventListener('click', async event => {
+        const commandButton = event.target.closest('[data-command]');
+        if (commandButton) {
+            const command = commandButton.dataset.command;
+            const selectedId = select?.value || getSelectedDesktopDisplayId();
+
+            if (command === 'reminder-save') {
+                const text = document.getElementById('desktop-reminder-text')?.value.trim();
+                const time = document.getElementById('desktop-reminder-time')?.value;
+                const repeat = document.getElementById('desktop-reminder-repeat')?.value || 'once';
+                const level = document.getElementById('desktop-reminder-level')?.value || '1';
+
+                if (!selectedId || !text || !time) {
+                    if (status) status.textContent = 'Display, Text und Uhrzeit fehlen';
+                    return;
+                }
+
+                await pulseApiCall(`/display/${selectedId}/reminder?text=${encodeURIComponent(text)}&stufe=${level}&time=${encodeURIComponent(time)}&repeat=${encodeURIComponent(repeat)}`, status);
+                document.getElementById('desktop-reminder-text').value = '';
+                refreshDesktopReminders();
+                return;
+            }
+
+            const endpoint = getDesktopControlEndpoint(command);
+            if (endpoint) await pulseApiCall(endpoint, status);
+            return;
+        }
+
+        const deleteButton = event.target.closest('[data-reminder-delete]');
+        if (deleteButton) {
+            await pulseApiCall(`/reminder/${deleteButton.dataset.reminderDelete}/delete`, status);
+            refreshDesktopReminders();
+        }
+    });
+}
+
+async function initTimerControlWidget() {
+    const widget = document.getElementById('timer-control-widget');
+    if (!widget || widget.dataset.initialized === 'true') return;
+    widget.dataset.initialized = 'true';
+
+    const select = document.getElementById('timer-widget-display');
+    const status = document.getElementById('timer-widget-status');
+
+    await loadPulseDisplays(select, status);
+
+    document.getElementById('timer-widget-refresh')?.addEventListener('click', () => loadPulseDisplays(select, status));
+
+    widget.addEventListener('click', async event => {
+        const preset = event.target.closest('[data-timer-preset]');
+        if (preset) {
+            document.getElementById('timer-widget-seconds').value = preset.dataset.timerPreset;
+            return;
+        }
+
+        const timerCommand = event.target.closest('[data-timer-command]');
+        const stopwatchCommand = event.target.closest('[data-stopwatch-command]');
+        const selectedId = select?.value || getSelectedDesktopDisplayId();
+
+        if (!selectedId) {
+            if (status) status.textContent = 'Kein Display ausgewählt';
+            return;
+        }
+
+        if (timerCommand) {
+            const command = timerCommand.dataset.timerCommand;
+            let endpoint = `/display/${selectedId}/timer/${command}`;
+            if (command === 'set') {
+                const seconds = Math.max(1, parseInt(document.getElementById('timer-widget-seconds')?.value || '600', 10));
+                const name = document.getElementById('timer-widget-name')?.value || 'Timer';
+                endpoint = `/display/${selectedId}/timer/set/${seconds}?name=${encodeURIComponent(name)}`;
+            }
+            await pulseApiCall(endpoint, status);
+        }
+
+        if (stopwatchCommand) {
+            await pulseApiCall(`/display/${selectedId}/stopwatch/${stopwatchCommand.dataset.stopwatchCommand}`, status);
+        }
+    });
 }
 
 // Example events (test data)
@@ -1246,6 +1670,7 @@ eventSource.onmessage = function(event) {
                 nextSlot.classList.add('slot-active');
                 document.body.classList.add('widget-active');
             }
+            initDynamicWidget(data.name);
             currentSlot = (currentSlot === 'a') ? 'b' : 'a';
             
             // Zurück-Button anzeigen
@@ -1254,10 +1679,20 @@ eventSource.onmessage = function(event) {
         }
         
         if (data.action === 'go-idle') { 
+            const wasWidgetActive = document.body.classList.contains('widget-active');
+            const wasStandbyActive = document.body.classList.contains('standby-active');
             document.body.classList.remove('widget-active'); 
+            document.body.classList.remove('standby-active');
             document.getElementById('spotify-widget').classList.remove('active');
             const backBtn = document.getElementById('status-back-btn');
             if (backBtn) backBtn.style.display = 'none';
+            if (wasWidgetActive && document.body.classList.contains('desktop-mode')) {
+                document.body.classList.add('desktop-icons-returning');
+                setTimeout(() => document.body.classList.remove('desktop-icons-returning'), 900);
+            }
+            if (wasStandbyActive) {
+                triggerDesktopWakeAnimation();
+            }
         }
 
         if (data.action === 'toggle-standby') {
@@ -1300,7 +1735,7 @@ eventSource.onmessage = function(event) {
                 rPopup.classList.add(`lvl-${level}`);
                 document.getElementById('reminder-label-text').textContent = (level === 1) ? '📌 Info' : '🔔 Reminder';
                 showPopup('reminder-popup');
-                setTimeout(() => { hidePopup('reminder-popup'); }, 10000);
+                setTimeout(() => { hidePopup('reminder-popup'); }, 25000);
             }
         }
 

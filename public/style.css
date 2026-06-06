@@ -195,6 +195,20 @@ body.widget-active #popup-container {
     top: 55px;
 }
 
+body.desktop-mode #popup-container {
+    top: 86px;
+    left: 52px;
+    z-index: 25;
+}
+
+body.desktop-mode #reminder-container {
+    top: 50px;
+}
+
+body.desktop-mode.widget-active #popup-container {
+    top: 86px;
+}
+
 body.standby-active #popup-container {
     opacity: 0.4;
 }
@@ -704,7 +718,7 @@ body.standby-active #reminder-container, body.standby-active .reminder.box, body
     right: 0%;
     bottom: 0%;
     background: #000000;
-    z-index: 10;
+    z-index: 999999;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -990,13 +1004,19 @@ body.standby-active .spotify-dashboard-layout{
     font-size: 0.95rem;
     font-weight: 600;
     letter-spacing: 1.5px;
-    z-index: 10;
+    z-index: 1000000;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2);
     min-width: 280px;
     display: none;
     opacity: 0;
 }
+
+body.desktop-mode #init-toast {
+    display: block;
+    top: 50px;
+}
+
 
 body.widget-active #init-toast {
     display: block;
@@ -1414,4 +1434,566 @@ body.settings-active #brightness-popup {
     text-transform: uppercase;
     min-width: 45px;
     opacity: 0.9;
+}
+
+/* --- DESKTOP MODE (1920x1080 tuned) --- */
+body.desktop-mode {
+    background:
+        linear-gradient(135deg, rgba(3, 7, 18, 0.92), rgba(19, 28, 58, 0.72)),
+        radial-gradient(circle at 82% 18%, rgba(29, 185, 84, 0.28), transparent 32%),
+        radial-gradient(circle at 16% 84%, rgba(255, 0, 85, 0.18), transparent 30%),
+        #050812;
+}
+
+body.desktop-mode .aura-bg {
+    opacity: 0.45;
+}
+
+#desktop-surface,
+#desktop-taskbar,
+#desktop-control-center {
+    display: none;
+}
+
+body.desktop-mode #desktop-surface {
+    position: absolute;
+    inset: 40px 0 0;
+    z-index: 6;
+    display: grid;
+    grid-template-columns: minmax(260px, 360px) 1fr;
+    gap: 44px;
+    padding: 46px 54px 104px;
+    pointer-events: none;
+    transform-origin: center center;
+    transition: opacity 0.32s ease, transform 0.42s cubic-bezier(0.2, 0.9, 0.2, 1), filter 0.42s ease;
+}
+
+body.desktop-mode .desktop-icon-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 126px);
+    grid-auto-rows: 132px;
+    align-content: start;
+    gap: 18px 22px;
+    pointer-events: auto;
+}
+
+body.desktop-mode .desktop-icon {
+    width: 126px;
+    height: 132px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: #ffffff;
+    display: grid;
+    grid-template-rows: 82px 1fr;
+    justify-items: center;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-family: var(--font-apple);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+body.desktop-mode .desktop-icon:hover,
+body.desktop-mode .desktop-icon:focus-visible {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.18);
+    outline: none;
+}
+
+body.desktop-mode .desktop-icon:active {
+    transform: scale(0.96);
+}
+
+body.desktop-mode .desktop-icon-glyph {
+    width: 76px;
+    height: 76px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    font-size: 2.25rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+body.desktop-mode .desktop-icon-label {
+    max-width: 118px;
+    padding: 4px 7px;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.26);
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+body.desktop-mode .desktop-icon-spotify .desktop-icon-glyph { background: linear-gradient(135deg, #1db954, #0f7a3a); }
+body.desktop-mode .desktop-icon-vim .desktop-icon-glyph { background: linear-gradient(135deg, #35d0ff, #1a48d8); }
+body.desktop-mode .desktop-icon-calendar .desktop-icon-glyph { background: linear-gradient(135deg, #ffffff, #d9e5ff); color: #111827; }
+body.desktop-mode .desktop-icon-home .desktop-icon-glyph { background: linear-gradient(135deg, #ffb703, #fb5607); }
+body.desktop-mode .desktop-icon-info .desktop-icon-glyph { background: linear-gradient(135deg, #8b5cf6, #ec4899); }
+body.desktop-mode .desktop-icon-settings .desktop-icon-glyph { background: linear-gradient(135deg, #94a3b8, #334155); }
+body.desktop-mode .desktop-icon-timer .desktop-icon-glyph { background: linear-gradient(135deg, #111827, #25304a); }
+
+body.desktop-mode .desktop-at-a-glance {
+    position: relative;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+    min-width: 0;
+    pointer-events: none;
+}
+
+body.desktop-mode .desktop-brand {
+    position: absolute;
+    top: 8px;
+    right: 0;
+    color: rgba(255, 255, 255, 0.48);
+    font-size: 0.84rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+body.desktop-mode #idle-screen {
+    position: static;
+    width: min(620px, 42vw);
+    height: auto;
+    min-height: 270px;
+    margin-top: 42px;
+    align-items: flex-end;
+    justify-content: flex-start;
+    text-align: right;
+}
+
+body.desktop-mode #clock {
+    font-size: clamp(5.6rem, 6.8vw, 8.1rem);
+    font-weight: 800;
+    letter-spacing: 0;
+    margin-bottom: 14px;
+}
+
+body.desktop-mode #weather {
+    font-size: 1.35rem;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.09);
+}
+
+body.desktop-mode #status-bar {
+    opacity: 1;
+    transform: translateY(0);
+    height: 40px;
+    background: rgba(4, 8, 18, 0.68);
+}
+
+body.desktop-mode #status-back-btn {
+    display: none;
+}
+
+body.desktop-mode #settings-panel {
+    display: none !important;
+}
+
+body.desktop-mode.widget-active #status-back-btn {
+    display: block !important;
+}
+
+body.desktop-mode #desktop-taskbar {
+    position: fixed;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    z-index: 8886;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    background: rgba(7, 12, 24, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45);
+    max-width: calc(100vw - 52px);
+}
+
+body.desktop-mode .desktop-taskbar-btn {
+    flex: 0 0 auto;
+    width: 48px;
+    height: 48px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    font-size: 1.28rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+    overflow: hidden;
+}
+
+body.desktop-mode .desktop-taskbar-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+body.desktop-mode .desktop-taskbar-btn:active {
+    transform: scale(0.94);
+}
+
+body.desktop-mode .spotify-card {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    width: 0;
+    min-width: 0;
+    height: 48px;
+    padding: 0;
+    gap: 0;
+    border-radius: 8px;
+    transform: translateY(14px) scale(0.94);
+    box-shadow: none;
+    background: rgba(29, 185, 84, 0.14);
+    pointer-events: none;
+    opacity: 0;
+    overflow: hidden;
+    border-width: 0;
+    transition:
+        width 0.34s cubic-bezier(0.2, 0.9, 0.2, 1),
+        min-width 0.34s cubic-bezier(0.2, 0.9, 0.2, 1),
+        opacity 0.22s ease,
+        transform 0.34s cubic-bezier(0.2, 0.9, 0.2, 1),
+        padding 0.34s cubic-bezier(0.2, 0.9, 0.2, 1),
+        gap 0.34s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+body.desktop-mode .spotify-card.active {
+    width: 286px;
+    min-width: 286px;
+    padding: 5px 8px;
+    gap: 10px;
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    pointer-events: auto;
+    border-width: 1px;
+}
+
+body.desktop-mode .spotify-card.active + .desktop-spotify-fallback {
+    width: 0;
+    opacity: 0;
+    transform: translateY(14px) scale(0.8);
+    border-width: 0;
+    padding: 0;
+    pointer-events: none;
+}
+
+body.desktop-mode #track-cover {
+    width: 38px;
+    height: 38px;
+    border-radius: 6px;
+    flex: 0 0 38px;
+}
+
+body.desktop-mode .track-info {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+}
+
+body.desktop-mode #track-title {
+    font-size: 0.82rem;
+    margin-bottom: 1px;
+}
+
+body.desktop-mode #track-artist {
+    font-size: 0.72rem;
+    margin-bottom: 5px;
+}
+
+body.desktop-mode .progress-bar-container {
+    height: 3px;
+}
+
+body.desktop-mode #desktop-control-center {
+    position: fixed;
+    left: var(--desktop-control-x, 50%);
+    bottom: 98px;
+    width: var(--desktop-control-width, min(360px, calc(100vw - 28px)));
+    max-height: min(580px, calc(100vh - 108px));
+    transform: translateX(-50%) translateY(14px) scale(0.98);
+    z-index: 8890;
+    display: block;
+    opacity: 0;
+    pointer-events: none;
+    overflow-y: auto;
+    padding: 14px;
+    border-radius: 18px;
+    background: rgba(17, 20, 31, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(34px) saturate(170%);
+    -webkit-backdrop-filter: blur(34px) saturate(170%);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.56);
+    transition: opacity 0.2s ease, transform 0.24s cubic-bezier(0.2, 0.9, 0.2, 1);
+    color: #f8fafc;
+}
+
+body.desktop-mode #desktop-control-center::after {
+    content: '';
+    position: absolute;
+    left: var(--desktop-control-arrow-x, 50%);
+    bottom: -8px;
+    width: 16px;
+    height: 16px;
+    transform: translateX(-50%) rotate(45deg);
+    background: rgba(17, 20, 31, 0.78);
+    border-right: 1px solid rgba(255, 255, 255, 0.16);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(34px) saturate(170%);
+    -webkit-backdrop-filter: blur(34px) saturate(170%);
+}
+
+body.desktop-mode.control-center-open #desktop-control-center {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0) scale(1);
+}
+
+body.desktop-mode .desktop-control-header,
+body.desktop-mode .desktop-control-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+body.desktop-mode .desktop-control-header {
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+body.desktop-mode .desktop-control-kicker,
+body.desktop-mode .desktop-control-label {
+    color: rgba(248, 250, 252, 0.46);
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+body.desktop-mode .desktop-control-label {
+    display: block;
+    margin: 10px 0 6px;
+}
+
+body.desktop-mode .desktop-control-title {
+    font-size: 1.22rem;
+    font-weight: 900;
+    color: #ffffff;
+}
+
+body.desktop-mode .desktop-control-title.small {
+    font-size: 1rem;
+    margin-bottom: 10px;
+}
+
+body.desktop-mode .desktop-control-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 1.35rem;
+    cursor: pointer;
+}
+
+body.desktop-mode .desktop-control-input {
+    width: 100%;
+    min-height: 34px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    padding: 0 10px;
+    font: inherit;
+    font-weight: 700;
+}
+
+body.desktop-mode .desktop-control-input option {
+    color: #111827;
+}
+
+body.desktop-mode .desktop-control-status,
+body.desktop-mode .desktop-reminder-list {
+    margin-top: 7px;
+    color: rgba(248, 250, 252, 0.58);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+body.desktop-mode .desktop-control-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+body.desktop-mode .desktop-control-btn {
+    min-height: 36px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #f8fafc;
+    padding: 0 11px;
+    font: inherit;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+body.desktop-mode .desktop-control-btn.danger {
+    border-color: rgba(255, 59, 48, 0.2);
+    background: rgba(255, 59, 48, 0.14);
+    color: #ff6b78;
+}
+
+body.desktop-mode .desktop-control-section {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.desktop-mode .desktop-reminder-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.desktop-mode .desktop-reminder-item button {
+    border: none;
+    background: transparent;
+    color: #ff6b78;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+body.desktop-mode #widget-container {
+    z-index: 20;
+}
+
+body.desktop-mode .widget-slot {
+    padding: 68px 54px 42px !important;
+    background: rgba(6, 10, 22, 0.88);
+}
+
+body.desktop-mode .widget-slot #calendar-widget {
+    max-height: calc(100vh - 130px);
+    overflow-y: auto;
+    padding-right: 8px;
+    scrollbar-width: thin;
+}
+
+body.desktop-mode.widget-active #desktop-surface {
+    opacity: 0;
+    transform: scale(0.92) translateY(18px);
+    filter: blur(8px);
+}
+
+body.desktop-mode.widget-active #desktop-taskbar {
+    opacity: 0.32;
+}
+
+body.desktop-mode.standby-active #desktop-surface,
+body.desktop-mode.standby-active #desktop-taskbar {
+    opacity: 0;
+    pointer-events: none;
+}
+
+body.desktop-mode .desktop-icon {
+    animation-fill-mode: both;
+}
+
+body.desktop-mode.desktop-icons-returning .desktop-icon {
+    animation: desktopIconReturn 0.58s cubic-bezier(0.2, 0.95, 0.24, 1.18) both;
+}
+
+body.desktop-mode.desktop-icons-returning .desktop-icon:nth-child(2) { animation-delay: 0.04s; }
+body.desktop-mode.desktop-icons-returning .desktop-icon:nth-child(3) { animation-delay: 0.08s; }
+body.desktop-mode.desktop-icons-returning .desktop-icon:nth-child(4) { animation-delay: 0.12s; }
+body.desktop-mode.desktop-icons-returning .desktop-icon:nth-child(5) { animation-delay: 0.16s; }
+body.desktop-mode.desktop-icons-returning .desktop-icon:nth-child(6) { animation-delay: 0.2s; }
+body.desktop-mode.desktop-icons-returning .desktop-icon:nth-child(7) { animation-delay: 0.24s; }
+
+body.desktop-mode.desktop-waking .desktop-icon {
+    animation: desktopWakeIcon 0.86s cubic-bezier(0.18, 0.98, 0.22, 1.15) both;
+}
+
+body.desktop-mode.desktop-waking .desktop-icon:nth-child(2) { animation-delay: 0.035s; }
+body.desktop-mode.desktop-waking .desktop-icon:nth-child(3) { animation-delay: 0.07s; }
+body.desktop-mode.desktop-waking .desktop-icon:nth-child(4) { animation-delay: 0.105s; }
+body.desktop-mode.desktop-waking .desktop-icon:nth-child(5) { animation-delay: 0.14s; }
+body.desktop-mode.desktop-waking .desktop-icon:nth-child(6) { animation-delay: 0.175s; }
+body.desktop-mode.desktop-waking .desktop-icon:nth-child(7) { animation-delay: 0.21s; }
+
+@keyframes desktopIconReturn {
+    0% {
+        opacity: 0;
+        transform: translateY(22px) scale(0.84);
+        filter: blur(8px);
+    }
+    65% {
+        opacity: 1;
+        transform: translateY(-4px) scale(1.04);
+        filter: blur(0);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+    }
+}
+
+@keyframes desktopWakeIcon {
+    0% {
+        opacity: 0;
+        transform: translateY(34px) scale(0.72);
+        filter: blur(12px) brightness(1.35);
+    }
+    48% {
+        opacity: 1;
+        transform: translateY(-8px) scale(1.08);
+        filter: blur(0) brightness(1.18);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0) brightness(1);
+    }
+}
+
+@media (max-width: 1100px) {
+    body.desktop-mode #desktop-surface {
+        grid-template-columns: 1fr;
+        padding: 54px 24px 100px;
+    }
+
+    body.desktop-mode .desktop-icon-grid {
+        grid-template-columns: repeat(3, 112px);
+        grid-auto-rows: 122px;
+    }
+
+    body.desktop-mode .desktop-icon {
+        width: 112px;
+        height: 122px;
+    }
+
+    body.desktop-mode .desktop-at-a-glance {
+        display: none;
+    }
 }

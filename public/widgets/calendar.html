@@ -15,13 +15,16 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #0a0e27 0%, #1a0a3e 50%, #0f0f2e 100%);
             color: #e0e0e0;
-            min-height: 100vh;
+            height: 100vh;
             padding: 20px;
+            overflow-y: auto;
+            scrollbar-width: thin;
         }
 
         .container {
             max-width: 1000px;
             margin: 0 auto;
+            padding-bottom: 40px;
         }
 
         .header {
@@ -255,6 +258,13 @@
             box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
         }
 
+        .icloud-btn.secondary {
+            margin-left: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            color: #e0e0e0;
+        }
+
         .sync-status {
             margin-top: 15px;
             font-size: 0.85rem;
@@ -263,7 +273,7 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container" id="calendar-widget">
         <div class="header">
             <h1>📅 Kalender</h1>
             <p>Deine Termine im Überblick</p>
@@ -313,11 +323,16 @@
             <p style="font-size: 0.9rem; margin-bottom: 15px; color: rgba(255, 255, 255, 0.6);">
                 Verbinde deinen iCloud Kalender um automatische Updates zu erhalten.
             </p>
-            <a href="https://www.icloud.com/calendar" class="icloud-btn" target="_blank">
-                ☁️ iCloud Kalender öffnen
-            </a>
+            <button class="icloud-btn" id="btn-calendar-sync" type="button">
+                ☁️ Kalender synchronisieren
+            </button>
+            <button class="icloud-btn secondary" id="btn-calendar-open" type="button">
+                iCloud öffnen
+            </button>
             <div class="sync-status">
                 ⏱️ Letzte Synchronisierung: <span id="last-sync">--:-- --</span>
+                <br>
+                <span id="calendar-sync-state">Warte auf Sync</span>
             </div>
         </div>
     </div>

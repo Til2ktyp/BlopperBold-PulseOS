@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlopperBold PulseOS Desktop Mode</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="desktop-mode">
+
+    <div class="aura-bg">
+        <div class="blob blob1"></div>
+        <div class="blob blob2"></div>
+        <div class="blob blob3"></div>
+    </div>
+
+    <div id="mode-toast">Modus: Semi</div>
+
+    <div id="init-toast">
+        <div class="init-toast-text">INITIALISIERE DESKTOP</div>
+        <div class="init-toast-bar-container">
+            <div class="init-toast-bar"></div>
+        </div>
+    </div>
+
+    <div id="popup-container">
+        <div id="timer-popup" class="popup-box">
+            <div class="popup-label" id="timer-label-text">Timer</div>
+            <div class="popup-value" id="timer-display">00:00</div>
+            <div class="timer-btn-container">
+                <button class="timer-end-btn" onclick="localTimerReset()">Timer Beenden</button>
+            </div>
+        </div>
+        <div id="stopwatch-popup" class="popup-box">
+            <div class="popup-label">Stoppuhr</div>
+            <div class="popup-value" id="stopwatch-display">00:00.0</div>
+        </div>
+    </div>
+
+    <div id="reminder-container">
+        <div id="reminder-popup" class="reminder-box">
+            <div class="reminder-lines"></div>
+            <div class="reminder-inner-content">
+                <div class="reminder-label" id="reminder-label-text">Reminder</div>
+                <div class="reminder-text" id="reminder-content">Inhalt</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="brightness-popup" class="brightness-popup">
+        <div class="brightness-popup-content">
+            <div class="brightness-popup-icon">☀</div>
+            <div class="brightness-popup-slider-container">
+                <input type="range" id="brightnessPopupSlider" min="0" max="100" value="50" class="brightness-popup-slider">
+            </div>
+            <div class="brightness-popup-value" id="brightnessPopupValue">50%</div>
+        </div>
+    </div>
+
+    <video autoplay muted loop playsinline style="display: none;">
+        <source src="16x16.mp4" type="video/mp4">
+    </video>
+
+    <div id="adhs-overlay">
+        <div class="adhs-card">
+            <div class="adhs-flash-bg"></div>
+            <div class="adhs-content">
+                <div class="adhs-title">!! Erinnerung !!</div>
+                <div class="adhs-message" id="adhs-message-text">Aufstehen!</div>
+                <button class="adhs-btn" onclick="closeAdhsPopup()">OK, GECHECKT!</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading-screen">
+        <div class="loading-content">
+            <div class="loading-logo">BlopperBold PulseOS</div>
+            <div class="loading-bar-container">
+                <div class="loading-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <main id="desktop-surface" aria-label="PulseOS Desktop">
+        <section class="desktop-icon-grid" aria-label="Widgets">
+            <button class="desktop-icon desktop-icon-spotify" onclick="openWidget('spotify')" title="Spotify">
+                <span class="desktop-icon-glyph">♫</span>
+                <span class="desktop-icon-label">Spotify</span>
+            </button>
+            <button class="desktop-icon desktop-icon-vim" onclick="openWidget('vim')" title="Vim">
+                <span class="desktop-icon-glyph">⌘</span>
+                <span class="desktop-icon-label">Vim</span>
+            </button>
+            <button class="desktop-icon desktop-icon-calendar" onclick="openWidget('calendar')" title="Kalender">
+                <span class="desktop-icon-glyph">17</span>
+                <span class="desktop-icon-label">Kalender</span>
+            </button>
+            <button class="desktop-icon desktop-icon-timer" onclick="openWidget('timer')" title="Timer">
+                <span class="desktop-icon-glyph">⏱</span>
+                <span class="desktop-icon-label">Timer</span>
+            </button>
+            <button class="desktop-icon desktop-icon-home" onclick="openWidget('homeassistant')" title="Home Assistant">
+                <span class="desktop-icon-glyph">⌂</span>
+                <span class="desktop-icon-label">Home</span>
+            </button>
+            <button class="desktop-icon desktop-icon-info" onclick="openWidget('info')" title="Info">
+                <span class="desktop-icon-glyph">i</span>
+                <span class="desktop-icon-label">Info</span>
+            </button>
+        </section>
+
+        <section class="desktop-at-a-glance" aria-label="Systemstatus">
+            <div class="desktop-brand">Hallo Nutzer.. Was willst du heute machen?</div>
+            <div id="idle-screen">
+                <div id="clock">00:00</div>
+                <div id="weather">Lade Wetter...</div>
+            </div>
+        </section>
+    </main>
+
+    <div id="widget-container">
+        <div class="widget-slot" id="widget-slot-a"></div>
+        <div class="widget-slot" id="widget-slot-b"></div>
+    </div>
+
+    <div id="status-bar">
+        <div class="status-left">
+            <span id="status-weather">--°C</span>
+            <button id="status-back-btn" class="status-back-btn" onclick="closeWidget()" style="display: none;">← Zurück</button>
+        </div>
+        <div class="status-center" id="status-time">00:00</div>
+        <div class="status-right" id="status-date">Mo, 25. Mai</div>
+    </div>
+
+    <nav id="desktop-taskbar" aria-label="Desktop Schnellzugriff">
+        <button class="desktop-taskbar-btn" onclick="closeWidget()" title="Desktop">⌂</button>
+        <div id="spotify-widget" class="spotify-card" onclick="openWidget('spotify')" title="Spotify">
+            <img id="track-cover" src="" alt="Album Cover">
+            <div class="track-info">
+                <h2 id="track-title">Songtitel</h2>
+                <h3 id="track-artist">Interpret</h3>
+                <div class="progress-bar-container">
+                    <div id="track-progress" class="progress-bar"></div>
+                </div>
+            </div>
+            <div id="spotify-semi-countdown"></div>
+        </div>
+        <button class="desktop-taskbar-btn desktop-spotify-fallback" onclick="openWidget('spotify')" title="Spotify">♫</button>
+        <button class="desktop-taskbar-btn" onclick="openWidget('calendar')" title="Kalender">17</button>
+        <button class="desktop-taskbar-btn" onclick="openWidget('timer')" title="Timer">⏱</button>
+        <button id="desktop-control-toggle" class="desktop-taskbar-btn" onclick="toggleDesktopControlCenter()" title="Kontrollzentrum">☰</button>
+    </nav>
+
+    <aside id="desktop-control-center" aria-label="Display Kontrollzentrum">
+        <div class="desktop-control-header">
+            <div>
+                <div class="desktop-control-kicker">PulseOS Control</div>
+                <div class="desktop-control-title">Displays</div>
+            </div>
+            <button class="desktop-control-close" onclick="toggleDesktopControlCenter(false)" title="Schließen">×</button>
+        </div>
+
+        <label class="desktop-control-label" for="desktop-display-select">Ziel</label>
+        <select id="desktop-display-select" class="desktop-control-input">
+            <option value="">Displays laden...</option>
+        </select>
+        <div id="desktop-display-status" class="desktop-control-status">Offline</div>
+
+        <div class="desktop-control-grid">
+            <button class="desktop-control-btn" data-command="idle">Idle</button>
+            <button class="desktop-control-btn" data-command="standby">Standby</button>
+            <button class="desktop-control-btn" data-command="reload">Reload</button>
+            <button class="desktop-control-btn" data-command="popups">Popups</button>
+        </div>
+
+        <label class="desktop-control-label" for="desktop-widget-select">Seite / Widget</label>
+        <div class="desktop-control-row">
+            <select id="desktop-widget-select" class="desktop-control-input">
+                <option value="spotify">Spotify</option>
+                <option value="homeassistant">Home Assistant</option>
+                <option value="calendar">Kalender</option>
+                <option value="timer">Timer</option>
+                <option value="info">Info</option>
+                <option value="vim">Vim</option>
+            </select>
+            <button class="desktop-control-btn" data-command="widget">Öffnen</button>
+        </div>
+
+        <label class="desktop-control-label" for="desktop-quality-select">Animation</label>
+        <select id="desktop-quality-select" class="desktop-control-input">
+            <option value="auto">Auto</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+        </select>
+
+        <div class="desktop-control-section">
+            <div class="desktop-control-title small">Timer</div>
+            <input id="desktop-timer-name" class="desktop-control-input" type="text" placeholder="Name">
+            <div class="desktop-control-row">
+                <input id="desktop-timer-seconds" class="desktop-control-input" type="number" min="1" value="600">
+                <button class="desktop-control-btn" data-command="timer-set">Setzen</button>
+            </div>
+            <div class="desktop-control-grid">
+                <button class="desktop-control-btn" data-command="timer-start">Start</button>
+                <button class="desktop-control-btn" data-command="timer-stop">Stop</button>
+                <button class="desktop-control-btn danger" data-command="timer-reset">Reset</button>
+            </div>
+        </div>
+
+        <div class="desktop-control-section">
+            <div class="desktop-control-title small">Reminder</div>
+            <input id="desktop-reminder-text" class="desktop-control-input" type="text" placeholder="Text">
+            <div class="desktop-control-row">
+                <input id="desktop-reminder-time" class="desktop-control-input" type="time">
+                <select id="desktop-reminder-repeat" class="desktop-control-input">
+                    <option value="once">Einmalig</option>
+                    <option value="daily">Täglich</option>
+                    <option value="weekly">Wöchentlich</option>
+                </select>
+            </div>
+            <div class="desktop-control-row">
+                <select id="desktop-reminder-level" class="desktop-control-input">
+                    <option value="1">Stufe 1</option>
+                    <option value="2">Stufe 2</option>
+                    <option value="3">Stufe 3</option>
+                </select>
+                <button class="desktop-control-btn" data-command="reminder-save">Speichern</button>
+            </div>
+            <div id="desktop-reminder-list" class="desktop-reminder-list"></div>
+        </div>
+    </aside>
+
+    <div id="settings-panel">
+        <div class="settings-overlay" onclick="toggleSettingsPanel()"></div>
+        <div class="settings-sheet">
+            <div class="settings-content">
+                <div class="settings-section settings-brightness">
+                    <button class="settings-btn settings-brightness-btn" id="brightness-btn" onclick="toggleBrightnessSlider()" title="Helligkeit">☀</button>
+                    <div class="brightness-slider-container" id="brightness-slider-container" style="display: none;">
+                        <input type="range" id="panelBrightnessSlider" min="0" max="100" value="50" class="brightness-slider">
+                        <div class="brightness-value" id="panelBrightnessValue">50%</div>
+                    </div>
+                </div>
+
+                <div class="settings-section settings-buttons">
+                    <button class="settings-btn" onclick="openWidget('spotify')">♫ Spotify</button>
+                    <button class="settings-btn" onclick="openWidget('vim')">⌘ Vim</button>
+                    <button class="settings-btn" onclick="openWidget('info')">i Info</button>
+                    <button class="settings-btn" onclick="closeWidget()">⌂ HOME</button>
+                </div>
+
+                <div class="settings-section settings-right-buttons">
+                    <button class="settings-btn settings-reload-btn" id="reload-btn" onmousedown="startReloadTimer()" onmouseup="cancelReloadTimer()" onmouseleave="cancelReloadTimer()" ontouchstart="startReloadTimer()" ontouchend="cancelReloadTimer()">
+                        <span class="reload-text">⟲</span>
+                        <span class="reload-progress" id="reload-progress"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

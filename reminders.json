@@ -1,0 +1,38 @@
+[
+  {
+    "id": "1780748106809-7e67380640c41",
+    "displayId": 4,
+    "text": "Hardcore Sex",
+    "level": 1,
+    "time": "14:16",
+    "repeat": "once",
+    "dayName": "Samstag",
+    "active": false,
+    "lastTriggeredMinute": "2026-06-06 14:16",
+    "createdAt": "2026-06-06T12:15:06.809Z"
+  },
+  {
+    "id": "1780748238861-85a715ee31fbb",
+    "displayId": 4,
+    "text": "Penis",
+    "level": 1,
+    "time": "14:18",
+    "repeat": "once",
+    "dayName": "Samstag",
+    "active": false,
+    "lastTriggeredMinute": "2026-06-06 14:18",
+    "createdAt": "2026-06-06T12:17:18.861Z"
+  },
+  {
+    "id": "1780748334167-90be66db00d508",
+    "displayId": 4,
+    "text": "fds",
+    "level": 1,
+    "time": "14:19",
+    "repeat": "once",
+    "dayName": "Samstag",
+    "active": false,
+    "lastTriggeredMinute": "2026-06-06 14:19",
+    "createdAt": "2026-06-06T12:18:54.167Z"
+  }
+]

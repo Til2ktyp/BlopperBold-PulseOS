@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timer Control</title>
+    <style>
+        .timer-app {
+            width: min(980px, 100%);
+            margin: 0 auto;
+            color: #fff;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .timer-app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 20px;
+            margin-bottom: 26px;
+        }
+
+        .timer-app-title {
+            font-size: 2.4rem;
+            font-weight: 900;
+            letter-spacing: 0;
+        }
+
+        .timer-app-subtitle {
+            margin-top: 6px;
+            color: rgba(255, 255, 255, 0.58);
+            font-size: 1rem;
+        }
+
+        .timer-app-panel {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 18px;
+        }
+
+        .timer-app-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .timer-app-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .timer-app label {
+            display: block;
+            margin-bottom: 7px;
+            color: rgba(255, 255, 255, 0.65);
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .timer-app input,
+        .timer-app select {
+            width: 100%;
+            min-height: 44px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.22);
+            color: #fff;
+            padding: 0 12px;
+            font: inherit;
+            font-weight: 700;
+        }
+
+        .timer-app button {
+            min-height: 44px;
+            border: 1px solid rgba(0, 255, 255, 0.38);
+            border-radius: 8px;
+            background: rgba(0, 255, 255, 0.14);
+            color: #00ffff;
+            padding: 0 16px;
+            font: inherit;
+            font-weight: 900;
+            cursor: pointer;
+        }
+
+        .timer-app button.primary {
+            background: linear-gradient(135deg, #00ffff, #00cc99);
+            color: #031018;
+        }
+
+        .timer-app button.danger {
+            border-color: rgba(255, 71, 87, 0.55);
+            background: rgba(255, 71, 87, 0.14);
+            color: #ff6b78;
+        }
+
+        .timer-app-presets {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 9px;
+            margin-top: 12px;
+        }
+
+        .timer-app-actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .timer-app-status {
+            min-height: 24px;
+            margin-top: 12px;
+            color: rgba(255, 255, 255, 0.64);
+            font-weight: 700;
+        }
+
+        @media (max-width: 800px) {
+            .timer-app-grid,
+            .timer-app-actions,
+            .timer-app-presets {
+                grid-template-columns: 1fr;
+            }
+
+            .timer-app-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="timer-app" id="timer-control-widget">
+        <div class="timer-app-header">
+            <div>
+                <div class="timer-app-title">Timer</div>
+                <div class="timer-app-subtitle">Steuert Timer und Stoppuhren über die PulseOS APIs.</div>
+            </div>
+            <button id="timer-widget-refresh">Displays laden</button>
+        </div>
+
+        <div class="timer-app-panel">
+            <div class="timer-app-grid">
+                <div>
+                    <label for="timer-widget-display">Display</label>
+                    <select id="timer-widget-display">
+                        <option value="">Displays laden...</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="timer-widget-name">Timer-Name</label>
+                    <input id="timer-widget-name" type="text" placeholder="Kochen, Fokus, Workout">
+                </div>
+            </div>
+
+            <div class="timer-app-grid" style="margin-top: 14px;">
+                <div>
+                    <label for="timer-widget-seconds">Sekunden</label>
+                    <input id="timer-widget-seconds" type="number" min="1" value="600">
+                </div>
+                <div>
+                    <label>Schnellwahl</label>
+                    <div class="timer-app-presets">
+                        <button data-timer-preset="60">1m</button>
+                        <button data-timer-preset="300">5m</button>
+                        <button data-timer-preset="600">10m</button>
+                        <button data-timer-preset="900">15m</button>
+                        <button data-timer-preset="1800">30m</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="timer-app-actions">
+                <button class="primary" data-timer-command="set">Setzen</button>
+                <button class="primary" data-timer-command="start">Start</button>
+                <button data-timer-command="stop">Stop</button>
+                <button class="danger" data-timer-command="reset">Reset</button>
+                <button data-stopwatch-command="start">Stoppuhr Start</button>
+                <button data-stopwatch-command="reset">Stoppuhr Reset</button>
+            </div>
+
+            <div id="timer-widget-status" class="timer-app-status"></div>
+        </div>
+    </div>
+</body>
+</html>

@@ -286,7 +286,7 @@ app.get('/display/:displayId/standby', (req, res) => {
 
 // --- TIMER STEUERUNGEN ---
 app.get('/timer/set/:value', (req, res) => {
-    sendToClients({ action: 'timer-set', value: req.params.value });
+    sendToClients({ action: 'timer-set', value: req.params.value, name: req.query.name || 'Timer' });
     res.send(`Timer auf ${req.params.value} Sekunden gesetzt.\n`);
 });
 
@@ -315,7 +315,7 @@ app.get('/timer/reset', (req, res) => {
 // --- PER-DISPLAY TIMER STEUERUNGEN ---
 app.get('/display/:displayId/timer/set/:value', (req, res) => {
     const displayId = parseInt(req.params.displayId);
-    sendToDisplay(displayId, { action: 'timer-set', value: req.params.value, displayId });
+    sendToDisplay(displayId, { action: 'timer-set', value: req.params.value, name: req.query.name || 'Timer', displayId });
     res.send(`Timer für Display ${displayId} auf ${req.params.value} Sekunden gesetzt.\n`);
 });
 
@@ -448,9 +448,131 @@ app.get('/display/:displayId/quality/animations', (req, res) => {
 });
 
 // --- REMINDER SYSTEM ---
+const REMINDERS_FILE = path.join(__dirname, 'reminders.json');
+
+function loadReminders() {
+    try {
+        if (!fs.existsSync(REMINDERS_FILE)) return [];
+        const data = fs.readFileSync(REMINDERS_FILE, 'utf8');
+        return data ? JSON.parse(data) : [];
+    } catch (e) {
+        console.error('[Reminder] Fehler beim Laden:', e);
+        return [];
+    }
+}
+
+function saveReminders(reminders) {
+    try {
+        fs.writeFileSync(REMINDERS_FILE, JSON.stringify(reminders, null, 2));
+    } catch (e) {
+        console.error('[Reminder] Fehler beim Speichern:', e);
+    }
+}
+
+function getReminderDayName(date) {
+    return ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'][date.getDay()];
+}
+
+function getReminderDateKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function normalizeRepeat(value) {
+    if (value === 'täglich') return 'daily';
+    if (value === 'wöchentlich') return 'weekly';
+    if (['once', 'daily', 'weekly'].includes(value)) return value;
+    return 'once';
+}
+
+function createScheduledReminder({ displayId = null, text, level, time, repeat, dayName }) {
+    const now = new Date();
+    return {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        displayId,
+        text,
+        level: parseInt(level) || 1,
+        time,
+        repeat: normalizeRepeat(repeat),
+        dayName: dayName || getReminderDayName(now),
+        active: true,
+        lastTriggeredMinute: null,
+        createdAt: now.toISOString()
+    };
+}
+
+function sendReminderPayload(reminder) {
+    const payload = {
+        action: 'show-reminder',
+        text: reminder.text,
+        stufe: parseInt(reminder.level) || 1,
+        displayId: reminder.displayId || undefined
+    };
+
+    if (reminder.displayId) {
+        sendToDisplay(parseInt(reminder.displayId), payload);
+    } else {
+        sendToClients(payload);
+    }
+}
+
+function isReminderDue(reminder, now) {
+    if (!reminder.active || !reminder.time) return false;
+
+    const currentMinute = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    if (reminder.time !== currentMinute) return false;
+
+    const triggerKey = `${getReminderDateKey(now)} ${currentMinute}`;
+    if (reminder.lastTriggeredMinute === triggerKey) return false;
+
+    if (reminder.repeat === 'weekly' && reminder.dayName && reminder.dayName !== getReminderDayName(now)) {
+        return false;
+    }
+
+    return true;
+}
+
+function checkStoredReminders() {
+    const reminders = loadReminders();
+    if (!reminders.length) return;
+
+    const now = new Date();
+    const currentMinuteKey = `${getReminderDateKey(now)} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    let changed = false;
+
+    reminders.forEach(reminder => {
+        if (!isReminderDue(reminder, now)) return;
+
+        sendReminderPayload(reminder);
+        reminder.lastTriggeredMinute = currentMinuteKey;
+        if (reminder.repeat === 'once') {
+            reminder.active = false;
+        }
+        changed = true;
+        console.log(`[Reminder] Ausgelöst: ${reminder.text} -> ${reminder.displayId || 'alle'}`);
+    });
+
+    if (changed) saveReminders(reminders);
+}
+
 app.get('/reminder', (req, res) => {
     const text = req.query.text || "Kein Text angegeben";
     const stufe = req.query.stufe || 1;
+    const time = req.query.time || '';
+    const repeat = req.query.repeat || req.query.days || 'once';
+
+    if (time) {
+        const reminders = loadReminders();
+        const reminder = createScheduledReminder({
+            text,
+            level: stufe,
+            time,
+            repeat,
+            dayName: req.query.dayName
+        });
+        reminders.push(reminder);
+        saveReminders(reminders);
+        return res.json(reminder);
+    }
 
     sendToClients({
         action: "show-reminder",
@@ -466,6 +588,23 @@ app.get('/display/:displayId/reminder', (req, res) => {
     const displayId = parseInt(req.params.displayId);
     const text = req.query.text || "Kein Text angegeben";
     const stufe = req.query.stufe || 1;
+    const time = req.query.time || '';
+    const repeat = req.query.repeat || req.query.days || 'once';
+
+    if (time) {
+        const reminders = loadReminders();
+        const reminder = createScheduledReminder({
+            displayId,
+            text,
+            level: stufe,
+            time,
+            repeat,
+            dayName: req.query.dayName
+        });
+        reminders.push(reminder);
+        saveReminders(reminders);
+        return res.json(reminder);
+    }
 
     sendToDisplay(displayId, {
         action: "show-reminder",
@@ -475,6 +614,17 @@ app.get('/display/:displayId/reminder', (req, res) => {
     });
 
     res.send(`Reminder der Stufe ${stufe} für Display ${displayId} gesendet.\n`);
+});
+
+app.get('/reminders', (req, res) => {
+    res.json(loadReminders());
+});
+
+app.get('/reminder/:id/delete', (req, res) => {
+    const reminders = loadReminders();
+    const nextReminders = reminders.filter(reminder => reminder.id !== req.params.id);
+    saveReminders(nextReminders);
+    res.json({ success: true, count: nextReminders.length });
 });
 
 
@@ -586,6 +736,144 @@ app.get('/todo/clear', (req, res) => {
 app.get('/todo/show', (req, res) => {
     saveAndBroadcast(loadTodos());
     res.send("Widget erfolgreich auf dem Hub geöffnet.");
+});
+
+// --- CALENDAR / ICLOUD ICS SYNC ---
+const CALENDAR_ICS_URL = process.env.CALENDAR_ICS_URL || process.env.ICLOUD_CALENDAR_URL || '';
+
+function unfoldIcsLines(text) {
+    return text.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '').split(/\r?\n/);
+}
+
+function cleanIcsText(value = '') {
+    return value
+        .replace(/\\n/g, ' ')
+        .replace(/\\,/g, ',')
+        .replace(/\\;/g, ';')
+        .replace(/\\\\/g, '\\')
+        .trim();
+}
+
+function parseIcsDate(value = '') {
+    if (!value) return null;
+
+    const dateOnly = value.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (dateOnly) {
+        return {
+            dateKey: `${dateOnly[1]}-${dateOnly[2]}-${dateOnly[3]}`,
+            time: ''
+        };
+    }
+
+    const dateTime = value.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
+    if (!dateTime) return null;
+
+    const isUtc = value.endsWith('Z');
+    const date = isUtc
+        ? new Date(Date.UTC(
+            Number(dateTime[1]),
+            Number(dateTime[2]) - 1,
+            Number(dateTime[3]),
+            Number(dateTime[4]),
+            Number(dateTime[5])
+        ))
+        : new Date(
+            Number(dateTime[1]),
+            Number(dateTime[2]) - 1,
+            Number(dateTime[3]),
+            Number(dateTime[4]),
+            Number(dateTime[5])
+        );
+
+    return {
+        dateKey: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+        time: date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+    };
+}
+
+function parseIcsEvents(icsText) {
+    const lines = unfoldIcsLines(icsText);
+    const eventsByDate = {};
+    let currentEvent = null;
+
+    lines.forEach(line => {
+        if (line === 'BEGIN:VEVENT') {
+            currentEvent = {};
+            return;
+        }
+
+        if (line === 'END:VEVENT') {
+            if (currentEvent && currentEvent.dtstart && currentEvent.summary) {
+                const parsedDate = parseIcsDate(currentEvent.dtstart);
+                if (parsedDate) {
+                    if (!eventsByDate[parsedDate.dateKey]) eventsByDate[parsedDate.dateKey] = [];
+                    eventsByDate[parsedDate.dateKey].push({
+                        time: parsedDate.time,
+                        title: cleanIcsText(currentEvent.summary),
+                        location: cleanIcsText(currentEvent.location || '')
+                    });
+                }
+            }
+            currentEvent = null;
+            return;
+        }
+
+        if (!currentEvent) return;
+
+        const separatorIndex = line.indexOf(':');
+        if (separatorIndex === -1) return;
+
+        const rawKey = line.slice(0, separatorIndex);
+        const key = rawKey.split(';')[0].toUpperCase();
+        const value = line.slice(separatorIndex + 1);
+
+        if (key === 'SUMMARY') currentEvent.summary = value;
+        if (key === 'LOCATION') currentEvent.location = value;
+        if (key === 'DTSTART') currentEvent.dtstart = value;
+    });
+
+    Object.values(eventsByDate).forEach(dayEvents => {
+        dayEvents.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+    });
+
+    return eventsByDate;
+}
+
+app.get('/calendar/events', async (req, res) => {
+    if (!CALENDAR_ICS_URL) {
+        return res.json({
+            configured: false,
+            count: 0,
+            eventsByDate: {}
+        });
+    }
+
+    try {
+        const response = await fetch(CALENDAR_ICS_URL);
+        if (!response.ok) {
+            return res.status(response.status).json({
+                configured: true,
+                error: `Kalender-Feed antwortet mit HTTP ${response.status}`
+            });
+        }
+
+        const icsText = await response.text();
+        const eventsByDate = parseIcsEvents(icsText);
+        const count = Object.values(eventsByDate).reduce((sum, dayEvents) => sum + dayEvents.length, 0);
+
+        res.json({
+            configured: true,
+            count,
+            eventsByDate,
+            lastSync: new Date().toISOString()
+        });
+    } catch (e) {
+        console.error('[Calendar] ICS Sync Fehler:', e.message);
+        res.status(500).json({
+            configured: true,
+            error: e.message
+        });
+    }
 });
 
 
@@ -906,6 +1194,8 @@ app.post('/brightness/:value', (req, res) => {
 // --- SERVER START ---
 app.listen(PORT, () => {
     console.log(`Server läuft auf http://localhost:${PORT}`);
+    checkStoredReminders();
+    setInterval(checkStoredReminders, 60 * 1000);
     if (SPOTIFY_REFRESH_TOKEN) {
         startSpotifyPolling();
     } else {
