@@ -133,6 +133,7 @@
                         <input type="range" id="panelBrightnessSlider" min="0" max="100" value="50" class="brightness-slider">
                         <div class="brightness-value" id="panelBrightnessValue">50%</div>
                     </div>
+                <button class="settings-btn" onclick="closeWidget()">🏠 HOME</button>
                 </div>
 
                 <!-- Buttons Mitte -->
@@ -141,9 +142,8 @@
                     <button class="settings-btn" onclick="openWidget('vim')">📝 Vim</button>
                     <button class="settings-btn" onclick="openWidget('calendar')">📅 Kalender</button>
                     <button class="settings-btn" onclick="openWidget('homeassistant')">⌂ Home Assistant</button>
-                    <button class="settings-btn" onclick="openWidget('info')">ℹ️ Info</button>
                     <button class="settings-btn" onclick="window.location.href='http://192.168.178.96:3000/desktop-mode.html'">📅 Desktop-Mode</button>
-                    <button class="settings-btn" onclick="closeWidget()">🏠 HOME</button>
+                    <button class="settings-btn" onclick="openWidget('info')">ℹ️ Info</button>
                 </div>
 
                 <!-- Buttons Rechts -->
