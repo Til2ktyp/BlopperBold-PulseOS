@@ -52,7 +52,7 @@ body.standby-active #clock {
 }
 
 body, #clock, #weather, .aura-bg {
-    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* --- AURA HINTERGRUND --- */
@@ -358,6 +358,7 @@ body.standby-active #status-bar {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     white-space: nowrap;
+    transform: translateX(-0%);
 }
 
 .status-back-btn:hover {
@@ -570,7 +571,7 @@ body.standby-active .widget-title {
     left: 50%;
     transform: translateX(-50%);
     opacity: 0;
-    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), bottom 0.3s ease;
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), bottom 0.3s ease, transform 0.35s ease;
     pointer-events: none;
     position: absolute;
     box-shadow: 0 15px 40px rgba(0,0,0,0.6);
@@ -600,9 +601,14 @@ body.standby-active .spotify-card {
 }
 
 body.settings-active .spotify-card.active {
-    bottom: 185px;
-    opacity: 0.72;
+    bottom: 138px;
+    opacity: 0.7;
     z-index: 8889;
+    transform: scale(0.85) translateX(-59%);
+}
+
+body.settings-active #weather {
+    opacity: 0 !important;
 }
 
 #track-cover {
@@ -905,7 +911,7 @@ body.animation-medium #widget-container {
     height: 100%;
     background: rgba(10, 11, 16, 0.25);
     backdrop-filter: var(--glass-blur);
-    padding: 50px;
+    padding: 25px;
     overflow-y: auto;
     opacity: 0;
     transform: scale(0.95);
@@ -1473,7 +1479,7 @@ body.widget-active #init-toast {
 }
 
 .settings-btn {
-    padding: 12px 16px;
+    padding: 5px 16px;
     background: linear-gradient(135deg, #00ffff, #00cc99);
     border: 2px solid rgba(0, 255, 255, 0.5);
     border-radius: 8px;
@@ -1481,7 +1487,7 @@ body.widget-active #init-toast {
     font-weight: 700;
     cursor: pointer;
     transition: all 0.3s ease;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
@@ -1870,8 +1876,8 @@ body.desktop-mode .spotify-card {
 body.desktop-mode .spotify-card.active {
     width: 420px;
     min-width: 420px;
-    padding: 5px 8px;
-    gap: 10px;
+    padding: 5px 5px;
+    gap: 5px;
     transform: translateY(0) scale(1);
     opacity: 1;
     pointer-events: auto;

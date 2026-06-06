@@ -154,6 +154,7 @@
         <button class="desktop-taskbar-btn desktop-spotify-fallback" onclick="openWidget('desktop-spotify')" title="Spotify">♫</button>
         <button class="desktop-taskbar-btn" onclick="openWidget('calendar')" title="Kalender">17</button>
         <button class="desktop-taskbar-btn" onclick="openWidget('timer')" title="Timer">⏱</button>
+        <button class="desktop-taskbar-btn" onclick="openWidget('homeassistant')" title="Home Assistant">⌂</button>
         <button id="desktop-control-toggle" class="desktop-taskbar-btn" onclick="toggleDesktopControlCenter()" title="Kontrollzentrum">☰</button>
     </nav>
 
@@ -236,38 +237,6 @@
             <div id="desktop-reminder-list" class="desktop-reminder-list"></div>
         </div>
     </aside>
-
-    <div id="settings-panel">
-        <div class="settings-overlay" onclick="toggleSettingsPanel()"></div>
-        <div class="settings-sheet">
-            <div class="settings-content">
-                <div class="settings-section settings-brightness">
-                    <button class="settings-btn settings-brightness-btn" id="brightness-btn" onclick="toggleBrightnessSlider()" title="Helligkeit">☀</button>
-                    <div class="brightness-slider-container" id="brightness-slider-container" style="display: none;">
-                        <input type="range" id="panelBrightnessSlider" min="0" max="100" value="50" class="brightness-slider">
-                        <div class="brightness-value" id="panelBrightnessValue">50%</div>
-                    </div>
-                </div>
-
-                <div class="settings-section settings-buttons">
-                    <button class="settings-btn spotify-quick-control" type="button" title="Spotify Zurück" data-spotify-previous-track>⏮</button>
-                    <button class="settings-btn spotify-quick-toggle" type="button" title="Spotify Play/Pause" data-spotify-toggle-play>⏯ Spotify</button>
-                    <button class="settings-btn spotify-quick-control" type="button" title="Spotify Weiter" data-spotify-next-track>⏭</button>
-                    <button class="settings-btn" onclick="openWidget('desktop-spotify')">♫ Spotify</button>
-                    <button class="settings-btn" onclick="openWidget('vim')">⌘ Vim</button>
-                    <button class="settings-btn" onclick="openWidget('info')">i Info</button>
-                    <button class="settings-btn" onclick="closeWidget()">⌂ HOME</button>
-                </div>
-
-                <div class="settings-section settings-right-buttons">
-                    <button class="settings-btn settings-reload-btn" id="reload-btn" onmousedown="startReloadTimer()" onmouseup="cancelReloadTimer()" onmouseleave="cancelReloadTimer()" ontouchstart="startReloadTimer()" ontouchend="cancelReloadTimer()">
-                        <span class="reload-text">⟲</span>
-                        <span class="reload-progress" id="reload-progress"></span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <script src="script.js"></script>
 </body>
