@@ -86,7 +86,7 @@
 
     <div id="idle-screen">
         <div id="clock">00:00</div>
-        <div id="weather" onclick="openWidget('weather')" style="cursor: pointer;">Lade Wetter...</div>
+        <div id="weather">Lade Wetter...</div>
     </div>
 
     <div id="spotify-widget" class="spotify-card" onclick="openWidget('spotify')">
@@ -129,15 +129,12 @@
                     </div>
                 </div>
 
-                <!-- Buttons Mitte - Quick Functions -->
+                <!-- Buttons Mitte -->
                 <div class="settings-section settings-buttons">
-                    <button class="settings-btn" onclick="openTimerPopup()" title="Timer">⏲️</button>
-                    <button class="settings-btn" onclick="startQuickStopwatch()" title="Stoppuhr">⏱️</button>
-                    <button class="settings-btn" onclick="toggleQuickStandby()" title="Standby">🌙</button>
-                    <button class="settings-btn" onclick="openWidget('spotify')">🎵</button>
-                    <button class="settings-btn" onclick="openWidget('vim')">📝</button>
-                    <button class="settings-btn" onclick="openWidget('info')">ℹ️</button>
-                    <button class="settings-btn" onclick="closeWidget()">🏠</button>
+                    <button class="settings-btn" onclick="openWidget('spotify')">🎵 Spotify</button>
+                    <button class="settings-btn" onclick="openWidget('vim')">📝 Vim</button>
+                    <button class="settings-btn" onclick="openWidget('info')">ℹ️ Info</button>
+                    <button class="settings-btn" onclick="closeWidget()">🏠 HOME</button>
                 </div>
 
                 <!-- Buttons Rechts -->
@@ -147,41 +144,6 @@
                         <span class="reload-progress" id="reload-progress"></span>
                     </button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Timer Quick Popup -->
-    <div id="timer-quick-popup" class="timer-quick-popup" style="display: none;">
-        <div class="timer-quick-content">
-            <h3>⏲️ Timer</h3>
-            <div class="timer-quick-inputs" id="timer-quick-inputs-section">
-                <input type="number" id="timer-quick-min" min="0" max="99" value="5" placeholder="Min">
-                <span>:</span>
-                <input type="number" id="timer-quick-sec" min="0" max="59" value="00" placeholder="Sek">
-            </div>
-            <div class="timer-quick-display" id="timer-quick-display" style="display: none; font-size: 2rem; text-align: center; margin: 15px 0; font-weight: 600; color: rgba(255, 255, 255, 0.9);">00:00</div>
-            <div class="timer-quick-presets">
-                <button onclick="setQuickTimerPreset(1)">1 Min</button>
-                <button onclick="setQuickTimerPreset(5)">5 Min</button>
-                <button onclick="setQuickTimerPreset(10)">10 Min</button>
-            </div>
-            <button class="timer-quick-start" onclick="startQuickTimer()">Start Timer</button>
-            <div class="timer-quick-controls" id="timer-quick-controls" style="display: none; gap: 10px;">
-                <button class="timer-quick-stop" onclick="stopQuickTimer()">⏸️ Pausieren</button>
-                <button class="timer-quick-reset" onclick="resetQuickTimer()">↻ Reset</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stopwatch Quick Popup -->
-    <div id="stopwatch-quick-popup" class="timer-quick-popup" style="display: none;">
-        <div class="timer-quick-content">
-            <h3>⏱️ Stoppuhr</h3>
-            <div class="stopwatch-quick-display" id="stopwatch-quick-display">00:00.0</div>
-            <div class="timer-quick-presets">
-                <button onclick="stopQuickStopwatch()" class="stopwatch-stop-btn">⏸️ Pausieren</button>
-                <button onclick="resetQuickStopwatch()" class="stopwatch-reset-btn">↻ Reset</button>
             </div>
         </div>
     </div>

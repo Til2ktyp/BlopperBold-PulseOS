@@ -4,8 +4,6 @@ const express = require('express');
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
-const https = require('https');
-const http = require('http');
 const app = express();
 const PORT = 3000;
 
@@ -13,19 +11,6 @@ const PulseOSVERSION = "26.5.1111";
 
 // WICHTIG: Erlaubt Express, JSON-Daten (z.B. vom Handy) zu lesen
 app.use(express.json());
-
-// CORS-Headers hinzufügen für API-Anfragen
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    if (req.method === 'OPTIONS') {
-        res.sendStatus(200);
-    } else {
-        next();
-    }
-});
-
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- 🎯 DISPLAY MANAGEMENT SYSTEM ---
@@ -916,113 +901,6 @@ app.post('/brightness/:value', (req, res) => {
     brightnessValue = value;
     console.log(`[Brightness] Updated: ${value}%`);
     res.json({ brightness: brightnessValue });
-});
-
-// --- 🔔 REMINDERS ENDPOINTS ---
-const REMINDERS_FILE = path.join(__dirname, 'reminders.json');
-
-function loadReminders() {
-    try {
-        if (!fs.existsSync(REMINDERS_FILE)) {
-            console.log('[Reminders] reminders.json nicht gefunden, erstelle neue Datei');
-            fs.writeFileSync(REMINDERS_FILE, JSON.stringify({ reminders: [] }, null, 2));
-            return { reminders: [] };
-        }
-        const data = fs.readFileSync(REMINDERS_FILE, 'utf8');
-        return data ? JSON.parse(data) : { reminders: [] };
-    } catch (e) {
-        console.error('[Reminders] Fehler beim Laden:', e);
-        return { reminders: [] };
-    }
-}
-
-function saveReminders(data) {
-    try {
-        fs.writeFileSync(REMINDERS_FILE, JSON.stringify(data, null, 2));
-        console.log('[Reminders] Gespeichert');
-    } catch (e) {
-        console.error('[Reminders] Fehler beim Speichern:', e);
-    }
-}
-
-// Hole alle Erinnerungen
-app.get('/reminders', (req, res) => {
-    const reminders = loadReminders();
-    res.json(reminders);
-});
-
-// Füge neue Erinnerung hinzu
-app.post('/reminders', (req, res) => {
-    const reminders = loadReminders();
-    const newReminder = req.body;
-    
-    if (!newReminder.text) {
-        return res.status(400).json({ error: 'Erinnerung Text erforderlich' });
-    }
-    
-    // Setze Defaults
-    newReminder.id = Date.now();
-    newReminder.level = newReminder.level || 1;
-    newReminder.time = newReminder.time || new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-    newReminder.days = newReminder.days || 'täglich';
-    
-    reminders.reminders.push(newReminder);
-    saveReminders(reminders);
-    
-    console.log(`[Reminders] Neue Erinnerung hinzugefügt: ${newReminder.text}`);
-    res.json({ success: true, reminder: newReminder });
-});
-
-// Lösche Erinnerung
-app.delete('/reminders/:id', (req, res) => {
-    const reminders = loadReminders();
-    const id = parseInt(req.params.id);
-    
-    reminders.reminders = reminders.reminders.filter(r => r.id !== id);
-    saveReminders(reminders);
-    
-    console.log(`[Reminders] Erinnerung ${id} gelöscht`);
-    res.json({ success: true });
-});
-
-// --- 🌤️ WEATHER API PROXY ---
-// Proxy für Open-Meteo API um CORS-Probleme zu vermeiden
-app.get('/api/weather', async (req, res) => {
-    try {
-        const { latitude, longitude } = req.query;
-        
-        if (!latitude || !longitude) {
-            return res.status(400).json({ error: 'latitude und longitude erforderlich' });
-        }
-        
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`;
-        
-        const https = require('https');
-        https.get(url, (apiRes) => {
-            let data = '';
-            
-            apiRes.on('data', (chunk) => {
-                data += chunk;
-            });
-            
-            apiRes.on('end', () => {
-                try {
-                    const jsonData = JSON.parse(data);
-                    res.json(jsonData);
-                    console.log(`[Weather] Daten vom Proxy für ${latitude},${longitude} geholt`);
-                } catch (e) {
-                    console.error('[Weather] JSON Parse-Fehler:', e);
-                    res.status(500).json({ error: 'Fehler beim Parsen der Wetterdaten' });
-                }
-            });
-        }).on('error', (e) => {
-            console.error('[Weather] API-Fehler:', e);
-            res.status(500).json({ error: 'Fehler beim Abrufen der Wetterdaten' });
-        });
-    } catch (e) {
-        console.error('[Weather] Server-Fehler:', e);
-        res.status(500).json({ error: 'Interner Server-Fehler' });
-    }
 });
 
 // --- SERVER START ---
