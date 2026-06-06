@@ -20,7 +20,7 @@ html {
 body {
     font-family: var(--font-apple);
     background: #07003c;
-    color: #ffffff;
+    color: #060606;
     height: 100vh;
     overflow: hidden;
     position: relative;
