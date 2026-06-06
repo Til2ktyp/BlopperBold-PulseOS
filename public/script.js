@@ -1735,7 +1735,7 @@ eventSource.onmessage = function(event) {
                 rPopup.classList.add(`lvl-${level}`);
                 document.getElementById('reminder-label-text').textContent = (level === 1) ? '📌 Info' : '🔔 Reminder';
                 showPopup('reminder-popup');
-                setTimeout(() => { hidePopup('reminder-popup'); }, 25000);
+                setTimeout(() => { hidePopup('reminder-popup'); }, 60000);
             }
         }
 
