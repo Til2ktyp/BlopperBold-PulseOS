@@ -9,3 +9,4 @@ node_modules/gopd/.DS_Store
 .DS_Store
 display-settings.json
 spotify-cache.json
+reminders.json

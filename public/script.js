@@ -1,5 +1,8 @@
 let idleTimeout;
 let standbyTimeout;
+let currentAudio = null;
+let timerAudio = null;
+let eventAudio = null;
 
 const IDLE_TIME = 20 * 1000; // 20 sekunden
 const STANDBY_TIME = 5 * 1000; // 5 sekunden nach Idle
@@ -261,6 +264,7 @@ function wakeDisplay(reason = 'unknown', force = false) {
     resetIdleTimer();
 }
 
+
 // Benutzeraktivität erkennen
 function setupActivityListeners() {
     const events = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'click'];
@@ -493,7 +497,7 @@ function hideLoadingScreen() {
     if (randomValue < 0.005) {
         totalLoadTime = 20000;
     } else {
-        totalLoadTime = Math.random() * 100 + 100; //3000 + 4000
+        totalLoadTime = Math.random() * 3000 + 4000; //3000 + 4000
     }
     
     const stage2Delay = Math.random() * 2000 + 100;
@@ -513,10 +517,17 @@ function hideLoadingScreen() {
     setTimeout(showInitToast, totalLoadTime - 1000);
     
     setTimeout(() => {
+        // Sound + fade-out gleichzeitig
+        currentAudio = new Audio('/sounds/startup.mp3');
+        currentAudio.play().catch(error => {
+            console.log('Audio Autoplay blockiert:', error);
+        });
+        
         loadingScreen.classList.add('fade-out');
+        
         setTimeout(() => {
             loadingScreen.style.display = 'none';
-            fetchWeather();
+            fetchWeather()
         }, 1600);
     }, totalLoadTime);
 }
@@ -567,6 +578,13 @@ const desktopStandbyObserver = new MutationObserver(() => {
     wasDesktopStandbyActive = isDesktopStandbyActive;
 });
 
+function onLocalEventComplete() {
+    eventAudio = new Audio('/sounds/startup.mp3');
+    eventAudio.play().catch(error => {
+        console.log('Event-Sound konnte nicht abgespielt werden:', error);
+    });
+}
+
 desktopStandbyObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
 async function fetchWeather() {
@@ -607,7 +625,8 @@ function checkScheduledReminders() {
                 document.getElementById('reminder-content').textContent = reminder.text;
                 reminderPopup.classList.add('reminder-show');
                 wakeDisplay('reminder-triggered', true);
-                
+                onLocalEventComplete();
+
                 // Mark as triggered for this minute
                 reminder.lastTriggered = now.getTime();
                 setTimeout(() => {
@@ -697,6 +716,22 @@ function clearDoneTodos(event) {
         .catch(e => console.error("Fehler beim Aufräumen der Liste:", e));
 }
 
+function onTimerComplete() {
+    timerAudio = new Audio('/sounds/timer.mp3');
+    timerAudio.loop = true; // Sound loopt endlos
+    timerAudio.play().catch(error => {
+        console.log('Timer-Sound konnte nicht abgespielt werden:', error);
+    });
+}
+
+function resetTimer() {
+    if (timerAudio) {
+        timerAudio.pause();
+        timerAudio.currentTime = 0;
+        timerAudio = null;
+    }
+}
+
 function localTimerReset() {
     clearInterval(timerInterval);
     timerRunning = false;
@@ -718,6 +753,7 @@ function localTimerReset() {
     }, 300);
 
     fetch('/timer/reset').catch(e => console.error("Reset Fehler:", e));
+    resetTimer();
 }
 
 function closeAdhsPopup() { document.getElementById('adhs-overlay').classList.remove('active'); }
@@ -1798,6 +1834,8 @@ eventSource.onmessage = function(event) {
                         if (timerTime <= 0) {
                             if (!tPopup.classList.contains('timer-alarm')) {
                                 tPopup.classList.add('timer-alarm');
+
+                                onTimerComplete();
                             }
                             document.getElementById('timer-label-text').textContent = "🚨 ABGELAUFEN";
                         } else {
