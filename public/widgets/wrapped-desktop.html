@@ -1,0 +1,375 @@
+<style>
+    .wrapped-desktop-wrapper {
+        width: 100%;
+        margin: 0 auto;
+        padding: 10px;
+        font-family: 'Inter', -apple-system, sans-serif;
+    }
+
+    .wrapped-desktop-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 15px;
+    }
+
+    .wrapped-desktop-header h1 {
+        font-size: 2.2rem;
+        font-weight: 800;
+        letter-spacing: -1px;
+        background: linear-gradient(135deg, #f472b6 0%, #38bdf8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0;
+    }
+
+    .wrapped-desktop-header p {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.95rem;
+        margin: 5px 0 0 0;
+    }
+
+    .wrapped-desktop-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+
+    /* Cards */
+    .wd-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 24px;
+        padding: 24px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    .wd-card h2 {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 18px;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Hero / Stat Overview - spans full width */
+    .wd-hero {
+        grid-column: span 3;
+        display: flex;
+        gap: 16px;
+    }
+
+    .wd-hero-stat {
+        flex: 1;
+        background: linear-gradient(135deg, rgba(244, 114, 182, 0.1) 0%, rgba(56, 189, 248, 0.1) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        padding: 18px 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .wd-hero-value {
+        font-size: 2.6rem;
+        font-weight: 800;
+        letter-spacing: -2px;
+        background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        line-height: 1;
+        margin-bottom: 6px;
+    }
+
+    .wd-hero-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.6);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Chart - spans full width */
+    .wd-chart-card {
+        grid-column: span 3;
+    }
+
+    .wd-chart-container {
+        height: 160px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-around;
+        padding-top: 15px;
+    }
+
+    .wd-chart-bar-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 12%;
+        height: 100%;
+        justify-content: flex-end;
+    }
+
+    .wd-chart-bar {
+        width: 100%;
+        background: linear-gradient(to top, #38bdf8 0%, #f472b6 100%);
+        border-radius: 8px 8px 0 0;
+        min-height: 4px;
+        transition: height 1s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        cursor: pointer;
+    }
+
+    .wd-chart-bar:hover {
+        opacity: 0.9;
+        filter: brightness(1.2);
+    }
+
+    .wd-chart-bar-tooltip {
+        position: absolute;
+        top: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1e293b;
+        color: #ffffff;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        border: 1px solid rgba(255,255,255,0.1);
+        pointer-events: none;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .wd-chart-bar:hover .wd-chart-bar-tooltip {
+        opacity: 1;
+    }
+
+    .wd-chart-bar-label {
+        margin-top: 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: rgba(255,255,255,0.4);
+    }
+
+    /* Rankings / Lists */
+    .wd-ranking-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: 420px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .wd-ranking-list::-webkit-scrollbar { width: 5px; }
+    .wd-ranking-list::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 10px; }
+    .wd-ranking-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+
+    .wd-ranking-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 14px;
+        padding: 9px 12px;
+        transition: transform 0.2s;
+    }
+
+    .wd-ranking-item:hover {
+        transform: translateX(4px);
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .wd-ranking-number {
+        font-size: 1rem;
+        font-weight: 800;
+        color: rgba(255, 255, 255, 0.2);
+        width: 20px;
+        text-align: center;
+    }
+
+    .wd-ranking-item:nth-child(1) .wd-ranking-number { color: #facc15; }
+    .wd-ranking-item:nth-child(2) .wd-ranking-number { color: #cbd5e1; }
+    .wd-ranking-item:nth-child(3) .wd-ranking-number { color: #b45309; }
+
+    .wd-ranking-info {
+        flex-grow: 1;
+        min-width: 0;
+    }
+
+    .wd-ranking-name {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #ffffff;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .wd-ranking-sub {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.5);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .wd-ranking-badge {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #38bdf8;
+        background: rgba(56, 189, 248, 0.1);
+        padding: 4px 10px;
+        border-radius: 12px;
+        flex-shrink: 0;
+    }
+
+    .wd-ranking-empty {
+        text-align: center;
+        padding: 30px;
+        color: rgba(255, 255, 255, 0.3);
+        font-size: 0.95rem;
+    }
+
+    /* Recent Activity card */
+    .wd-recent-card {
+        grid-column: span 1;
+    }
+
+    .wd-recent-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .wd-recent-item:last-child { border-bottom: none; }
+
+    .wd-recent-cover {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        object-fit: cover;
+        flex-shrink: 0;
+        background: rgba(255,255,255,0.05);
+    }
+
+    .wd-recent-info {
+        flex-grow: 1;
+        min-width: 0;
+    }
+
+    .wd-recent-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #fff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .wd-recent-artist {
+        font-size: 0.75rem;
+        color: rgba(255,255,255,0.5);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .wd-recent-time {
+        font-size: 0.7rem;
+        color: #38bdf8;
+        flex-shrink: 0;
+    }
+
+    .wd-recent-list {
+        max-height: 420px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .wd-recent-list::-webkit-scrollbar { width: 5px; }
+    .wd-recent-list::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 10px; }
+    .wd-recent-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+</style>
+
+<div class="wrapped-desktop-wrapper">
+    <div class="wrapped-desktop-header">
+        <div>
+            <h1>🎁 PulseOS Wrapped</h1>
+            <p>Deine ganz persönlichen Musik-Statistiken — Desktop Edition</p>
+        </div>
+    </div>
+
+    <div class="wrapped-desktop-grid" id="wrapped-desktop-grid" style="opacity: 0; transition: opacity 0.5s;">
+        <!-- Hero Overview - 5 Stats -->
+        <div class="wd-hero">
+            <div class="wd-hero-stat">
+                <div id="wd-stat-today" class="wd-hero-value">0</div>
+                <div class="wd-hero-label">Minuten Heute</div>
+            </div>
+            <div class="wd-hero-stat">
+                <div id="wd-stat-alltime" class="wd-hero-value">0</div>
+                <div class="wd-hero-label">Stunden Gesamt</div>
+            </div>
+            <div class="wd-hero-stat">
+                <div id="wd-stat-songs" class="wd-hero-value">0</div>
+                <div class="wd-hero-label">Songs Gehört</div>
+            </div>
+            <div class="wd-hero-stat">
+                <div id="wd-stat-artists" class="wd-hero-value">0</div>
+                <div class="wd-hero-label">Verschiedene Künstler</div>
+            </div>
+            <div class="wd-hero-stat">
+                <div id="wd-stat-avg" class="wd-hero-value">0</div>
+                <div class="wd-hero-label">⌀ Min./Song</div>
+            </div>
+        </div>
+
+        <!-- Weekly Chart - full width -->
+        <div class="wd-card wd-chart-card">
+            <h2>📊 Letzte 7 Tage (Hörzeit)</h2>
+            <div class="wd-chart-container" id="wd-chart-container">
+                <!-- Bars injected here -->
+            </div>
+        </div>
+
+        <!-- Top Artists -->
+        <div class="wd-card">
+            <h2>🎤 Top Künstler</h2>
+            <div id="wd-artists-container" class="wd-ranking-list">
+                <div class="wd-ranking-empty">Lade Künstler...</div>
+            </div>
+        </div>
+
+        <!-- Top Songs -->
+        <div class="wd-card">
+            <h2>🎵 Top Songs</h2>
+            <div id="wd-songs-container" class="wd-ranking-list">
+                <div class="wd-ranking-empty">Lade Songs...</div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="wd-card wd-recent-card">
+            <h2>🕐 Zuletzt Gehört</h2>
+            <div id="wd-recent-container" class="wd-recent-list">
+                <div class="wd-ranking-empty">Lade...</div>
+            </div>
+        </div>
+    </div>
+</div>

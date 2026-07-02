@@ -84,9 +84,57 @@
         </div>
     </div>
 
-    <div id="idle-screen">
-        <div id="clock">00:00</div>
-        <div id="weather">Lade Wetter...</div>
+    <div id="idle-screen" class="watchface-container">
+        <div id="watchface-carousel" class="watchface-carousel">
+            <!-- Digital Watchface (Current) -->
+            <div class="watchface active" id="watchface-digital">
+                <div id="clock">00:00</div>
+                <div id="weather">Lade Wetter...</div>
+                
+                <div class="watchface-btn-group">
+                    <button class="watchface-edit-btn" onclick="openInlineEditor()">Anpassen</button>
+                </div>
+            </div>
+            
+            <!-- Analog Watchface -->
+            <div class="watchface" id="watchface-analog">
+                <div class="analog-clock">
+                    <div class="hand hour-hand" id="analog-hour"></div>
+                    <div class="hand minute-hand" id="analog-minute"></div>
+                    <div class="hand second-hand" id="analog-second"></div>
+                    <div class="center-dot"></div>
+                    <!-- Markers -->
+                    <div class="marker m12"></div>
+                    <div class="marker m3"></div>
+                    <div class="marker m6"></div>
+                    <div class="marker m9"></div>
+                </div>
+                <div class="analog-weather" id="analog-weather">☁️ --°C</div>
+                
+                <div class="watchface-btn-group">
+                    <button class="watchface-edit-btn" onclick="openInlineEditor()">Anpassen</button>
+                </div>
+            </div>
+
+            <!-- Modular Watchface (Complications) -->
+            <div class="watchface" id="watchface-modular">
+                <div class="widget-grid-container">
+                    <div class="widget-grid" id="modular-widget-grid">
+                        <!-- Dynamically injected widgets go here -->
+                    </div>
+                </div>
+                <div class="watchface-btn-group">
+                    <button class="watchface-edit-btn" onclick="openInlineEditor()">Anpassen</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Popout Menu Indicators -->
+        <div id="watchface-indicators" class="watchface-indicators">
+            <div class="indicator active"></div>
+            <div class="indicator"></div>
+            <div class="indicator"></div>
+        </div>
     </div>
 
     <div id="spotify-widget" class="spotify-card">
@@ -125,39 +173,136 @@
     <div id="settings-panel">
         <div class="settings-overlay" onclick="toggleSettingsPanel()"></div>
         <div class="settings-sheet">
-            <div class="settings-content">
-                <!-- Helligkeit Links -->
-                <div class="settings-section settings-brightness">
-                    <button class="settings-btn settings-brightness-btn" id="brightness-btn" onclick="toggleBrightnessSlider()" title="Helligkeit">☀️</button>
-                    <div class="brightness-slider-container" id="brightness-slider-container" style="display: none;">
-                        <input type="range" id="panelBrightnessSlider" min="0" max="100" value="50" class="brightness-slider">
-                        <div class="brightness-value" id="panelBrightnessValue">50%</div>
+            <div class="settings-content control-center-layout">
+                <!-- Spalte 1: System-Karte (System-Grid) -->
+                <div class="control-card system-card">
+                    <div class="system-grid">
+                        <button class="system-grid-btn" onclick="closeWidget()" title="Home">
+                            <span class="system-icon">🏠</span>
+                            <span class="system-label">Home</span>
+                        </button>
+                        <button class="system-grid-btn settings-reload-btn" id="reload-btn" 
+                                onmousedown="startReloadTimer()" onmouseup="cancelReloadTimer()" onmouseleave="cancelReloadTimer()" 
+                                ontouchstart="startReloadTimer()" ontouchend="cancelReloadTimer()" title="Neu laden">
+                            <span class="system-icon">⟲</span>
+                            <span class="system-label">Reload</span>
+                            <span class="reload-progress" id="reload-progress"></span>
+                        </button>
+                        <button class="system-grid-btn" onclick="toggleStandby()" title="Standby">
+                            <span class="system-icon">🌙</span>
+                            <span class="system-label">Standby</span>
+                        </button>
+                        <button class="system-grid-btn" onclick="openWidget('info')" title="Info">
+                            <span class="system-icon">ℹ️</span>
+                            <span class="system-label">Info</span>
+                        </button>
                     </div>
-                <button class="settings-btn" onclick="closeWidget()">🏠 HOME</button>
                 </div>
 
-                <!-- Buttons Mitte -->
-                <div class="settings-section settings-buttons">
-                    <button class="settings-btn" onclick="openWidget('spotify')">🎵 Spotify</button>
-                    <button class="settings-btn" onclick="openWidget('vim')">📝 Vim</button>
-                    <button class="settings-btn" onclick="openWidget('calendar')">📅 Kalender</button>
-                    <button class="settings-btn" onclick="openWidget('homeassistant')">⌂ Home Assistant</button>
-                    <button class="settings-btn" onclick="window.location.href='http://192.168.178.96:3000/desktop-mode.html'">📅 Desktop-Mode</button>
-                    <button class="settings-btn" onclick="openWidget('info')">ℹ️ Info</button>
+                <!-- Spalte 2: Helligkeits-Karte (Vertikaler Slider) -->
+                <div class="control-card brightness-card">
+                    <div class="brightness-vertical-container">
+                        <span class="brightness-icon top">☀️</span>
+                        <div class="slider-track-vertical">
+                            <input type="range" id="panelBrightnessSlider" min="0" max="100" value="50" class="brightness-slider-vertical">
+                        </div>
+                        <span class="brightness-icon bottom">🔆</span>
+                        <div class="brightness-label-vertical" id="panelBrightnessValue">50%</div>
+                    </div>
                 </div>
 
-                <!-- Buttons Rechts -->
-                <div class="settings-section settings-right-buttons">
-                    <button class="settings-btn settings-reload-btn" id="reload-btn" onmousedown="startReloadTimer()" onmouseup="cancelReloadTimer()" onmouseleave="cancelReloadTimer()" ontouchstart="startReloadTimer()" ontouchend="cancelReloadTimer()">
-                        <span class="reload-text">⟲</span>
-                        <span class="reload-progress" id="reload-progress"></span>
-                    </button>
+                <!-- Spalte 3: Apps-Karte (Kompaktes Grid mit quadratischen Icons) -->
+                <div class="control-card apps-card">
+                    <div class="apps-grid">
+                        <div id="spotify-player-slot" class="spotify-player-slot" style="display: none; grid-column: span 2;"></div>
+                        <button class="app-icon-btn" id="spotify-app-btn" onclick="openWidget('spotify')">
+                            <div class="app-icon-glyph spotify-bg">🎵</div>
+                            <span class="app-icon-label">Spotify</span>
+                        </button>
+                        <button class="app-icon-btn" id="history-app-btn" onclick="openWidget('history')">
+                            <div class="app-icon-glyph history-bg">📜</div>
+                            <span class="app-icon-label">History</span>
+                        </button>
+                        <button class="app-icon-btn" onclick="openWidget('wrapped')">
+                            <div class="app-icon-glyph wrapped-bg">🎁</div>
+                            <span class="app-icon-label">Wrapped</span>
+                        </button>
+                        <button class="app-icon-btn" onclick="openWidget('vim')">
+                            <div class="app-icon-glyph vim-bg">📝</div>
+                            <span class="app-icon-label">Vim</span>
+                        </button>
+                        <button class="app-icon-btn" onclick="openWidget('calendar')">
+                            <div class="app-icon-glyph calendar-bg">📅</div>
+                            <span class="app-icon-label">Kalender</span>
+                        </button>
+                        <button class="app-icon-btn" onclick="openWidget('homeassistant')">
+                            <div class="app-icon-glyph home-bg">⌂</div>
+                            <span class="app-icon-label">Home</span>
+                        </button>
+                        <button class="app-icon-btn" onclick="window.location.href='http://192.168.178.96:3000/desktop-mode.html'">
+                            <div class="app-icon-glyph desktop-bg">🖥️</div>
+                            <span class="app-icon-label">Desktop</span>
+                        </button>
+                        <button class="app-icon-btn highlight-btn" id="switch-watchface-btn">
+                            <div class="app-icon-glyph watchface-bg">⌚</div>
+                            <span class="app-icon-label">Ziffernblatt</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+    <!-- 🎨 WATCHFACE INLINE EDITOR (APPLE WATCH STYLE) -->
+    <div id="inline-editor-overlay" class="inline-editor-overlay">
+        <!-- Top Tabs -->
+        <div class="editor-tabs">
+            <button class="editor-tab active" id="tab-color" onclick="switchEditorTab('color')">FARBE</button>
+            <button class="editor-tab" id="tab-widgets" onclick="switchEditorTab('widgets')">WIDGETS</button>
+        </div>
+        
+        <!-- Right Color Column -->
+        <div class="color-column" id="color-column">
+            <div class="color-column-inner">
+                <button class="color-swatch midnight" data-theme="midnight" style="background: #0b0f19;" onclick="setWatchfaceTheme('midnight')"></button>
+                <button class="color-swatch abyss" data-theme="abyss" style="background: #032b45;" onclick="setWatchfaceTheme('abyss')"></button>
+                <button class="color-swatch plum" data-theme="plum" style="background: #3b0764;" onclick="setWatchfaceTheme('plum')"></button>
+                <button class="color-swatch forest" data-theme="forest" style="background: #022c22;" onclick="setWatchfaceTheme('forest')"></button>
+                <button class="color-swatch crimson" data-theme="crimson" style="background: #450a0a;" onclick="setWatchfaceTheme('crimson')"></button>
+                <button class="color-swatch black" data-theme="black" style="background: #000000;" onclick="setWatchfaceTheme('black')"></button>
+                <button class="color-swatch slate" data-theme="slate" style="background: #1e293b;" onclick="setWatchfaceTheme('slate')"></button>
+                <button class="color-swatch navy" data-theme="navy" style="background: #1e1b4b;" onclick="setWatchfaceTheme('navy')"></button>
+                <button class="color-swatch rose" data-theme="rose" style="background: #4c0519;" onclick="setWatchfaceTheme('rose')"></button>
+                <button class="color-swatch emerald" data-theme="emerald" style="background: #064e3b;" onclick="setWatchfaceTheme('emerald')"></button>
+            </div>
+        </div>
+        
+        <!-- Done Button & Opacity Control -->
+        <div class="editor-bottom-bar">
+            <div class="opacity-slider-container">
+                <span class="opacity-label">Deckkraft</span>
+                <input type="range" id="theme-opacity-slider" min="10" max="100" value="55" oninput="updateThemeOpacity(this.value)">
+                <span id="theme-opacity-value" class="opacity-value">55%</span>
+            </div>
+            <button class="editor-done-btn" onclick="closeInlineEditor()">Fertig</button>
+        </div>
+    </div>
+
+    <!-- 🧩 WIDGET GALLERY MODAL -->
+    <div id="widget-gallery-modal" class="watchface-modal">
+        <div class="watchface-modal-overlay" onclick="closeWidgetGallery()"></div>
+        <div class="watchface-modal-content gallery-content">
+            <h2 class="modal-title">Widget hinzufügen</h2>
+            <div class="gallery-grid" id="widget-gallery-grid">
+                <!-- Gallery items injected here -->
+            </div>
+            <button class="modal-close-btn" onclick="closeWidgetGallery()">Abbrechen</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="script.js"></script>
     <script src="spotify.js"></script>
+    <script src="spotify-wrapped.js"></script>
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
 </body>
 </html>

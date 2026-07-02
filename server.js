@@ -71,13 +71,29 @@ function saveDisplaySettings(settings) {
 let displaySettings = loadDisplaySettings();
 
 // IP zu DisplayID Mapping
+const temporaryDisplays = {};
+
 function getDisplayIdFromIp(ip) {
+    // 1. Check configured displays from .env
     for (const [displayId, config] of Object.entries(CONFIGURED_DISPLAYS)) {
         if (config.ip === ip) {
             return parseInt(displayId);
         }
     }
-    return null;
+    
+    // 2. Check already assigned temporary display
+    if (temporaryDisplays[ip]) {
+        return temporaryDisplays[ip];
+    }
+    
+    // 3. Assign new unique temporary integer displayId
+    const maxConfiguredId = Math.max(...Object.keys(CONFIGURED_DISPLAYS).map(Number), 0);
+    const maxTempId = Math.max(...Object.values(temporaryDisplays), 0);
+    const newId = Math.max(maxConfiguredId, maxTempId, 9) + 1; // Starts at 10 or higher
+    
+    temporaryDisplays[ip] = newId;
+    console.log(`[Display] Dynamic DisplayID ${newId} assigned for unconfigured IP ${ip}`);
+    return newId;
 }
 
 function getClientIp(req) {
@@ -90,7 +106,7 @@ function getClientIp(req) {
 function getDisplayNameFromRequest(req) {
     const clientIp = getClientIp(req);
     const displayId = getDisplayIdFromIp(clientIp);
-    return displayId ? CONFIGURED_DISPLAYS[displayId]?.name : process.env.SPOTIFY_DEVICE_NAME || clientIp;
+    return (displayId && CONFIGURED_DISPLAYS[displayId]?.name) || process.env.SPOTIFY_DEVICE_NAME || clientIp;
 }
 
 // DAS ZENTRALE ARRAY FÜR ALLE OPENING DISPLAYS
@@ -138,10 +154,9 @@ app.get('/events', (req, res) => {
                      req.ip || 
                      'unknown';
 
-
     const displayId = getDisplayIdFromIp(clientIp);
     const clientId = Date.now();
-    const displayName = displayId ? CONFIGURED_DISPLAYS[displayId]?.name : 'Unknown';
+    const displayName = (displayId && CONFIGURED_DISPLAYS[displayId]?.name) || 'Unknown';
     
     clients.push({ id: clientId, res, ip: clientIp, displayId: displayId, name: displayName });
     console.log(`[SSE] Display verbunden - Name: ${displayName} | IP: ${clientIp} | DisplayID: ${displayId} | Aktive Displays: ${clients.length}`);
@@ -149,7 +164,13 @@ app.get('/events', (req, res) => {
     // Sende die DisplayID zum Client
     if (displayId) {
         try {
-            res.write(`data: ${JSON.stringify({ action: 'init-display', displayId, name: displayName, quality: displaySettings[displayId]?.animationQuality || 'auto', serial: CONFIGURED_DISPLAYS[displayId]?.serial })}\n\n`);
+            res.write(`data: ${JSON.stringify({ 
+                action: 'init-display', 
+                displayId, 
+                name: displayName, 
+                quality: (displayId && displaySettings[displayId]?.animationQuality) || 'auto', 
+                serial: (displayId && CONFIGURED_DISPLAYS[displayId]?.serial) || `TEMP_${displayId}` 
+            })}\n\n`);
         } catch(e) {
             console.error("Fehler beim Senden der DisplayID:", e.message);
         }
@@ -897,6 +918,55 @@ const SPOTIFY_REDIRECT_URI = 'http://127.0.0.1:3000/callback';
 const SPOTIFY_ACCESS_TOKEN = process.env.SPOTIFY_ACCESS_TOKEN;
 let SPOTIFY_REFRESH_TOKEN = process.env.SPOTIFY_REFRESH_TOKEN;
 const SPOTIFY_CACHE_FILE = path.join(__dirname, 'public', 'spotify-cache.json'); // Im public Ordner!
+const SPOTIFY_HISTORY_FILE = path.join(__dirname, 'spotify-history.json');
+
+function loadSpotifyHistory() {
+    try {
+        if (!fs.existsSync(SPOTIFY_HISTORY_FILE)) return [];
+        const data = fs.readFileSync(SPOTIFY_HISTORY_FILE, 'utf8');
+        return data ? JSON.parse(data) : [];
+    } catch (e) {
+        console.error('[Spotify History] Fehler beim Laden:', e);
+        return [];
+    }
+}
+
+function saveSpotifyHistory(history) {
+    try {
+        fs.writeFileSync(SPOTIFY_HISTORY_FILE, JSON.stringify(history, null, 2));
+    } catch (e) {
+        console.error('[Spotify History] Fehler beim Speichern:', e);
+    }
+}
+
+let currentSession = null;
+let lastDiscardedSession = null;
+
+function finalizeCurrentSession() {
+    if (!currentSession) return;
+    if (currentSession.listenedMs >= 30000) { // 30 Sekunden
+        const history = loadSpotifyHistory();
+        const sessionToSave = {
+            id: currentSession.id,
+            trackId: currentSession.trackId,
+            title: currentSession.title,
+            artists: currentSession.artists,
+            albumImg: currentSession.albumImg,
+            url: currentSession.url,
+            durationMs: currentSession.durationMs,
+            listenedMs: currentSession.listenedMs,
+            timestamp: currentSession.timestamp
+        };
+        history.push(sessionToSave);
+        saveSpotifyHistory(history);
+        console.log(`[Spotify History] Gespeichert: "${sessionToSave.title}" (${Math.round(sessionToSave.listenedMs / 1000)}s gehört)`);
+        lastDiscardedSession = null;
+    } else {
+        console.log(`[Spotify History] Übersprungen (nur ${Math.round(currentSession.listenedMs / 1000)}s gehört): "${currentSession.title}"`);
+        lastDiscardedSession = currentSession;
+    }
+    currentSession = null;
+}
 
 let cachedTopTracks = [];
 let cachedCurrentPlayback = null; // Cache für aktuellen Track
@@ -953,7 +1023,7 @@ if (!fs.existsSync(SPOTIFY_CACHE_FILE)) {
 }
 
 app.get('/spotify/login', (req, res) => {
-    const scopes = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing user-top-read playlist-read-private playlist-read-collaborative';
+    const scopes = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing user-top-read playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private';
     res.redirect('https://accounts.spotify.com/authorize' +
         '?response_type=code' +
         '&client_id=' + SPOTIFY_CLIENT_ID +
@@ -1079,6 +1149,7 @@ async function fetchAndCacheCurrentPlayback() {
         });
 
         if (resPlayback.status === 204 || resPlayback.status > 400) {
+            finalizeCurrentSession();
             console.log("ℹ️ Spotify sagt: Kein aktives Gerät oder Wiedergabe pausiert (Status " + resPlayback.status + ")");
             sendToClients({
                 action: 'spotify-unavailable',
@@ -1089,6 +1160,7 @@ async function fetchAndCacheCurrentPlayback() {
 
         const playback = await resPlayback.json();
         if (!playback) {
+            finalizeCurrentSession();
             console.log("ℹ️ Spotify: Keine Playback-Daten verfügbar");
             sendToClients({
                 action: 'spotify-unavailable',
@@ -1098,6 +1170,71 @@ async function fetchAndCacheCurrentPlayback() {
         }
 
         if (playback.item) {
+            // Session Tracking
+            if (playback.is_playing) {
+                const now = Date.now();
+                if (!currentSession || currentSession.trackId !== playback.item.id) {
+                    finalizeCurrentSession();
+                    
+                    const history = loadSpotifyHistory();
+                    const lastSession = history[history.length - 1];
+                    const mergeWindowMs = 15 * 60 * 1000; // 15 Minuten
+                    
+                    if (lastSession && lastSession.trackId === playback.item.id && (Date.now() - new Date(lastSession.timestamp).getTime()) < mergeWindowMs) {
+                        history.pop();
+                        saveSpotifyHistory(history);
+                        currentSession = {
+                            id: lastSession.id,
+                            trackId: lastSession.trackId,
+                            title: lastSession.title,
+                            artists: lastSession.artists,
+                            albumImg: lastSession.albumImg,
+                            url: lastSession.url,
+                            durationMs: lastSession.durationMs,
+                            listenedMs: lastSession.listenedMs,
+                            timestamp: lastSession.timestamp,
+                            lastProgress: playback.progress_ms,
+                            lastUpdated: now
+                        };
+                        console.log(`[Spotify History] Session fortgesetzt (aus Verlauf wiederhergestellt): "${currentSession.title}"`);
+                    } else if (lastDiscardedSession && lastDiscardedSession.trackId === playback.item.id && (Date.now() - lastDiscardedSession.lastUpdated) < mergeWindowMs) {
+                        currentSession = lastDiscardedSession;
+                        currentSession.lastProgress = playback.progress_ms;
+                        currentSession.lastUpdated = now;
+                        lastDiscardedSession = null;
+                        console.log(`[Spotify History] Session fortgesetzt (aus Zwischenspeicher): "${currentSession.title}"`);
+                    } else {
+                        currentSession = {
+                            id: `session-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                            trackId: playback.item.id,
+                            title: playback.item.name,
+                            artists: playback.item.artists.map(a => a.name),
+                            albumImg: playback.item.album?.images?.[0]?.url || '',
+                            url: playback.item.external_urls?.spotify || `https://open.spotify.com/track/${playback.item.id}`,
+                            durationMs: playback.item.duration_ms,
+                            listenedMs: 0,
+                            timestamp: new Date().toISOString(),
+                            lastProgress: playback.progress_ms,
+                            lastUpdated: now
+                        };
+                        console.log(`[Spotify History] Neue Session gestartet: "${currentSession.title}"`);
+                    }
+                } else {
+                    const deltaProgress = playback.progress_ms - currentSession.lastProgress;
+                    const timeElapsed = now - currentSession.lastUpdated;
+                    if (deltaProgress > 0 && deltaProgress < 20000) {
+                        currentSession.listenedMs += deltaProgress;
+                    } else if (timeElapsed > 0 && timeElapsed < 20000) {
+                        currentSession.listenedMs += timeElapsed;
+                    }
+                    currentSession.lastProgress = playback.progress_ms;
+                    currentSession.lastUpdated = now;
+                    console.log(`[Spotify History] Session aktiv: "${currentSession.title}" (bisher ${Math.round(currentSession.listenedMs / 1000)}s)`);
+                }
+            } else {
+                finalizeCurrentSession();
+            }
+
             let queueData = [];
             try {
                 const resQueue = await fetch('https://api.spotify.com/v1/me/player/queue', {
@@ -1141,6 +1278,7 @@ async function fetchAndCacheCurrentPlayback() {
             }
             return spotifyData;
         } else {
+            finalizeCurrentSession();
             // Wenn Musik gestoppt/pausiert ist
             console.log("ℹ️ Spotify: Musik ist pausiert oder gestoppt");
             sendToClients({
@@ -1193,6 +1331,244 @@ app.get('/spotify/playlists', async (req, res) => {
         });
     } catch (e) {
         res.status(500).json({ error: e.message });
+    }
+});
+
+// --- SPOTIFY ROTATION, HISTORY & STATS LOGIC ---
+
+async function rotateSpotifyPlaylist() {
+    console.log("[Spotify Rotation] Starte Playlist-Rotation...");
+    try {
+        const history = loadSpotifyHistory();
+        if (!history || history.length === 0) {
+            console.log("[Spotify Rotation] Keine Historie vorhanden, überspringe.");
+            return { success: false, error: "Keine Historie vorhanden" };
+        }
+
+        const now = new Date();
+        const twentyDaysAgo = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000);
+
+        // Filter tracks played in the last 20 days
+        const recentPlays = history.filter(item => new Date(item.timestamp) >= twentyDaysAgo);
+
+        if (recentPlays.length === 0) {
+            console.log("[Spotify Rotation] Keine Songs in den letzten 20 Tagen gehört.");
+            return { success: true, tracksCount: 0 };
+        }
+
+        // Count plays per track
+        const trackStats = {};
+        recentPlays.forEach(play => {
+            if (!trackStats[play.trackId]) {
+                trackStats[play.trackId] = {
+                    trackId: play.trackId,
+                    title: play.title,
+                    plays: 0
+                };
+            }
+            trackStats[play.trackId].plays += 1;
+        });
+
+        // Sort by play count descending, limit to 100 tracks
+        const sortedTracks = Object.values(trackStats)
+            .sort((a, b) => b.plays - a.plays)
+            .slice(0, 100);
+
+        const trackUris = sortedTracks.map(t => `spotify:track:${t.trackId}`);
+
+        // Get Spotify Token
+        const token = await getSpotifyAccessToken();
+
+        // Get User ID
+        const userRes = await fetch('https://api.spotify.com/v1/me', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!userRes.ok) {
+            throw new Error(`Fehler beim Abrufen des Nutzers: ${userRes.statusText}`);
+        }
+        const userData = await userRes.json();
+        const userId = userData.id;
+
+        // Find or create playlist "PulseOS Highlights"
+        let playlistId = null;
+        let limit = 50;
+        let offset = 0;
+        let finished = false;
+
+        while (!finished) {
+            const playlistsRes = await fetch(`https://api.spotify.com/v1/me/playlists?limit=${limit}&offset=${offset}`, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (!playlistsRes.ok) {
+                throw new Error(`Fehler beim Abrufen der Playlists: ${playlistsRes.statusText}`);
+            }
+            const playlistsData = await playlistsRes.json();
+            const playlists = playlistsData.items || [];
+            
+            const existing = playlists.find(p => p.name === 'PulseOS Highlights');
+            if (existing) {
+                playlistId = existing.id;
+                finished = true;
+            } else if (playlists.length < limit) {
+                finished = true;
+            } else {
+                offset += limit;
+            }
+        }
+
+        if (!playlistId) {
+            console.log("[Spotify Rotation] Erstelle neue Playlist 'PulseOS Highlights'...");
+            const createRes = await fetch(`https://api.spotify.com/v1/users/${userId}/playlists`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({
+                    name: 'PulseOS Highlights',
+                    public: true,
+                    description: 'Deine PulseOS Highlights der letzten 20 Tage (wird automatisch aktualisiert)'
+                })
+            });
+            if (!createRes.ok) {
+                throw new Error(`Fehler beim Erstellen der Playlist: ${createRes.statusText}`);
+            }
+            const newPlaylist = await createRes.json();
+            playlistId = newPlaylist.id;
+        }
+
+        // Replace playlist tracks
+        console.log(`[Spotify Rotation] Aktualisiere Playlist mit ${trackUris.length} Songs...`);
+        const updateRes = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+                uris: trackUris
+            })
+        });
+
+        if (!updateRes.ok) {
+            throw new Error(`Fehler beim Aktualisieren der Playlist-Tracks: ${updateRes.statusText}`);
+        }
+
+        console.log("[Spotify Rotation] Playlist-Rotation erfolgreich durchgeführt!");
+        return { success: true, tracksCount: trackUris.length };
+    } catch (err) {
+        console.error("[Spotify Rotation] Fehler bei der Rotation:", err.message);
+        return { success: false, error: err.message };
+    }
+}
+
+let lastRotationDay = null;
+
+function checkPlaylistRotationScheduling() {
+    const now = new Date();
+    // Monday is 1, 12:00
+    if (now.getDay() === 1 && now.getHours() === 12 && now.getMinutes() === 0) {
+        const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+        if (lastRotationDay !== todayKey) {
+            lastRotationDay = todayKey;
+            rotateSpotifyPlaylist();
+        }
+    }
+}
+
+app.get('/spotify/history', (req, res) => {
+    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit, 10) || 50));
+    const history = loadSpotifyHistory();
+    const sortedHistory = [...history].reverse().slice(0, limit);
+    res.json({ history: sortedHistory });
+});
+
+app.get('/spotify/stats', (req, res) => {
+    const history = loadSpotifyHistory();
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    let totalTimeTodayMs = 0;
+    let totalTimeAllTimeMs = 0;
+
+    const dailyListenTime = {};
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+        const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        dailyListenTime[dateKey] = 0;
+    }
+
+    const trackCounts = {};
+    const artistCounts = {};
+
+    history.forEach(session => {
+        const sessionTime = session.listenedMs || 0;
+        totalTimeAllTimeMs += sessionTime;
+
+        const sessionDate = new Date(session.timestamp);
+        if (sessionDate >= startOfToday) {
+            totalTimeTodayMs += sessionTime;
+        }
+
+        const dateKey = `${sessionDate.getFullYear()}-${String(sessionDate.getMonth() + 1).padStart(2, '0')}-${String(sessionDate.getDate()).padStart(2, '0')}`;
+        if (dailyListenTime[dateKey] !== undefined) {
+            dailyListenTime[dateKey] += sessionTime;
+        }
+
+        if (session.trackId) {
+            if (!trackCounts[session.trackId]) {
+                trackCounts[session.trackId] = {
+                    trackId: session.trackId,
+                    title: session.title,
+                    artists: session.artists,
+                    plays: 0,
+                    durationMs: session.durationMs
+                };
+            }
+            trackCounts[session.trackId].plays += 1;
+        }
+
+        if (session.artists && Array.isArray(session.artists)) {
+            session.artists.forEach(artist => {
+                if (!artistCounts[artist]) {
+                    artistCounts[artist] = {
+                        name: artist,
+                        plays: 0,
+                        durationMs: 0
+                    };
+                }
+                artistCounts[artist].plays += 1;
+                artistCounts[artist].durationMs += sessionTime;
+            });
+        }
+    });
+
+    const topTracks = Object.values(trackCounts)
+        .sort((a, b) => b.plays - a.plays)
+        .slice(0, 5);
+
+    const topArtists = Object.values(artistCounts)
+        .sort((a, b) => b.durationMs - a.durationMs)
+        .slice(0, 5);
+
+    res.json({
+        totalTimeTodayMinutes: Math.round(totalTimeTodayMs / 60000),
+        totalTimeAllTimeHours: Math.round(totalTimeAllTimeMs / 3600000),
+        dailyListenTime: Object.entries(dailyListenTime).map(([date, ms]) => ({
+            date,
+            minutes: Math.round(ms / 60000)
+        })).reverse(),
+        topTracks,
+        topArtists
+    });
+});
+
+app.get('/spotify/playlist/rotate-now', async (req, res) => {
+    const result = await rotateSpotifyPlaylist();
+    if (result.success) {
+        res.json({ ok: true, message: `Playlist 'PulseOS Highlights' erfolgreich rotiert mit ${result.tracksCount} Songs.` });
+    } else {
+        res.status(500).json({ ok: false, error: result.error });
     }
 });
 
@@ -1277,6 +1653,35 @@ app.post('/spotify/play', async (req, res) => {
     }
 });
 
+app.post('/spotify/play-track', async (req, res) => {
+    const trackId = req.body?.trackId;
+    if (!trackId) {
+        return res.status(400).json({ error: 'trackId fehlt' });
+    }
+
+    try {
+        const token = await getSpotifyAccessToken();
+        const response = await fetch('https://api.spotify.com/v1/me/player/play', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ uris: [`spotify:track:${trackId}`] })
+        });
+
+        if (!response.ok && response.status !== 204) {
+            const errorText = await response.text();
+            return res.status(response.status).json({ error: errorText || `Spotify Play-Track Fehler (${response.status})` });
+        }
+
+        setTimeout(fetchAndCacheCurrentPlayback, 1000);
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // --- POPUP / WIDGET TOGGLE SYSTEM (STREAM DECK) ---
 let allPopupsHidden = false;
 
@@ -1331,12 +1736,27 @@ app.get('/display/:displayId/popup/:name', (req, res) => {
 // --- SERVER INFO & CONFIG ENDPOINTS ---
 app.get('/config/displays', (req, res) => {
     const displaysList = Object.entries(CONFIGURED_DISPLAYS).map(([id, config]) => ({
-        displayId: id,
+        displayId: parseInt(id),
         name: config.name,
         ip: config.ip,
         online: clients.some(c => c.displayId === parseInt(id)),
         settings: displaySettings[id] || {}
     }));
+    
+    // Add online temporary displays
+    clients.forEach(client => {
+        const id = client.displayId;
+        if (id && !CONFIGURED_DISPLAYS[id] && !displaysList.some(d => d.displayId === id)) {
+            displaysList.push({
+                displayId: id,
+                name: client.name,
+                ip: client.ip,
+                online: true,
+                settings: displaySettings[id] || {}
+            });
+        }
+    });
+
     res.json({ displays: displaysList, total: displaysList.length });
 });
 
@@ -1371,7 +1791,11 @@ app.post('/brightness/:value', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server läuft auf http://localhost:${PORT}`);
     checkStoredReminders();
-    setInterval(checkStoredReminders, 60 * 1000);
+    checkPlaylistRotationScheduling();
+    setInterval(() => {
+        checkStoredReminders();
+        checkPlaylistRotationScheduling();
+    }, 60 * 1000);
     if (SPOTIFY_REFRESH_TOKEN) {
         startSpotifyPolling();
     } else {

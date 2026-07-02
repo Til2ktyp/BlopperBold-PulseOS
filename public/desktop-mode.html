@@ -88,6 +88,14 @@
                 <span class="desktop-icon-glyph">♫</span>
                 <span class="desktop-icon-label">Spotify</span>
             </button>
+            <button class="desktop-icon desktop-icon-history" onclick="openWidget('history-desktop')" title="Spotify History">
+                <span class="desktop-icon-glyph">📜</span>
+                <span class="desktop-icon-label">History</span>
+            </button>
+            <button class="desktop-icon desktop-icon-wrapped" onclick="openWidget('wrapped-desktop')" title="Spotify Wrapped">
+                <span class="desktop-icon-glyph">🎁</span>
+                <span class="desktop-icon-label">Wrapped</span>
+            </button>
             <button class="desktop-icon desktop-icon-vim" onclick="openWidget('vim')" title="Vim">
                 <span class="desktop-icon-glyph">⌘</span>
                 <span class="desktop-icon-label">Vim</span>
@@ -184,6 +192,8 @@
         <div class="desktop-control-row">
             <select id="desktop-widget-select" class="desktop-control-input">
                 <option value="spotify">Spotify</option>
+                <option value="history-desktop">Spotify History</option>
+                <option value="wrapped-desktop">Spotify Wrapped</option>
                 <option value="homeassistant">Home Assistant</option>
                 <option value="calendar">Kalender</option>
                 <option value="timer">Timer</option>
@@ -239,5 +249,6 @@
     </aside>
 
     <script src="script.js"></script>
+    <script src="spotify-wrapped.js"></script>
 </body>
 </html>

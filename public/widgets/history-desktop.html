@@ -1,0 +1,312 @@
+<style>
+    .history-desktop-wrapper {
+        width: 100%;
+        margin: 0 auto;
+        padding: 10px;
+        font-family: 'Inter', -apple-system, sans-serif;
+    }
+
+    .history-desktop-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+    }
+
+    .history-desktop-header h1 {
+        font-size: 2.2rem;
+        font-weight: 700;
+        letter-spacing: -1px;
+        background: linear-gradient(135deg, #ffffff 0%, #a5f3fc 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0;
+    }
+
+    .history-desktop-header p {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.95rem;
+        margin: 5px 0 0 0;
+    }
+
+    .hd-total-count {
+        font-size: 0.85rem;
+        color: rgba(255,255,255,0.4);
+        font-weight: 500;
+        margin-top: 10px;
+        white-space: nowrap;
+    }
+
+    /* ---- FILTER BAR ---- */
+    .hd-filter-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 12px 16px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px;
+        margin-bottom: 16px;
+    }
+
+    .hd-filter-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: rgba(255,255,255,0.35);
+        white-space: nowrap;
+    }
+
+    .hd-filter-input, .hd-filter-select {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        color: #fff;
+        font-size: 0.85rem;
+        padding: 7px 12px;
+        outline: none;
+        transition: border-color 0.2s, background 0.2s;
+        font-family: 'Inter', -apple-system, sans-serif;
+    }
+
+    .hd-filter-input:focus, .hd-filter-select:focus {
+        border-color: rgba(56,189,248,0.5);
+        background: rgba(56,189,248,0.07);
+    }
+
+    .hd-filter-input::placeholder {
+        color: rgba(255,255,255,0.25);
+    }
+
+    .hd-filter-input[type="date"],
+    .hd-filter-input[type="time"] {
+        color-scheme: dark;
+        width: 148px;
+    }
+
+    .hd-filter-select {
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        padding-right: 30px;
+    }
+
+    .hd-filter-select option {
+        background: #0d1117;
+        color: #fff;
+    }
+
+    .hd-filter-sep {
+        width: 1px;
+        height: 22px;
+        background: rgba(255,255,255,0.1);
+        flex-shrink: 0;
+    }
+
+    .hd-filter-reset {
+        background: rgba(255, 69, 58, 0.12);
+        border: 1px solid rgba(255, 69, 58, 0.25);
+        color: #ff453a;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 7px 14px;
+        cursor: pointer;
+        transition: background 0.2s, border-color 0.2s;
+        font-family: 'Inter', -apple-system, sans-serif;
+        display: none;
+    }
+
+    .hd-filter-reset:hover {
+        background: rgba(255, 69, 58, 0.22);
+        border-color: rgba(255, 69, 58, 0.5);
+    }
+
+    .hd-filter-reset.visible {
+        display: block;
+    }
+
+    .hd-result-info {
+        font-size: 0.8rem;
+        color: rgba(56,189,248,0.7);
+        font-weight: 500;
+        padding: 0 4px 8px;
+        display: none;
+    }
+
+    .hd-result-info.visible {
+        display: block;
+    }
+
+    /* Date Group */
+    .hd-date-group {
+        margin-bottom: 24px;
+    }
+
+    .hd-date-label {
+        font-size: 1rem;
+        font-weight: 700;
+        color: rgba(255,255,255,0.7);
+        margin-bottom: 12px;
+        padding-left: 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .hd-date-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: rgba(56, 189, 248, 0.12);
+        color: #38bdf8;
+        padding: 3px 10px;
+        border-radius: 10px;
+    }
+
+    /* 4-Column Grid */
+    .hd-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+    }
+
+    .hd-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 16px;
+        padding: 10px 14px;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        color: inherit;
+        overflow: hidden;
+    }
+
+    .hd-item:hover {
+        background: rgba(255, 255, 255, 0.07);
+        border-color: rgba(56, 189, 248, 0.4);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .hd-cover {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        object-fit: cover;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        flex-shrink: 0;
+        background: rgba(255,255,255,0.05);
+    }
+
+    .hd-details {
+        flex-grow: 1;
+        min-width: 0;
+    }
+
+    .hd-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #ffffff;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .hd-artist {
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.6);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .hd-meta {
+        text-align: right;
+        flex-shrink: 0;
+    }
+
+    .hd-time {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #38bdf8;
+        margin-bottom: 2px;
+    }
+
+    .hd-duration {
+        font-size: 0.7rem;
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    .hd-empty {
+        text-align: center;
+        padding: 40px 20px;
+        color: rgba(255, 255, 255, 0.3);
+        font-size: 1.1rem;
+        grid-column: span 4;
+    }
+
+    /* Scroll Container */
+    .hd-scroll {
+        max-height: calc(100vh - 310px);
+        overflow-y: auto;
+        padding-right: 8px;
+    }
+
+    .hd-scroll::-webkit-scrollbar { width: 6px; }
+    .hd-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 10px; }
+    .hd-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+    .hd-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+</style>
+
+<div class="history-desktop-wrapper">
+    <div class="history-desktop-header">
+        <div>
+            <h1>📜 Musik-Verlauf</h1>
+            <p>Deine zuletzt gehörten Songs — Desktop Edition (ab 30 Sek. Spieldauer)</p>
+        </div>
+        <div id="hd-total-count" class="hd-total-count"></div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="hd-filter-bar">
+        <span class="hd-filter-label">🔍 Filter</span>
+
+        <input type="date" id="hd-filter-date" class="hd-filter-input" title="Nach Datum filtern">
+        <input type="time" id="hd-filter-time-from" class="hd-filter-input" placeholder="Von Uhr" title="Von Uhrzeit">
+        <input type="time" id="hd-filter-time-to" class="hd-filter-input" placeholder="Bis Uhr" title="Bis Uhrzeit">
+
+        <div class="hd-filter-sep"></div>
+
+        <input type="text" id="hd-filter-artist" class="hd-filter-input" placeholder="Künstler suchen..." style="min-width:160px;" title="Nach Künstler filtern">
+
+        <div class="hd-filter-sep"></div>
+
+        <select id="hd-filter-duration" class="hd-filter-select" title="Mindest-Hördauer">
+            <option value="0">Jede Dauer</option>
+            <option value="30">≥ 30 Sek.</option>
+            <option value="60">≥ 1 Min.</option>
+            <option value="120">≥ 2 Min.</option>
+            <option value="180">≥ 3 Min.</option>
+            <option value="300">≥ 5 Min.</option>
+        </select>
+
+        <button class="hd-filter-reset" id="hd-filter-reset" onclick="hdResetFilters()">✕ Reset</button>
+    </div>
+
+    <div id="hd-result-info" class="hd-result-info"></div>
+
+    <div class="hd-scroll">
+        <div id="history-desktop-container">
+            <div class="hd-empty">Lade Verlauf...</div>
+        </div>
+    </div>
+</div>

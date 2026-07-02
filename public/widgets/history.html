@@ -1,0 +1,155 @@
+<style>
+    .history-wrapper {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 10px;
+        font-family: 'Inter', -apple-system, sans-serif;
+    }
+
+    .history-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 15px;
+    }
+
+    .history-header h1 {
+        font-size: 2.2rem;
+        font-weight: 700;
+        letter-spacing: -1px;
+        background: linear-gradient(135deg, #ffffff 0%, #a5f3fc 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0;
+    }
+
+    .history-header p {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.95rem;
+        margin: 5px 0 0 0;
+    }
+
+    .history-scroll-container {
+        max-height: 480px;
+        overflow-y: auto;
+        padding-right: 8px;
+    }
+
+    /* Custom Scrollbar */
+    .history-scroll-container::-webkit-scrollbar {
+        width: 6px;
+    }
+    .history-scroll-container::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 10px;
+    }
+    .history-scroll-container::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 10px;
+    }
+    .history-scroll-container::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    .history-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .history-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 16px;
+        padding: 12px 16px;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .history-item:hover {
+        background: rgba(255, 255, 255, 0.07);
+        border-color: rgba(56, 189, 248, 0.4);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .history-cover {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        object-fit: cover;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        flex-shrink: 0;
+        background: rgba(255,255,255,0.05);
+    }
+
+    .history-details {
+        flex-grow: 1;
+        min-width: 0;
+    }
+
+    .history-title {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #ffffff;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .history-artist {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.6);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .history-meta {
+        text-align: right;
+        flex-shrink: 0;
+    }
+
+    .history-time {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #38bdf8;
+        margin-bottom: 2px;
+    }
+
+    .history-duration {
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    .history-empty {
+        text-align: center;
+        padding: 40px 20px;
+        color: rgba(255, 255, 255, 0.3);
+        font-size: 1.1rem;
+    }
+</style>
+
+<div class="history-wrapper">
+    <div class="history-header">
+        <div>
+            <h1>📜 Musik-Verlauf</h1>
+            <p>Deine zuletzt gehörten Songs (ab 1 Min. Spieldauer)</p>
+        </div>
+    </div>
+
+    <div class="history-scroll-container">
+        <div id="history-container" class="history-list">
+            <div class="history-empty">Lade Verlauf...</div>
+        </div>
+    </div>
+</div>
+
+

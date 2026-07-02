@@ -1,0 +1,298 @@
+<style>
+    .wrapped-wrapper {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 10px;
+        font-family: 'Inter', -apple-system, sans-serif;
+    }
+
+    .wrapped-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 15px;
+    }
+
+    .wrapped-header h1 {
+        font-size: 2.2rem;
+        font-weight: 800;
+        letter-spacing: -1px;
+        background: linear-gradient(135deg, #f472b6 0%, #38bdf8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0;
+    }
+
+    .wrapped-header p {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.95rem;
+        margin: 5px 0 0 0;
+    }
+
+    .wrapped-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 25px;
+    }
+
+    /* Cards */
+    .wrapped-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 24px;
+        padding: 24px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    .wrapped-card h2 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 20px;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Hero / Stat Overview */
+    .wrapped-hero {
+        grid-column: span 2;
+        display: flex;
+        gap: 25px;
+    }
+
+    .hero-stat {
+        flex: 1;
+        background: linear-gradient(135deg, rgba(244, 114, 182, 0.1) 0%, rgba(56, 189, 248, 0.1) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .hero-stat-value {
+        font-size: 3rem;
+        font-weight: 800;
+        letter-spacing: -2px;
+        background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        line-height: 1;
+        margin-bottom: 8px;
+    }
+
+    .hero-stat-label {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.6);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Chart */
+    .chart-container {
+        height: 180px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-around;
+        padding-top: 20px;
+    }
+
+    .chart-bar-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 10%;
+        height: 100%;
+        justify-content: flex-end;
+    }
+
+    .chart-bar {
+        width: 100%;
+        background: linear-gradient(to top, #38bdf8 0%, #f472b6 100%);
+        border-radius: 8px 8px 0 0;
+        min-height: 4px;
+        transition: height 1s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        cursor: pointer;
+    }
+
+    .chart-bar:hover {
+        opacity: 0.9;
+        filter: brightness(1.2);
+    }
+
+    .chart-bar-tooltip {
+        position: absolute;
+        top: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1e293b;
+        color: #ffffff;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        border: 1px solid rgba(255,255,255,0.1);
+        pointer-events: none;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .chart-bar:hover .chart-bar-tooltip {
+        opacity: 1;
+    }
+
+    .chart-bar-label {
+        margin-top: 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: rgba(255,255,255,0.4);
+    }
+
+    /* Rankings / Lists */
+    .ranking-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .ranking-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 14px;
+        padding: 10px 14px;
+        transition: transform 0.2s;
+    }
+
+    .ranking-item:hover {
+        transform: translateX(4px);
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .ranking-number {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: rgba(255, 255, 255, 0.2);
+        width: 20px;
+        text-align: center;
+    }
+
+    .ranking-item:nth-child(1) .ranking-number { color: #facc15; }
+    .ranking-item:nth-child(2) .ranking-number { color: #cbd5e1; }
+    .ranking-item:nth-child(3) .ranking-number { color: #b45309; }
+
+    .ranking-image {
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        object-fit: cover;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+
+    .ranking-info {
+        flex-grow: 1;
+        min-width: 0;
+    }
+
+    .ranking-name {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #ffffff;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .ranking-sub {
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.5);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .ranking-badge {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #38bdf8;
+        background: rgba(56, 189, 248, 0.1);
+        padding: 4px 10px;
+        border-radius: 12px;
+        flex-shrink: 0;
+    }
+
+    .ranking-empty {
+        text-align: center;
+        padding: 30px;
+        color: rgba(255, 255, 255, 0.3);
+        font-size: 0.95rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .wrapped-grid { grid-template-columns: 1fr; }
+        .wrapped-hero { grid-column: span 1; flex-direction: column; }
+    }
+</style>
+
+<div class="wrapped-wrapper">
+    <div class="wrapped-header">
+        <div>
+            <h1>🎁 PulseOS Wrapped</h1>
+            <p>Deine ganz persönlichen Musik-Statistiken</p>
+        </div>
+    </div>
+
+    <div class="wrapped-grid" id="wrapped-grid-container" style="opacity: 0; transition: opacity 0.5s;">
+        <!-- Hero Overview -->
+        <div class="wrapped-hero">
+            <div class="hero-stat">
+                <div id="stat-today" class="hero-stat-value">0</div>
+                <div class="hero-stat-label">Minuten Heute</div>
+            </div>
+            <div class="hero-stat">
+                <div id="stat-alltime" class="hero-stat-value">0</div>
+                <div class="hero-stat-label">Stunden Gesamt</div>
+            </div>
+        </div>
+
+        <!-- Weekly Chart -->
+        <div class="wrapped-card" style="grid-column: span 2;">
+            <h2>📊 Letzte 7 Tage (Hörzeit)</h2>
+            <div class="chart-container" id="chart-bars-container">
+                <!-- Bars injected here -->
+            </div>
+        </div>
+
+        <!-- Top Artists -->
+        <div class="wrapped-card">
+            <h2>🎤 Top Künstler</h2>
+            <div id="artists-container" class="ranking-list">
+                <div class="ranking-empty">Lade Künstler...</div>
+            </div>
+        </div>
+
+        <!-- Top Songs -->
+        <div class="wrapped-card">
+            <h2>🎵 Top Songs</h2>
+            <div id="songs-container" class="ranking-list">
+                <div class="ranking-empty">Lade Songs...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+

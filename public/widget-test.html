@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget Grid Test</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Test-specific styling to simulate PulseOS watchface container */
+        body {
+            background: #09090e;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .test-frame {
+            width: 100%;
+            max-width: 1200px;
+            height: 800px;
+            background: #020f18;
+            border-radius: 30px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 4px solid #1e293b;
+        }
+
+        /* Simulate Popout and Edit Mode */
+        .watchface-wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transform: scale(0.85);
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="edit-mode" data-tab="widgets">
+
+    <div class="test-frame">
+        <div class="watchface-wrapper">
+            <div class="watchface active theme-midnight" id="watchface-modular" style="opacity: 1;">
+                <div class="modular-clock" id="modular-clock" style="font-size: 3.5rem; font-weight: 700; color: #fff; margin-bottom: 20px;">14:53</div>
+                
+                <div class="widget-grid-container">
+                    <div class="widget-grid" id="modular-widget-grid">
+                        
+                        <!-- Small Weather Widget (Square) -->
+                        <div class="widget-item widget-small">
+                            <div class="widget-delete-btn" style="display: flex;">-</div>
+                            <div style="text-align:center; font-size:1.8rem; font-weight:600;">☁️ 22°C</div>
+                        </div>
+
+                        <!-- Small Battery Widget (Square) -->
+                        <div class="widget-item widget-small">
+                            <div class="widget-delete-btn" style="display: flex;">-</div>
+                            <div style="text-align:center;">
+                                <div style="font-size: 2.2rem; font-weight: 600;">🔋 85%</div>
+                                <div style="font-size: 0.8rem; opacity: 0.6; margin-top: 5px;">Geladen</div>
+                            </div>
+                        </div>
+
+                        <!-- Medium To-Do Widget (Wide) -->
+                        <div class="widget-item widget-medium">
+                            <div class="widget-delete-btn" style="display: flex;">-</div>
+                            <div style="font-weight:600; margin-bottom:5px; color:rgba(255,255,255,0.6); text-transform:uppercase; font-size:0.8rem; letter-spacing:1px; width:100%;">📝 To-Do</div>
+                            <div style="width:100%; display:flex; flex-direction:column; gap:8px; font-size:0.95rem;">
+                                <div>• Einkaufen gehen</div>
+                                <div>• Hausaufgaben machen</div>
+                            </div>
+                        </div>
+
+                        <!-- Add Button -->
+                        <div class="widget-add-btn" style="display: flex;">+</div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

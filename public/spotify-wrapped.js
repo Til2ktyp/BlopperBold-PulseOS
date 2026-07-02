@@ -1,0 +1,538 @@
+// public/spotify-wrapped.js
+
+// Spielt einen Song direkt auf Spotify ab (über den Server-Endpoint)
+async function playSpotifyTrack(trackId) {
+    if (!trackId) return;
+    try {
+        const res = await fetch('/spotify/play-track', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ trackId })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            console.error('[playSpotifyTrack] Fehler:', err.error || res.status);
+        }
+    } catch (e) {
+        console.error('[playSpotifyTrack] Netzwerk-Fehler:', e);
+    }
+}
+
+async function initHistoryWidget() {
+    const container = document.getElementById('history-container');
+    if (!container) return;
+    try {
+        const response = await fetch('/spotify/history?limit=40');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        
+        const history = data.history || [];
+        if (history.length === 0) {
+            container.innerHTML = '<div class="history-empty">Noch keine gehörten Songs aufgezeichnet 🎧</div>';
+            return;
+        }
+
+        container.innerHTML = history.map(item => {
+            const date = new Date(item.timestamp);
+            const timeStr = formatHistoryTime(date);
+            const durationStr = formatDuration(item.listenedMs);
+            const coverUrl = item.albumImg || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9 18V12l4-2v6"/></svg>';
+            const artists = Array.isArray(item.artists) ? item.artists.join(', ') : item.artists;
+
+            return `
+                <div class="history-item" onclick="playSpotifyTrack('${item.trackId}')" style="cursor:pointer;">
+                    <img src="${coverUrl}" class="history-cover" alt="Cover" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;50&quot; height=&quot;50&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;rgba(255,255,255,0.2)&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;><circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;10&quot;/><path d=&quot;M9 18V12l4-2v6&quot;/></svg>';">
+                    <div class="history-details">
+                        <div class="history-title">${escapeHTML(item.title)}</div>
+                        <div class="history-artist">${escapeHTML(artists)}</div>
+                    </div>
+                    <div class="history-meta">
+                        <div class="history-time">${timeStr}</div>
+                        <div class="history-duration">⏱️ ${durationStr}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        console.error('[History Widget] Fehler:', err);
+        container.innerHTML = '<div class="history-empty" style="color: #ff453a;">Fehler beim Laden des Verlaufs.</div>';
+    }
+}
+
+function formatHistoryTime(date) {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfYesterday = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000);
+
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+
+    if (date >= startOfToday) {
+        return `Heute, ${hours}:${minutes}`;
+    } else if (date >= startOfYesterday) {
+        return `Gestern, ${hours}:${minutes}`;
+    } else {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        return `${day}.${month}., ${hours}:${minutes}`;
+    }
+}
+
+function formatDuration(ms) {
+    const totalSeconds = Math.round(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
+async function initWrappedWidget() {
+    try {
+        const response = await fetch('/spotify/stats');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+
+        const statToday = document.getElementById('stat-today');
+        const statAlltime = document.getElementById('stat-alltime');
+        const chartContainer = document.getElementById('chart-bars-container');
+        const artistsContainer = document.getElementById('artists-container');
+        const songsContainer = document.getElementById('songs-container');
+        const grid = document.getElementById('wrapped-grid-container');
+
+        if (statToday) statToday.textContent = data.totalTimeTodayMinutes || 0;
+        if (statAlltime) statAlltime.textContent = data.totalTimeAllTimeHours || 0;
+
+        if (chartContainer) renderChart(chartContainer, data.dailyListenTime || []);
+        if (artistsContainer) renderArtists(artistsContainer, data.topArtists || []);
+        if (songsContainer) renderSongs(songsContainer, data.topTracks || []);
+
+        if (grid) grid.style.opacity = '1';
+    } catch (err) {
+        console.error('[Wrapped Widget] Fehler:', err);
+        const grid = document.getElementById('wrapped-grid-container');
+        if (grid) {
+            grid.innerHTML = '<div class="ranking-empty" style="color: #ff453a; grid-column: span 2;">Fehler beim Laden der Statistiken. Hast du schon Songs gehört?</div>';
+            grid.style.opacity = '1';
+        }
+    }
+}
+
+function renderChart(chartContainer, dailyData) {
+    if (dailyData.length === 0) {
+        chartContainer.innerHTML = '<div class="ranking-empty">Keine täglichen Daten vorhanden</div>';
+        return;
+    }
+
+    const maxVal = Math.max(...dailyData.map(d => d.minutes), 1);
+
+    chartContainer.innerHTML = dailyData.map(d => {
+        const heightPercent = Math.max(5, (d.minutes / maxVal) * 90);
+        const date = new Date(d.date);
+        const dayLabel = date.toLocaleDateString('de-DE', { weekday: 'short' });
+
+        return `
+            <div class="chart-bar-wrapper">
+                <div class="chart-bar" style="height: 0%;" data-height="${heightPercent}%">
+                    <div class="chart-bar-tooltip">${d.minutes} Min.</div>
+                </div>
+                <div class="chart-bar-label">${dayLabel}</div>
+            </div>
+        `;
+    }).join('');
+
+    setTimeout(() => {
+        const bars = chartContainer.querySelectorAll('.chart-bar');
+        bars.forEach(bar => {
+            bar.style.height = bar.getAttribute('data-height');
+        });
+    }, 100);
+}
+
+function renderArtists(container, artists) {
+    if (artists.length === 0) {
+        container.innerHTML = '<div class="ranking-empty">Noch keine Daten verfügbar</div>';
+        return;
+    }
+
+    container.innerHTML = artists.map((artist, index) => {
+        const displayTime = Math.round(artist.durationMs / 60000);
+        return `
+            <div class="ranking-item">
+                <div class="ranking-number">${index + 1}</div>
+                <div class="ranking-info">
+                    <div class="ranking-name">${escapeHTML(artist.name)}</div>
+                    <div class="ranking-sub">Insgesamt gehört</div>
+                </div>
+                <div class="ranking-badge">${displayTime} Min.</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderSongs(container, songs) {
+    if (songs.length === 0) {
+        container.innerHTML = '<div class="ranking-empty">Noch keine Daten verfügbar</div>';
+        return;
+    }
+
+    container.innerHTML = songs.map((song, index) => {
+        const artistsStr = Array.isArray(song.artists) ? song.artists.join(', ') : song.artists;
+        return `
+            <div class="ranking-item" onclick="playSpotifyTrack('${song.trackId}')" style="cursor:pointer;">
+                <div class="ranking-number">${index + 1}</div>
+                <div class="ranking-info">
+                    <div class="ranking-name">${escapeHTML(song.title)}</div>
+                    <div class="ranking-sub">${escapeHTML(artistsStr)}</div>
+                </div>
+                <div class="ranking-badge">${song.plays}x</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function escapeHTML(str) {
+    if (!str) return '';
+    return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// ===== DESKTOP WRAPPED WIDGET =====
+async function initWrappedDesktopWidget() {
+    try {
+        const [statsRes, historyRes] = await Promise.all([
+            fetch('/spotify/stats'),
+            fetch('/spotify/history?limit=15')
+        ]);
+
+        if (!statsRes.ok) throw new Error(`Stats HTTP ${statsRes.status}`);
+        const data = await statsRes.json();
+        const historyData = historyRes.ok ? await historyRes.json() : { history: [] };
+
+        const statToday = document.getElementById('wd-stat-today');
+        const statAlltime = document.getElementById('wd-stat-alltime');
+        const statSongs = document.getElementById('wd-stat-songs');
+        const statArtists = document.getElementById('wd-stat-artists');
+        const statAvg = document.getElementById('wd-stat-avg');
+        const chartContainer = document.getElementById('wd-chart-container');
+        const artistsContainer = document.getElementById('wd-artists-container');
+        const songsContainer = document.getElementById('wd-songs-container');
+        const recentContainer = document.getElementById('wd-recent-container');
+        const grid = document.getElementById('wrapped-desktop-grid');
+
+        if (statToday) statToday.textContent = data.totalTimeTodayMinutes || 0;
+        if (statAlltime) statAlltime.textContent = data.totalTimeAllTimeHours || 0;
+
+        // Total songs & unique artists from top data
+        const totalSongs = (data.topTracks || []).reduce((sum, t) => sum + t.plays, 0);
+        const uniqueArtists = (data.topArtists || []).length;
+        const avgPerSong = totalSongs > 0 ? Math.round((data.totalTimeTodayMinutes || 0) / Math.max(1, totalSongs)) : 0;
+
+        if (statSongs) statSongs.textContent = totalSongs;
+        if (statArtists) statArtists.textContent = uniqueArtists;
+        if (statAvg) statAvg.textContent = avgPerSong;
+
+        if (chartContainer) renderDesktopChart(chartContainer, data.dailyListenTime || []);
+        if (artistsContainer) renderDesktopArtists(artistsContainer, data.topArtists || []);
+        if (songsContainer) renderDesktopSongs(songsContainer, data.topTracks || []);
+        if (recentContainer) renderDesktopRecent(recentContainer, historyData.history || []);
+
+        if (grid) grid.style.opacity = '1';
+    } catch (err) {
+        console.error('[Wrapped Desktop Widget] Fehler:', err);
+        const grid = document.getElementById('wrapped-desktop-grid');
+        if (grid) {
+            grid.innerHTML = '<div class="wd-ranking-empty" style="color: #ff453a; grid-column: span 3;">Fehler beim Laden der Statistiken.</div>';
+            grid.style.opacity = '1';
+        }
+    }
+}
+
+function renderDesktopChart(container, dailyData) {
+    if (dailyData.length === 0) {
+        container.innerHTML = '<div class="wd-ranking-empty">Keine täglichen Daten vorhanden</div>';
+        return;
+    }
+    const maxVal = Math.max(...dailyData.map(d => d.minutes), 1);
+    container.innerHTML = dailyData.map(d => {
+        const heightPercent = Math.max(5, (d.minutes / maxVal) * 90);
+        const date = new Date(d.date);
+        const dayLabel = date.toLocaleDateString('de-DE', { weekday: 'short' });
+        return `
+            <div class="wd-chart-bar-wrapper">
+                <div class="wd-chart-bar" style="height: 0%;" data-height="${heightPercent}%">
+                    <div class="wd-chart-bar-tooltip">${d.minutes} Min.</div>
+                </div>
+                <div class="wd-chart-bar-label">${dayLabel}</div>
+            </div>
+        `;
+    }).join('');
+    setTimeout(() => {
+        container.querySelectorAll('.wd-chart-bar').forEach(bar => {
+            bar.style.height = bar.getAttribute('data-height');
+        });
+    }, 100);
+}
+
+function renderDesktopArtists(container, artists) {
+    if (artists.length === 0) {
+        container.innerHTML = '<div class="wd-ranking-empty">Noch keine Daten verfügbar</div>';
+        return;
+    }
+    container.innerHTML = artists.map((artist, index) => {
+        const displayTime = Math.round(artist.durationMs / 60000);
+        return `
+            <div class="wd-ranking-item">
+                <div class="wd-ranking-number">${index + 1}</div>
+                <div class="wd-ranking-info">
+                    <div class="wd-ranking-name">${escapeHTML(artist.name)}</div>
+                    <div class="wd-ranking-sub">${artist.plays} Plays</div>
+                </div>
+                <div class="wd-ranking-badge">${displayTime} Min.</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderDesktopSongs(container, songs) {
+    if (songs.length === 0) {
+        container.innerHTML = '<div class="wd-ranking-empty">Noch keine Daten verfügbar</div>';
+        return;
+    }
+    container.innerHTML = songs.map((song, index) => {
+        const artistsStr = Array.isArray(song.artists) ? song.artists.join(', ') : song.artists;
+        return `
+            <div class="wd-ranking-item" onclick="playSpotifyTrack('${song.trackId}')" style="cursor:pointer;">
+                <div class="wd-ranking-number">${index + 1}</div>
+                <div class="wd-ranking-info">
+                    <div class="wd-ranking-name">${escapeHTML(song.title)}</div>
+                    <div class="wd-ranking-sub">${escapeHTML(artistsStr)}</div>
+                </div>
+                <div class="wd-ranking-badge">${song.plays}x</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderDesktopRecent(container, history) {
+    if (history.length === 0) {
+        container.innerHTML = '<div class="wd-ranking-empty">Noch keine Songs gehört</div>';
+        return;
+    }
+    const fallbackCover = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='38' height='38' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.2)' stroke-width='2'><circle cx='12' cy='12' r='10'/></svg>";
+    container.innerHTML = history.map(item => {
+        const date = new Date(item.timestamp);
+        const timeStr = formatHistoryTime(date);
+        const coverUrl = item.albumImg || fallbackCover;
+        const artists = Array.isArray(item.artists) ? item.artists.join(', ') : item.artists;
+        return `
+            <div class="wd-recent-item" onclick="playSpotifyTrack('${item.trackId}')" style="cursor:pointer;">
+                <img src="${coverUrl}" class="wd-recent-cover" alt="" onerror="this.src='${fallbackCover}';">
+                <div class="wd-recent-info">
+                    <div class="wd-recent-title">${escapeHTML(item.title)}</div>
+                    <div class="wd-recent-artist">${escapeHTML(artists)}</div>
+                </div>
+                <div class="wd-recent-time">${timeStr}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ===== DESKTOP HISTORY WIDGET (4-Column, Date-Grouped, with Filters) =====
+
+// Raw data cache for client-side filtering
+let _hdAllHistory = [];
+
+async function initHistoryDesktopWidget() {
+    const container = document.getElementById('history-desktop-container');
+    const totalCountEl = document.getElementById('hd-total-count');
+    if (!container) return;
+    try {
+        const response = await fetch('/spotify/history?limit=200');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        _hdAllHistory = data.history || [];
+
+        if (_hdAllHistory.length === 0) {
+            container.innerHTML = '<div class="hd-empty">Noch keine gehörten Songs aufgezeichnet 🎧</div>';
+            if (totalCountEl) totalCountEl.textContent = '';
+            return;
+        }
+
+        if (totalCountEl) totalCountEl.textContent = `${_hdAllHistory.length} Einträge`;
+
+        // Attach filter listeners once (check flag to avoid duplicates on re-render)
+        if (!window._hdFiltersAttached) {
+            window._hdFiltersAttached = true;
+            ['hd-filter-date', 'hd-filter-time-from', 'hd-filter-time-to', 'hd-filter-artist', 'hd-filter-duration'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('input', hdRenderFilteredHistory);
+            });
+        }
+
+        hdRenderFilteredHistory();
+    } catch (err) {
+        console.error('[History Desktop Widget] Fehler:', err);
+        container.innerHTML = '<div class="hd-empty" style="color: #ff453a;">Fehler beim Laden des Verlaufs.</div>';
+    }
+}
+
+function hdRenderFilteredHistory() {
+    const container = document.getElementById('history-desktop-container');
+    const totalCountEl = document.getElementById('hd-total-count');
+    const resultInfo = document.getElementById('hd-result-info');
+    const resetBtn = document.getElementById('hd-filter-reset');
+    if (!container) return;
+
+    const filterDate = document.getElementById('hd-filter-date')?.value || '';
+    const filterTimeFrom = document.getElementById('hd-filter-time-from')?.value || '';
+    const filterTimeTo = document.getElementById('hd-filter-time-to')?.value || '';
+    const filterArtist = (document.getElementById('hd-filter-artist')?.value || '').toLowerCase().trim();
+    const filterDuration = parseInt(document.getElementById('hd-filter-duration')?.value || '0', 10);
+
+    const isFiltered = filterDate || filterTimeFrom || filterTimeTo || filterArtist || filterDuration > 0;
+    if (resetBtn) resetBtn.classList.toggle('visible', isFiltered);
+
+    const toMinSec = str => {
+        if (!str) return null;
+        const [h, m] = str.split(':').map(Number);
+        return h * 60 + m;
+    };
+    const timeFromMin = toMinSec(filterTimeFrom);
+    const timeToMin = toMinSec(filterTimeTo);
+
+    const filtered = _hdAllHistory.filter(item => {
+        const date = new Date(item.timestamp);
+        const itemDateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const itemTimeMin = date.getHours() * 60 + date.getMinutes();
+        const artists = Array.isArray(item.artists) ? item.artists.join(' ').toLowerCase() : (item.artists || '').toLowerCase();
+
+        if (filterDate && itemDateKey !== filterDate) return false;
+        if (timeFromMin !== null && itemTimeMin < timeFromMin) return false;
+        if (timeToMin !== null && itemTimeMin > timeToMin) return false;
+        if (filterArtist && !artists.includes(filterArtist) && !item.title?.toLowerCase().includes(filterArtist)) return false;
+        if (filterDuration > 0 && (item.listenedMs || 0) < filterDuration * 1000) return false;
+        return true;
+    });
+
+    if (resultInfo) {
+        if (isFiltered) {
+            resultInfo.textContent = `${filtered.length} von ${_hdAllHistory.length} Einträgen entsprechen dem Filter`;
+            resultInfo.classList.add('visible');
+        } else {
+            resultInfo.classList.remove('visible');
+        }
+    }
+
+    if (totalCountEl) totalCountEl.textContent = `${_hdAllHistory.length} Einträge`;
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="hd-empty">Kein Eintrag entspricht dem Filter 🔍</div>';
+        return;
+    }
+
+    // Group by date
+    const grouped = {};
+    filtered.forEach(item => {
+        const date = new Date(item.timestamp);
+        const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        if (!grouped[dateKey]) grouped[dateKey] = [];
+        grouped[dateKey].push(item);
+    });
+
+    const sortedDateKeys = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+    const fallbackCover = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='44' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.2)' stroke-width='2'><circle cx='12' cy='12' r='10'/></svg>";
+
+    container.innerHTML = sortedDateKeys.map(dateKey => {
+        const items = grouped[dateKey];
+        const dateObj = new Date(dateKey + 'T00:00:00');
+        const dateLabel = formatDateGroupLabel(dateObj);
+        const count = items.length;
+
+        const itemsHtml = items.map(item => {
+            const date = new Date(item.timestamp);
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const timeStr = `${hours}:${minutes}`;
+            const durationStr = formatDuration(item.listenedMs);
+            const coverUrl = item.albumImg || fallbackCover;
+            const artists = Array.isArray(item.artists) ? item.artists.join(', ') : item.artists;
+
+            return `
+                <div class="hd-item" onclick="playSpotifyTrack('${item.trackId}')" style="cursor:pointer;">
+                    <img src="${coverUrl}" class="hd-cover" alt="" onerror="this.src='${fallbackCover}';">
+                    <div class="hd-details">
+                        <div class="hd-title">${escapeHTML(item.title)}</div>
+                        <div class="hd-artist">${escapeHTML(artists)}</div>
+                    </div>
+                    <div class="hd-meta">
+                        <div class="hd-time">${timeStr}</div>
+                        <div class="hd-duration">⏱️ ${durationStr}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="hd-date-group">
+                <div class="hd-date-label">${dateLabel} <span class="hd-date-badge">${count} Song${count !== 1 ? 's' : ''}</span></div>
+                <div class="hd-grid">${itemsHtml}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function hdResetFilters() {
+    ['hd-filter-date', 'hd-filter-time-from', 'hd-filter-time-to', 'hd-filter-artist'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const dur = document.getElementById('hd-filter-duration');
+    if (dur) dur.value = '0';
+    hdRenderFilteredHistory();
+}
+
+function formatDateGroupLabel(date) {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfYesterday = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000);
+
+    if (date >= startOfToday) {
+        return '📅 Heute';
+    } else if (date >= startOfYesterday) {
+        return '📅 Gestern';
+    } else {
+        return '📅 ' + date.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long' });
+    }
+}
+
+// ===== AUTO-REFRESH (10 Sekunden) =====
+let _widgetRefreshInterval = null;
+
+function startWidgetAutoRefresh() {
+    stopWidgetAutoRefresh();
+    _widgetRefreshInterval = setInterval(() => {
+        // Only refresh if the widget container is still in the DOM
+        if (document.getElementById('history-container')) {
+            initHistoryWidget();
+        }
+        if (document.getElementById('wrapped-grid-container')) {
+            initWrappedWidget();
+        }
+        if (document.getElementById('history-desktop-container')) {
+            initHistoryDesktopWidget();
+        }
+        if (document.getElementById('wrapped-desktop-grid')) {
+            initWrappedDesktopWidget();
+        }
+    }, 10000);
+}
+
+function stopWidgetAutoRefresh() {
+    if (_widgetRefreshInterval) {
+        clearInterval(_widgetRefreshInterval);
+        _widgetRefreshInterval = null;
+    }
+}
