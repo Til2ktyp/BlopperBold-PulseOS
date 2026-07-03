@@ -975,6 +975,26 @@ const SPOTIFY_ACCESS_TOKEN = process.env.SPOTIFY_ACCESS_TOKEN;
 let SPOTIFY_REFRESH_TOKEN = process.env.SPOTIFY_REFRESH_TOKEN;
 const SPOTIFY_CACHE_FILE = path.join(__dirname, 'public', 'spotify-cache.json'); // Im public Ordner!
 const SPOTIFY_HISTORY_FILE = path.join(__dirname, 'spotify-history.json');
+const playlistNameCache = {};
+
+async function getPlaylistNameCached(playlistId, token) {
+    if (playlistNameCache[playlistId]) return playlistNameCache[playlistId];
+    try {
+        const res = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.status === 200) {
+            const data = await res.json();
+            if (data && data.name) {
+                playlistNameCache[playlistId] = data.name;
+                return data.name;
+            }
+        }
+    } catch (e) {
+        console.error(`[Spotify Playlist Cache] Fehler beim Laden von ${playlistId}:`, e.message);
+    }
+    return null;
+}
 
 function loadSpotifyHistory() {
     try {
@@ -1007,6 +1027,7 @@ function finalizeCurrentSession() {
             trackId: currentSession.trackId,
             title: currentSession.title,
             artists: currentSession.artists,
+            playlistName: currentSession.playlistName || null,
             albumImg: currentSession.albumImg,
             url: currentSession.url,
             durationMs: currentSession.durationMs,
@@ -1244,6 +1265,7 @@ async function fetchAndCacheCurrentPlayback() {
                             trackId: lastSession.trackId,
                             title: lastSession.title,
                             artists: lastSession.artists,
+                            playlistName: lastSession.playlistName || null,
                             albumImg: lastSession.albumImg,
                             url: lastSession.url,
                             durationMs: lastSession.durationMs,
@@ -1260,11 +1282,18 @@ async function fetchAndCacheCurrentPlayback() {
                         lastDiscardedSession = null;
                         console.log(`[Spotify History] Session fortgesetzt (aus Zwischenspeicher): "${currentSession.title}"`);
                     } else {
+                        let playlistName = null;
+                        if (playback.context && playback.context.type === 'playlist') {
+                            const playlistId = playback.context.uri.split(':').pop();
+                            playlistName = await getPlaylistNameCached(playlistId, token);
+                        }
+
                         currentSession = {
                             id: `session-${Date.now()}-${Math.random().toString(16).slice(2)}`,
                             trackId: playback.item.id,
                             title: playback.item.name,
                             artists: playback.item.artists.map(a => a.name),
+                            playlistName: playlistName || null,
                             albumImg: playback.item.album?.images?.[0]?.url || '',
                             url: playback.item.external_urls?.spotify || `https://open.spotify.com/track/${playback.item.id}`,
                             durationMs: playback.item.duration_ms,
@@ -1273,7 +1302,7 @@ async function fetchAndCacheCurrentPlayback() {
                             lastProgress: playback.progress_ms,
                             lastUpdated: now
                         };
-                        console.log(`[Spotify History] Neue Session gestartet: "${currentSession.title}"`);
+                        console.log(`[Spotify History] Neue Session gestartet: "${currentSession.title}" (Playlist: ${playlistName || 'Keine'})`);
                     }
                 } else {
                     const deltaProgress = playback.progress_ms - currentSession.lastProgress;
@@ -1556,6 +1585,7 @@ app.get('/spotify/stats', (req, res) => {
 
     const trackCounts = {};
     const artistCounts = {};
+    const playlistCounts = {};
 
     history.forEach(session => {
         const sessionTime = session.listenedMs || 0;
@@ -1597,15 +1627,31 @@ app.get('/spotify/stats', (req, res) => {
                 artistCounts[artist].durationMs += sessionTime;
             });
         }
+
+        if (session.playlistName) {
+            if (!playlistCounts[session.playlistName]) {
+                playlistCounts[session.playlistName] = {
+                    name: session.playlistName,
+                    plays: 0,
+                    durationMs: 0
+                };
+            }
+            playlistCounts[session.playlistName].plays += 1;
+            playlistCounts[session.playlistName].durationMs += sessionTime;
+        }
     });
 
     const topTracks = Object.values(trackCounts)
         .sort((a, b) => b.plays - a.plays)
-        .slice(0, 5);
+        .slice(0, 50);
 
     const topArtists = Object.values(artistCounts)
         .sort((a, b) => b.durationMs - a.durationMs)
-        .slice(0, 5);
+        .slice(0, 50);
+
+    const topPlaylists = Object.values(playlistCounts)
+        .sort((a, b) => b.plays - a.plays)
+        .slice(0, 50);
 
     res.json({
         totalTimeTodayMinutes: Math.round(totalTimeTodayMs / 60000),
@@ -1615,7 +1661,10 @@ app.get('/spotify/stats', (req, res) => {
             minutes: Math.round(ms / 60000)
         })).reverse(),
         topTracks,
-        topArtists
+        topArtists,
+        topPlaylists,
+        uniqueArtistsCount: Object.keys(artistCounts).length,
+        totalPlaysCount: history.length
     });
 });
 

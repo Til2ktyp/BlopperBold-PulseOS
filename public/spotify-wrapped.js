@@ -102,8 +102,8 @@ async function initWrappedWidget() {
         if (statAlltime) statAlltime.textContent = data.totalTimeAllTimeHours || 0;
 
         if (chartContainer) renderChart(chartContainer, data.dailyListenTime || []);
-        if (artistsContainer) renderArtists(artistsContainer, data.topArtists || []);
-        if (songsContainer) renderSongs(songsContainer, data.topTracks || []);
+        if (artistsContainer) renderArtists(artistsContainer, (data.topArtists || []).slice(0, 5));
+        if (songsContainer) renderSongs(songsContainer, (data.topTracks || []).slice(0, 5));
 
         if (grid) grid.style.opacity = '1';
     } catch (err) {
@@ -123,6 +123,25 @@ function renderChart(chartContainer, dailyData) {
     }
 
     const maxVal = Math.max(...dailyData.map(d => d.minutes), 1);
+    const existingBars = chartContainer.querySelectorAll('.chart-bar-wrapper');
+
+    if (existingBars.length === dailyData.length) {
+        dailyData.forEach((d, index) => {
+            const barWrapper = existingBars[index];
+            const bar = barWrapper.querySelector('.chart-bar');
+            const tooltip = barWrapper.querySelector('.chart-bar-tooltip');
+            const heightPercent = Math.max(5, (d.minutes / maxVal) * 90);
+            
+            if (bar) {
+                bar.setAttribute('data-height', `${heightPercent}%`);
+                bar.style.height = `${heightPercent}%`;
+            }
+            if (tooltip) {
+                tooltip.textContent = `${d.minutes} Min.`;
+            }
+        });
+        return;
+    }
 
     chartContainer.innerHTML = dailyData.map(d => {
         const heightPercent = Math.max(5, (d.minutes / maxVal) * 90);
@@ -204,7 +223,7 @@ async function initWrappedDesktopWidget() {
     try {
         const [statsRes, historyRes] = await Promise.all([
             fetch('/spotify/stats'),
-            fetch('/spotify/history?limit=15')
+            fetch('/spotify/history?limit=50')
         ]);
 
         if (!statsRes.ok) throw new Error(`Stats HTTP ${statsRes.status}`);
@@ -219,6 +238,7 @@ async function initWrappedDesktopWidget() {
         const chartContainer = document.getElementById('wd-chart-container');
         const artistsContainer = document.getElementById('wd-artists-container');
         const songsContainer = document.getElementById('wd-songs-container');
+        const playlistsContainer = document.getElementById('wd-playlists-container');
         const recentContainer = document.getElementById('wd-recent-container');
         const grid = document.getElementById('wrapped-desktop-grid');
 
@@ -226,8 +246,8 @@ async function initWrappedDesktopWidget() {
         if (statAlltime) statAlltime.textContent = data.totalTimeAllTimeHours || 0;
 
         // Total songs & unique artists from top data
-        const totalSongs = (data.topTracks || []).reduce((sum, t) => sum + t.plays, 0);
-        const uniqueArtists = (data.topArtists || []).length;
+        const totalSongs = data.totalPlaysCount || (data.topTracks || []).reduce((sum, t) => sum + t.plays, 0);
+        const uniqueArtists = data.uniqueArtistsCount || (data.topArtists || []).length;
         const avgPerSong = totalSongs > 0 ? Math.round((data.totalTimeTodayMinutes || 0) / Math.max(1, totalSongs)) : 0;
 
         if (statSongs) statSongs.textContent = totalSongs;
@@ -237,6 +257,7 @@ async function initWrappedDesktopWidget() {
         if (chartContainer) renderDesktopChart(chartContainer, data.dailyListenTime || []);
         if (artistsContainer) renderDesktopArtists(artistsContainer, data.topArtists || []);
         if (songsContainer) renderDesktopSongs(songsContainer, data.topTracks || []);
+        if (playlistsContainer) renderDesktopPlaylists(playlistsContainer, data.topPlaylists || []);
         if (recentContainer) renderDesktopRecent(recentContainer, historyData.history || []);
 
         if (grid) grid.style.opacity = '1';
@@ -256,6 +277,26 @@ function renderDesktopChart(container, dailyData) {
         return;
     }
     const maxVal = Math.max(...dailyData.map(d => d.minutes), 1);
+    const existingBars = container.querySelectorAll('.wd-chart-bar-wrapper');
+
+    if (existingBars.length === dailyData.length) {
+        dailyData.forEach((d, index) => {
+            const barWrapper = existingBars[index];
+            const bar = barWrapper.querySelector('.wd-chart-bar');
+            const tooltip = barWrapper.querySelector('.wd-chart-bar-tooltip');
+            const heightPercent = Math.max(5, (d.minutes / maxVal) * 90);
+            
+            if (bar) {
+                bar.setAttribute('data-height', `${heightPercent}%`);
+                bar.style.height = `${heightPercent}%`;
+            }
+            if (tooltip) {
+                tooltip.textContent = `${d.minutes} Min.`;
+            }
+        });
+        return;
+    }
+
     container.innerHTML = dailyData.map(d => {
         const heightPercent = Math.max(5, (d.minutes / maxVal) * 90);
         const date = new Date(d.date);
@@ -327,18 +368,59 @@ function renderDesktopRecent(container, history) {
         const timeStr = formatHistoryTime(date);
         const coverUrl = item.albumImg || fallbackCover;
         const artists = Array.isArray(item.artists) ? item.artists.join(', ') : item.artists;
+        const playlistInfo = item.playlistName ? `<span class="wd-recent-playlist" style="color: rgba(255,255,255,0.35); font-weight: 500;"> • 💿 ${escapeHTML(item.playlistName)}</span>` : '';
         return `
             <div class="wd-recent-item" onclick="playSpotifyTrack('${item.trackId}')" style="cursor:pointer;">
                 <img src="${coverUrl}" class="wd-recent-cover" alt="" onerror="this.src='${fallbackCover}';">
                 <div class="wd-recent-info">
                     <div class="wd-recent-title">${escapeHTML(item.title)}</div>
-                    <div class="wd-recent-artist">${escapeHTML(artists)}</div>
+                    <div class="wd-recent-artist">${escapeHTML(artists)}${playlistInfo}</div>
                 </div>
                 <div class="wd-recent-time">${timeStr}</div>
             </div>
         `;
     }).join('');
 }
+
+function renderDesktopPlaylists(container, playlists) {
+    if (!playlists || playlists.length === 0) {
+        container.innerHTML = '<div class="wd-ranking-empty">Noch keine Playlist-Daten verfügbar</div>';
+        return;
+    }
+    container.innerHTML = playlists.map((playlist, index) => {
+        const displayTime = Math.round(playlist.durationMs / 60000);
+        return `
+            <div class="wd-ranking-item">
+                <div class="wd-ranking-number">${index + 1}</div>
+                <div class="wd-ranking-info">
+                    <div class="wd-ranking-name">${escapeHTML(playlist.name)}</div>
+                    <div class="wd-ranking-sub">${playlist.plays} Plays</div>
+                </div>
+                <div class="wd-ranking-badge">${displayTime} Min.</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function switchWdTab(tabName) {
+    const songsBtn = document.querySelector('.wd-tab-btn[onclick*="songs"]');
+    const playlistsBtn = document.querySelector('.wd-tab-btn[onclick*="playlists"]');
+    const songsContainer = document.getElementById('wd-songs-container');
+    const playlistsContainer = document.getElementById('wd-playlists-container');
+    
+    if (tabName === 'songs') {
+        if (songsBtn) songsBtn.classList.add('active');
+        if (playlistsBtn) playlistsBtn.classList.remove('active');
+        if (songsContainer) songsContainer.style.display = 'block';
+        if (playlistsContainer) playlistsContainer.style.display = 'none';
+    } else if (tabName === 'playlists') {
+        if (songsBtn) songsBtn.classList.remove('active');
+        if (playlistsBtn) playlistsBtn.classList.add('active');
+        if (songsContainer) songsContainer.style.display = 'none';
+        if (playlistsContainer) playlistsContainer.style.display = 'block';
+    }
+}
+window.switchWdTab = switchWdTab;
 
 // ===== DESKTOP HISTORY WIDGET (4-Column, Date-Grouped, with Filters) =====
 

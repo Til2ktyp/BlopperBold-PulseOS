@@ -305,6 +305,41 @@
     .wd-recent-list::-webkit-scrollbar { width: 5px; }
     .wd-recent-list::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 10px; }
     .wd-recent-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+
+    .wd-card-tabs-header {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 18px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding-bottom: 8px;
+    }
+    .wd-tab-btn {
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 1.15rem;
+        font-weight: 700;
+        cursor: pointer;
+        padding: 4px 8px;
+        position: relative;
+        transition: color 0.2s ease;
+    }
+    .wd-tab-btn:hover {
+        color: rgba(255, 255, 255, 0.8);
+    }
+    .wd-tab-btn.active {
+        color: #ffffff;
+    }
+    .wd-tab-btn.active::after {
+        content: '';
+        position: absolute;
+        bottom: -9px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: #1db954;
+        border-radius: 2px;
+    }
 </style>
 
 <div class="wrapped-desktop-wrapper">
@@ -356,11 +391,17 @@
             </div>
         </div>
 
-        <!-- Top Songs -->
+        <!-- Top Songs & Playlists -->
         <div class="wd-card">
-            <h2>🎵 Top Songs</h2>
+            <div class="wd-card-tabs-header">
+                <button class="wd-tab-btn active" onclick="switchWdTab('songs')">🎵 Songs</button>
+                <button class="wd-tab-btn" onclick="switchWdTab('playlists')">💿 Playlists</button>
+            </div>
             <div id="wd-songs-container" class="wd-ranking-list">
                 <div class="wd-ranking-empty">Lade Songs...</div>
+            </div>
+            <div id="wd-playlists-container" class="wd-ranking-list" style="display: none;">
+                <div class="wd-ranking-empty">Lade Playlists...</div>
             </div>
         </div>
 
