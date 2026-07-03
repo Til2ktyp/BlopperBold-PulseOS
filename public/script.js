@@ -703,7 +703,7 @@ function hideLoadingScreen() {
     if (randomValue < 0.005) {
         totalLoadTime = 20000;
     } else {
-        totalLoadTime = Math.random() * 100 + 10; //3000 + 4000
+        totalLoadTime = Math.random() * 3000 + 4000; //3000 + 4000
     }
 
     const stage2Delay = Math.random() * 2000 + 100;
@@ -1839,10 +1839,10 @@ eventSource.onmessage = function (event) {
             standbyEnabled = data.standbyEnabled !== false;
             localStorage.setItem('standby-enabled', standbyEnabled ? 'true' : 'false');
             console.log(`[Standby] Status aktualisiert vom Server: ${standbyEnabled ? 'Aktiviert' : 'Deaktiviert'}`);
-            
+
             // Show standby toggle toast on change
             showSystemToast(standbyEnabled ? '🌙 Standby aktiviert' : '🌙 Standby deaktiviert', 3000);
-            
+
             resetIdleTimer();
             return;
         }
