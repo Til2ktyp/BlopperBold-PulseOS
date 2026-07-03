@@ -508,11 +508,13 @@ function formatDateGroupLabel(date) {
     }
 }
 
-// ===== AUTO-REFRESH (10 Sekunden) =====
+// ===== AUTO-REFRESH (10 Sekunden / 30 Sekunden in low-powered) =====
 let _widgetRefreshInterval = null;
 
 function startWidgetAutoRefresh() {
     stopWidgetAutoRefresh();
+    const quality = (typeof animationQuality !== 'undefined') ? animationQuality : 'high';
+    const interval = (quality === 'low-powered') ? 30000 : 10000;
     _widgetRefreshInterval = setInterval(() => {
         // Only refresh if the widget container is still in the DOM
         if (document.getElementById('history-container')) {
@@ -527,7 +529,7 @@ function startWidgetAutoRefresh() {
         if (document.getElementById('wrapped-desktop-grid')) {
             initWrappedDesktopWidget();
         }
-    }, 10000);
+    }, interval);
 }
 
 function stopWidgetAutoRefresh() {

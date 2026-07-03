@@ -53,7 +53,26 @@ function loadDisplaySettings() {
             return initialSettings;
         }
         const data = fs.readFileSync(DISPLAY_SETTINGS_FILE, 'utf8');
-        return data ? JSON.parse(data) : {};
+        const settings = data ? JSON.parse(data) : {};
+        
+        // Migrate old standbyDisabled to standbyEnabled
+        let migrated = false;
+        for (const id in settings) {
+            if (settings[id] && settings[id].hasOwnProperty('standbyDisabled')) {
+                settings[id].standbyEnabled = !settings[id].standbyDisabled;
+                delete settings[id].standbyDisabled;
+                migrated = true;
+            }
+        }
+        if (migrated) {
+            try {
+                fs.writeFileSync(DISPLAY_SETTINGS_FILE, JSON.stringify(settings, null, 2));
+                console.log("[DisplaySettings] Migrated old standbyDisabled settings to standbyEnabled.");
+            } catch (e) {
+                console.error("[DisplaySettings] Fehler beim Speichern der Migration:", e);
+            }
+        }
+        return settings;
     } catch (e) {
         console.error("[DisplaySettings] Fehler beim Laden:", e);
         return {};
@@ -169,6 +188,7 @@ app.get('/events', (req, res) => {
                 displayId, 
                 name: displayName, 
                 quality: (displayId && displaySettings[displayId]?.animationQuality) || 'auto', 
+                standbyEnabled: (displayId && displaySettings[displayId]?.standbyEnabled !== false),
                 serial: (displayId && CONFIGURED_DISPLAYS[displayId]?.serial) || `TEMP_${displayId}` 
             })}\n\n`);
         } catch(e) {
@@ -318,6 +338,42 @@ app.get('/display/:displayId/standby', (req, res) => {
     res.send(`Display ${displayId} Standby-Modus getoggelt.\n`);
 });
 
+// --- 🌙 STANDBY TOGGLE SYNCHRONISATION ---
+app.get('/display/:displayId/standby/toggle/:state', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    const state = req.params.state;
+    const isEnabled = (state === 'enable');
+    
+    if (!displaySettings[displayId]) {
+        displaySettings[displayId] = {};
+    }
+    displaySettings[displayId].standbyEnabled = isEnabled;
+    saveDisplaySettings(displaySettings);
+    
+    sendToDisplay(displayId, { action: 'standby-settings-changed', standbyEnabled: isEnabled });
+    res.send(`Standby für Display ${displayId} auf ${isEnabled ? 'aktiviert' : 'deaktiviert'} gesetzt.\n`);
+});
+
+// --- 🎛️ WATCHFACE CONFIGURATION ENDPOINTS ---
+app.get('/display/:displayId/watchface-configs', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    const configs = displaySettings[displayId]?.watchfaceConfigs || null;
+    res.json(configs);
+});
+
+app.post('/display/:displayId/watchface-configs/save', (req, res) => {
+    const displayId = parseInt(req.params.displayId);
+    const configs = req.body;
+    
+    if (!displaySettings[displayId]) {
+        displaySettings[displayId] = {};
+    }
+    displaySettings[displayId].watchfaceConfigs = configs;
+    saveDisplaySettings(displaySettings);
+    
+    res.send("Watchface-Konfiguration gespeichert.\n");
+});
+
 // --- TIMER STEUERUNGEN ---
 app.get('/timer/set/:value', (req, res) => {
     sendToClients({ action: 'timer-set', value: req.params.value, name: req.query.name || 'Timer' });
@@ -434,8 +490,8 @@ app.get('/quality/animations', (req, res) => {
 
 app.get('/quality/animations/set/:level', (req, res) => {
     const level = req.params.level;
-    if (!['high', 'medium', 'low', 'auto'].includes(level)) {
-        return res.status(400).send("Ungültiger Quality-Level. Erlaubt: high, medium, low, auto\n");
+    if (!['high', 'medium', 'low', 'low-powered', 'auto'].includes(level)) {
+        return res.status(400).send("Ungültiger Quality-Level. Erlaubt: high, medium, low, low-powered, auto\n");
     }
     
     // Setze global für alle neuen Connections
@@ -461,8 +517,8 @@ app.get('/display/:displayId/quality/animations/set/:level', (req, res) => {
     const displayId = parseInt(req.params.displayId);
     const level = req.params.level;
     
-    if (!['high', 'medium', 'low', 'auto'].includes(level)) {
-        return res.status(400).send("Ungültiger Quality-Level. Erlaubt: high, medium, low, auto\n");
+    if (!['high', 'medium', 'low', 'low-powered', 'auto'].includes(level)) {
+        return res.status(400).send("Ungültiger Quality-Level. Erlaubt: high, medium, low, low-powered, auto\n");
     }
     
     if (!displaySettings[displayId]) {
@@ -1767,7 +1823,8 @@ app.get('/config/displays/status', (req, res) => {
         displays: clients.map(c => ({
             displayId: c.displayId,
             name: c.name,
-            ip: c.ip
+            ip: c.ip,
+            settings: displaySettings[c.displayId] || {}
         }))
     };
     res.json(status);

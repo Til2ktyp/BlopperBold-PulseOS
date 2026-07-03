@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BlopperBold</title>
+    <title>PulseOS Control Center</title>
+    <!-- Modern Premium Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -12,172 +14,135 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #0a0e27 0%, #1a0a3e 50%, #0f0f2e 100%);
-            color: #e0e0e0;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: radial-gradient(circle at top right, #0f172a, #020617);
+            color: #f8fafc;
             min-height: 100vh;
             padding: 20px;
-            padding-bottom: 110px;
+            padding-bottom: 120px;
             overflow-x: hidden;
         }
 
         .container {
-            max-width: 900px;
+            max-width: 800px;
             margin: 0 auto;
         }
 
+        /* HEADER REDESIGN */
         .header {
             text-align: center;
             margin-bottom: 30px;
+            padding-top: 10px;
         }
 
         .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            background: linear-gradient(135deg, #00ffff, #ff00ff);
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            text-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
-            font-weight: 900;
-            letter-spacing: 2px;
+            margin-bottom: 6px;
         }
 
         .header p {
-            color: #00ffff;
+            color: #64748b;
             font-size: 0.9rem;
-            text-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* STATUS & DROPDOWN CARDS */
+        .card {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 20px;
+            padding: 20px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            margin-bottom: 24px;
+        }
+
+        .display-selector label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        select, input[type="text"], input[type="number"], input[type="time"] {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: #ffffff;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-weight: 500;
+        }
+
+        select:focus, input:focus {
+            border-color: #38bdf8;
+            background: rgba(30, 41, 59, 0.8);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
+        }
+
+        select option {
+            background: #0f172a;
+            color: #f8fafc;
         }
 
         .status-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding: 12px 20px;
-            background: rgba(0, 255, 255, 0.05);
-            border: 2px solid rgba(0, 255, 255, 0.3);
-            border-radius: 12px;
-            font-size: 0.9rem;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.1), inset 0 0 20px rgba(0, 255, 255, 0.05);
+            margin-top: 14px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            font-weight: 600;
         }
 
         .status-item {
             display: flex;
             align-items: center;
             gap: 8px;
-            color: #00ffff;
-            font-weight: 600;
         }
 
         .status-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #00ff88;
-            box-shadow: 0 0 10px #00ff88;
-            animation: pulse 2s infinite;
+            background: #10b981;
+            box-shadow: 0 0 8px #10b981;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; box-shadow: 0 0 10px #00ff88; }
-            50% { opacity: 0.5; box-shadow: 0 0 20px #00ff88; }
+        .status-dot.offline {
+            background: #ef4444;
+            box-shadow: 0 0 8px #ef4444;
         }
 
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .display-selector {
-            margin-bottom: 30px;
-        }
-
-        .display-selector label {
-            display: block;
-            font-size: 0.9rem;
-            margin-bottom: 10px;
-            color: #00ffff;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        select, input {
-            width: 100%;
-            padding: 14px 16px;
-            background: rgba(0, 255, 255, 0.08);
-            border: 2px solid rgba(0, 255, 255, 0.3);
-            border-radius: 10px;
-            color: #ffffff;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-            font-weight: 600;
-        }
-
-        select::placeholder, input::placeholder {
-            color: #00ffff;
-            opacity: 0.6;
-        }
-
-        select:hover, input:hover {
-            border-color: #00ffff;
-            background: rgba(0, 255, 255, 0.15);
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2), inset 0 0 15px rgba(0, 255, 255, 0.05);
-        }
-
-        select:focus, input:focus {
-            outline: none;
-            border-color: #00ffff;
-            background: rgba(0, 255, 255, 0.2);
-            box-shadow: 0 0 25px rgba(0, 255, 255, 0.4), inset 0 0 20px rgba(0, 255, 255, 0.1);
-        }
-
-        select option {
-            background: #1a0a3e;
-            color: #ffffff;
-        }
-
+        /* SECTIONS */
         .control-section {
-            margin-bottom: 25px;
+            background: rgba(15, 23, 42, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
             padding: 20px;
-            background: rgba(0, 255, 255, 0.06);
-            border: 2px solid rgba(0, 255, 255, 0.2);
-            border-radius: 12px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.1), inset 0 0 20px rgba(0, 255, 255, 0.03);
-            animation: slideUp 0.6s ease both;
-        }
-
-        .control-section:nth-of-type(1) {
-            animation-delay: 0.3s;
+            margin-bottom: 20px;
         }
 
         .section-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            margin-bottom: 15px;
-            color: #00ffff;
+            font-size: 0.95rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            color: #38bdf8;
             text-transform: uppercase;
             letter-spacing: 1px;
             display: flex;
@@ -188,173 +153,253 @@
         .section-title::before {
             content: '';
             width: 3px;
-            height: 20px;
-            background: linear-gradient(180deg, #00ffff, #ff00ff);
+            height: 16px;
+            background: linear-gradient(180deg, #38bdf8, #818cf8);
             border-radius: 2px;
-            box-shadow: 0 0 10px #00ffff;
-        }
-
-        .button-group {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 12px;
-            margin-bottom: 15px;
-        }
-
-        .btn {
-            padding: 12px 16px;
-            background: linear-gradient(135deg, #00ffff, #00cc99);
-            border: 2px solid rgba(0, 255, 255, 0.5);
-            border-radius: 8px;
-            color: #0a0e27;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.95rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-        }
-
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 0 25px rgba(0, 255, 255, 0.5);
-            border-color: #00ffff;
-        }
-
-        .btn:active {
-            transform: translateY(-1px);
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
-        }
-
-        .btn.secondary {
-            background: linear-gradient(135deg, #ff00ff, #cc00ff);
-            border-color: rgba(255, 0, 255, 0.5);
-            box-shadow: 0 0 15px rgba(255, 0, 255, 0.3);
-            color: #ffffff;
-        }
-
-        .btn.secondary:hover {
-            box-shadow: 0 0 25px rgba(255, 0, 255, 0.5);
-            border-color: #ff00ff;
-        }
-
-        .btn.danger {
-            background: linear-gradient(135deg, #ff0055, #ff0088);
-            border-color: rgba(255, 0, 85, 0.5);
-            box-shadow: 0 0 15px rgba(255, 0, 85, 0.3);
-            color: #ffffff;
-        }
-
-        .btn.danger:hover {
-            box-shadow: 0 0 25px rgba(255, 0, 85, 0.5);
-            border-color: #ff0055;
-        }
-
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .input-group input {
-            flex: 1;
-        }
-
-        .input-group button {
-            flex: 0 0 auto;
-            padding: 12px 24px;
-        }
-
-        .timer-presets {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-            gap: 8px;
-            margin-bottom: 15px;
-        }
-
-        .timer-presets button {
-            padding: 8px 12px;
-            background: rgba(0, 255, 255, 0.1);
-            border: 2px solid rgba(0, 255, 255, 0.3);
-            border-radius: 6px;
-            color: #00ffff;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .timer-presets button:hover {
-            background: rgba(0, 255, 255, 0.3);
-            border-color: #00ffff;
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-        }
-
-        .reminder-levels {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .level-btn {
-            padding: 10px 12px;
-            background: rgba(0, 255, 255, 0.1);
-            border: 2px solid rgba(0, 255, 255, 0.3);
-            border-radius: 6px;
-            color: #00ffff;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .level-btn:hover {
-            background: rgba(0, 255, 255, 0.2);
-            border-color: #00ffff;
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-        }
-
-        .level-btn.active {
-            background: linear-gradient(135deg, #00ffff, #00cc99);
-            border-color: #00ffff;
-            color: #0a0e27;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
-        }
-
-        .dropdown-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 15px;
-        }
-
-        .dropdown-group.full {
-            grid-template-columns: 1fr;
         }
 
         .form-group {
             display: flex;
             flex-direction: column;
+            margin-bottom: 15px;
         }
 
         .form-group label {
-            font-size: 0.85rem;
-            margin-bottom: 8px;
-            color: #00ffff;
+            font-size: 0.8rem;
+            margin-bottom: 6px;
+            color: #94a3b8;
             font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
+        /* BUTTONS */
+        .btn {
+            padding: 12px 18px;
+            background: linear-gradient(135deg, #38bdf8 0%, #4f46e5 100%);
+            border: none;
+            border-radius: 12px;
+            color: #ffffff;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.85rem;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+            filter: brightness(1.1);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #f8fafc;
+        }
+
+        .btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: none;
+        }
+
+        .btn.danger {
+            background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%);
+        }
+
+        .btn.danger:hover {
+            box-shadow: 0 4px 15px rgba(244, 63, 94, 0.3);
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-group select, .input-group input {
+            flex: 1;
+        }
+
+        .input-group button {
+            flex: 0 0 auto;
+        }
+
+        /* BRIGHTNESS RANGE SLIDER */
+        .slider-container {
+            position: relative;
+            margin: 10px 0;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ffffff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+            border: 2px solid #38bdf8;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        /* TIMER PRESETS */
+        .timer-presets {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .timer-presets button {
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: inherit;
+        }
+
+        .timer-presets button:hover {
+            background: rgba(56, 189, 248, 0.1);
+            border-color: rgba(56, 189, 248, 0.3);
+            color: #38bdf8;
+        }
+
+        /* REMINDER PRIORITIES */
+        .reminder-levels {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .level-btn {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+            font-weight: 600;
+            font-family: inherit;
+        }
+
+        .level-btn:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .level-btn.active[data-level="1"] { background: rgba(16, 185, 129, 0.15); border-color: #10b981; color: #10b981; }
+        .level-btn.active[data-level="2"] { background: rgba(245, 158, 11, 0.15); border-color: #f59e0b; color: #f59e0b; }
+        .level-btn.active[data-level="3"] { background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #ef4444; }
+
+        /* iOS CUSTOM SWITCH */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            margin-bottom: 20px;
+        }
+
+        .switch-label-title {
+            font-weight: 600;
+            color: #f8fafc;
+            font-size: 0.9rem;
+        }
+
+        .switch-label-desc {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .switch-control {
+            display: inline-block;
+            position: relative;
+        }
+
+        .switch-control input {
+            display: none;
+        }
+
+        .switch-slider {
+            display: block;
+            width: 46px;
+            height: 26px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 13px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .switch-slider::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #ffffff;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .switch-control input:checked + .switch-slider {
+            background: #10b981;
+            border-color: #10b981;
+        }
+
+        .switch-control input:checked + .switch-slider::after {
+            transform: translateX(20px);
+        }
+
+        /* EMPTY SCREEN / FALLBACK */
         .no-display {
             text-align: center;
-            padding: 40px 20px;
-            color: #00ffff;
+            padding: 60px 20px;
+            color: #64748b;
         }
 
         .no-display-icon {
@@ -365,172 +410,165 @@
 
         @keyframes float {
             0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+            50% { transform: translateY(-8px); }
         }
 
+        /* TOAST BOX */
         .toast {
             position: fixed;
             bottom: 110px;
             right: 20px;
-            padding: 16px 24px;
-            background: linear-gradient(135deg, #00ff88, #00ffcc);
-            color: #0a0e27;
-            border-radius: 8px;
-            box-shadow: 0 4px 25px rgba(0, 255, 136, 0.4);
-            animation: slideIn 0.3s ease;
+            padding: 14px 20px;
+            background: #10b981;
+            color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
             z-index: 1000;
             font-weight: 600;
-            border: 2px solid #00ff88;
+            font-size: 0.85rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         .toast.error {
-            background: linear-gradient(135deg, #ff0055, #ff0088);
-            color: #ffffff;
-            border-color: #ff0055;
-            box-shadow: 0 4px 25px rgba(255, 0, 85, 0.4);
+            background: #ef4444;
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
         }
 
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        /* BOTTOM NAVIGATION BAR */
+        /* BOTTOM DOCK NAVBAR */
         .bottom-nav {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 90px;
-            background: rgba(10, 14, 39, 0.95);
-            border-top: 2px solid rgba(0, 255, 255, 0.3);
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 32px);
+            max-width: 500px;
+            height: 76px;
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
             display: flex;
             justify-content: space-around;
             align-items: center;
-            backdrop-filter: blur(20px);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
             z-index: 100;
-            box-shadow: 0 -5px 25px rgba(0, 255, 255, 0.1);
-            padding-bottom: 5px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            padding: 0 8px;
         }
 
         .nav-item {
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 6px;
-            padding: 10px 12px;
+            gap: 4px;
+            height: 100%;
             cursor: pointer;
             transition: all 0.2s ease;
-            color: #00ffff;
-            font-size: 0.7rem;
-            font-weight: 600;
+            color: #64748b;
+            font-size: 0.65rem;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            user-select: none;
+            border-radius: 16px;
         }
 
         .nav-item-icon {
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             line-height: 1;
+            transition: transform 0.2s;
         }
 
         .nav-item:hover {
-            color: #00ffff;
-            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            color: #38bdf8;
+        }
+
+        .nav-item:hover .nav-item-icon {
+            transform: scale(1.1);
         }
 
         .nav-item.active {
-            color: #00ffff;
-            text-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+            color: #38bdf8;
         }
 
         .nav-item.active .nav-item-icon {
-            animation: pulse-icon 1s infinite;
+            transform: scale(1.15);
         }
 
-        @keyframes pulse-icon {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
+        /* TABS CONTENT */
         .tab-content {
             display: none;
+            animation: fadeIn 0.3s ease;
         }
 
         .tab-content.active {
             display: block;
-            animation: slideUp 0.3s ease;
         }
 
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 1.8rem;
-            }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-            .button-group {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .dropdown-group {
-                grid-template-columns: 1fr;
-            }
-
-            .status-bar {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
-            }
-
-            body {
-                padding: 15px;
-                padding-bottom: 110px;
-            }
+        @media (max-width: 600px) {
+            body { padding: 12px; }
+            .timer-presets { grid-template-columns: repeat(5, 1fr); }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>⚡ BLOPPERBOLD</h1>
-            <p>NEURAL CONTROL INTERFACE</p>
+            <h1>⚡ PulseOS</h1>
+            <p>Display Control Center</p>
         </div>
 
-        <!-- Display Selector -->
-        <div class="display-selector">
-            <label for="display-select">📡 SELECT DISPLAY</label>
+        <!-- Display Selection Card -->
+        <div class="card display-selector">
+            <label for="display-select">📡 Display auswählen</label>
             <select id="display-select">
                 <option value="">-- Lade Displays...</option>
             </select>
-            <div class="status-bar" style="margin-top: 10px;">
+            <div class="status-bar">
                 <div class="status-item">
-                    <div class="status-dot"></div>
-                    <span id="status-text">Verbindung wird hergestellt...</span>
+                    <div id="status-dot" class="status-dot offline"></div>
+                    <span id="status-text">Lade Status...</span>
                 </div>
                 <div class="status-item">
-                    <span id="display-count">0 Displays verbunden</span>
+                    <span id="display-count">0 Displays online</span>
                 </div>
             </div>
         </div>
 
+        <!-- Fallback Message if no Display selected -->
+        <div id="no-display-message" class="card no-display">
+            <div class="no-display-icon">📡</div>
+            <h3>Kein Display ausgewählt</h3>
+            <p style="font-size: 0.85rem; color: #64748b; margin-top: 6px;">Wähle oben ein verbundenes Display aus, um es zu steuern.</p>
+        </div>
+
         <!-- TAB: ANZEIGE -->
-        <div id="tab-display" class="tab-content active">
+        <div id="tab-display" class="tab-content">
             <!-- Quality Control -->
             <div class="control-section">
-                <div class="section-title">⚡ Qualitätseinstellungen</div>
+                <div class="section-title">⚡ System-Qualität</div>
                 <div class="form-group">
-                    <label for="quality-select">Animation Qualität:</label>
+                    <label for="quality-select">Rendering- & Animationsmodus:</label>
                     <select id="quality-select">
-                        <option value="auto">Automatisch (Standard)</option>
-                        <option value="high">Hoch (Volle Qualität)</option>
-                        <option value="medium">Mittel (Ausgewogen)</option>
-                        <option value="low">Niedrig (Sparsam)</option>
+                        <option value="auto">Automatisch (Erkennung)</option>
+                        <option value="high">Hoch (Volle Qualität, 120 FPS)</option>
+                        <option value="medium">Mittel (Ausgewogen, 60 FPS)</option>
+                        <option value="low">Niedrig (Sparsam, 60 FPS)</option>
+                        <option value="low-powered">Low-Powered (Kartoffel-Modus, GPU Relief)</option>
                     </select>
                 </div>
             </div>
@@ -539,56 +577,34 @@
             <div class="control-section">
                 <div class="section-title">☀️ Helligkeit</div>
                 <div class="form-group">
-                    <label for="brightnessSlider">Display-Helligkeit: <span id="brightness-value">50</span>%</label>
-                    <input type="range" id="brightnessSlider" min="0" max="100" value="50" style="width: 100%; height: 8px; border-radius: 4px; background: linear-gradient(90deg, rgba(0, 255, 255, 0.3), #00ffff); outline: none; cursor: pointer; -webkit-appearance: none; appearance: none;">
-                    <style>
-                        input[type=range]::-webkit-slider-thumb {
-                            -webkit-appearance: none;
-                            appearance: none;
-                            width: 20px;
-                            height: 20px;
-                            border-radius: 50%;
-                            background: linear-gradient(135deg, #00ffff, #00cc99);
-                            cursor: pointer;
-                            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-                            border: 2px solid #00ffff;
-                        }
-                        input[type=range]::-moz-range-thumb {
-                            width: 20px;
-                            height: 20px;
-                            border-radius: 50%;
-                            background: linear-gradient(135deg, #00ffff, #00cc99);
-                            cursor: pointer;
-                            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-                            border: 2px solid #00ffff;
-                        }
-                    </style>
+                    <label for="brightnessSlider">Display-Helligkeit: <span id="brightness-value" style="color: #38bdf8; font-weight: 700;">50</span>%</label>
+                    <div class="slider-container">
+                        <input type="range" id="brightnessSlider" min="0" max="100" value="50">
+                    </div>
                 </div>
             </div>
 
             <!-- Widget Control -->
             <div class="control-section">
-                <div class="section-title">🎨 Widgets & Anzeige</div>
-                <div class="dropdown-group full">
-                    <div class="form-group">
-                        <label for="widget-select">Widget anzeigen:</label>
-                        <div class="input-group">
-                            <select id="widget-select">
-                                <option value="">-- Wähle ein Widget...</option>
-                                <option value="spotify">🎵 Spotify</option>
-                                <option value="homeassistant">🏠 Home Assistant</option>
-                                <option value="calendar">📅 Kalender</option>
-                                <option value="info">ℹ️ Info</option>
-                                <option value="settings">⚙️ Einstellungen</option>
-                                <option value="vim">📝 Vim</option>
-                            </select>
-                            <button class="btn secondary" id="btn-widget">Zeigen</button>
-                        </div>
+                <div class="section-title">🎨 Widgets & Screens</div>
+                <div class="form-group">
+                    <label for="widget-select">Widget erzwingen:</label>
+                    <div class="input-group">
+                        <select id="widget-select">
+                            <option value="">-- Wähle ein Widget...</option>
+                            <option value="spotify">🎵 Spotify</option>
+                            <option value="homeassistant">🏠 Home Assistant</option>
+                            <option value="calendar">📅 Kalender</option>
+                            <option value="info">ℹ️ Info</option>
+                            <option value="settings">⚙️ Einstellungen</option>
+                            <option value="vim">📝 Vim</option>
+                        </select>
+                        <button class="btn" id="btn-widget">Anzeigen</button>
                     </div>
                 </div>
                 <div class="button-group">
-                    <button class="btn secondary" id="btn-idle">🏠 Idle</button>
-                    <button class="btn secondary" id="btn-standby">🌙 Standby</button>
+                    <button class="btn secondary" id="btn-idle">🏠 Ziffernblatt</button>
+                    <button class="btn secondary" id="btn-standby">🌙 Standby toggeln</button>
                 </div>
             </div>
         </div>
@@ -598,41 +614,43 @@
             <div class="control-section">
                 <div class="section-title">⏱️ Timer</div>
                 
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; font-size: 0.85rem; margin-bottom: 8px; color: #00ffff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Timer-Name:</label>
-                    <input type="text" id="timer-name" placeholder="z.B. Kochen, Workout..." style="width: 100%; padding: 10px; border: 1px solid rgba(0, 255, 255, 0.3); background: rgba(0, 255, 255, 0.05); color: #e0e0e0; border-radius: 8px; margin-bottom: 15px;">
+                <div class="form-group">
+                    <label for="timer-name">Bezeichnung (optional):</label>
+                    <input type="text" id="timer-name" placeholder="z. B. Kochen, Workout, Tee...">
                 </div>
                 
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; font-size: 0.85rem; margin-bottom: 8px; color: #00ffff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Zeit eingeben:</label>
+                <div class="form-group">
+                    <label for="timer-value">Dauer festlegen:</label>
                     <div class="input-group">
                         <input type="number" id="timer-value" placeholder="Sekunden" min="1" value="600">
                         <button class="btn" id="btn-timer-set">Setzen</button>
                     </div>
                 </div>
 
-                <label style="display: block; font-size: 0.85rem; margin-bottom: 8px; color: #00ffff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Schnellvorgaben:</label>
-                <div class="timer-presets">
-                    <button id="preset-60">1 Min</button>
-                    <button id="preset-300">5 Min</button>
-                    <button id="preset-600">10 Min</button>
-                    <button id="preset-900">15 Min</button>
-                    <button id="preset-1800">30 Min</button>
+                <div class="form-group">
+                    <label>Schnellauswahl:</label>
+                    <div class="timer-presets">
+                        <button id="preset-60">1 Min</button>
+                        <button id="preset-300">5 Min</button>
+                        <button id="preset-600">10 Min</button>
+                        <button id="preset-900">15 Min</button>
+                        <button id="preset-1800">30 Min</button>
+                    </div>
                 </div>
 
-                <div class="button-group" style="margin-top: 15px;">
-                    <button class="btn" id="btn-timer-start">▶ Start</button>
-                    <button class="btn secondary" id="btn-timer-stop">⏸ Stop</button>
-                    <button class="btn danger" id="btn-timer-reset">⟲ Reset</button>
+                <div class="button-group" style="margin-top: 10px;">
+                    <button class="btn" id="btn-timer-start">▶ Starten</button>
+                    <button class="btn secondary" id="btn-timer-stop">⏸ Stoppen</button>
+                    <button class="btn danger" id="btn-timer-reset">⟲ Zurücksetzen</button>
                 </div>
             </div>
 
             <div class="control-section">
                 <div class="section-title">⏱️ Stoppuhr</div>
                 <div class="button-group">
-                    <button class="btn" id="btn-stopwatch-start">▶ Start</button>
-                    <button class="btn secondary" id="btn-stopwatch-stop">⏸ Stop</button>
-                    <button class="btn danger" id="btn-stopwatch-reset">⟲ Reset</button>
+                    <button class="btn" id="btn-stopwatch-start">▶ Starten</button>
+                    <button class="btn secondary" id="btn-stopwatch-stop">⏸ Stoppen</button>
+                    <button class="btn danger" id="btn-stopwatch-reset">⟲ Zurücksetzen</button>
                 </div>
             </div>
         </div>
@@ -640,24 +658,23 @@
         <!-- TAB: ERINNERUNGEN -->
         <div id="tab-reminder" class="tab-content">
             <div class="control-section">
-                <div class="section-title">🔔 Erinnerungen</div>
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; font-size: 0.85rem; margin-bottom: 8px; color: #00ffff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Erinnerungstext:</label>
+                <div class="section-title">🔔 Erinnerung senden</div>
+                <div class="form-group">
+                    <label for="reminder-text">Nachricht:</label>
                     <div class="input-group">
-                        <input type="text" id="reminder-text" placeholder="Text eingeben..." style="flex: 1;">
-                        <button class="btn secondary" id="btn-reminder" style="flex: 0 0 auto; padding: 12px 20px;">↑</button>
+                        <input type="text" id="reminder-text" placeholder="Aufstehen, trinken, lüften...">
+                        <button class="btn" id="btn-reminder">Senden</button>
                     </div>
                 </div>
 
-                <label style="display: block; font-size: 0.85rem; margin-bottom: 8px; color: #00ffff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Zeitplan (optional):</label>
-                <div style="margin-bottom: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
                     <div>
-                        <label style="font-size: 0.75rem; color: #00ffff; opacity: 0.7;">Uhrzeit:</label>
-                        <input type="time" id="reminder-time" style="width: 100%; padding: 8px; border: 1px solid rgba(0, 255, 255, 0.3); background: rgba(0, 255, 255, 0.05); color: #e0e0e0; border-radius: 8px;">
+                        <label for="reminder-time">Uhrzeit (optional):</label>
+                        <input type="time" id="reminder-time">
                     </div>
                     <div>
-                        <label style="font-size: 0.75rem; color: #00ffff; opacity: 0.7;">Tage:</label>
-                        <select id="reminder-days" style="width: 100%; padding: 8px; border: 1px solid rgba(0, 255, 255, 0.3); background: rgba(0, 255, 255, 0.05); color: #e0e0e0; border-radius: 8px;">
+                        <label for="reminder-days">Wiederholung:</label>
+                        <select id="reminder-days">
                             <option value="">Einmalig</option>
                             <option value="täglich">Täglich</option>
                             <option value="wöchentlich">Wöchentlich</option>
@@ -665,164 +682,178 @@
                     </div>
                 </div>
 
-                <label style="display: block; font-size: 0.85rem; margin-bottom: 10px; color: #00ffff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Prioritätsstufe:</label>
-                <div class="reminder-levels">
-                    <button class="level-btn active" data-level="1">🟢 Stufe 1</button>
-                    <button class="level-btn" data-level="2">🟡 Stufe 2</button>
-                    <button class="level-btn" data-level="3">🔴 Stufe 3</button>
+                <div class="form-group">
+                    <label>Prioritätsstufe:</label>
+                    <div class="reminder-levels">
+                        <button class="level-btn active" data-level="1">🟢 Stufe 1</button>
+                        <button class="level-btn" data-level="2">🟡 Stufe 2</button>
+                        <button class="level-btn" data-level="3">🔴 Stufe 3</button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- TAB: EINSTELLUNGEN -->
+        <!-- TAB: SYSTEM/EINSTELLUNGEN -->
         <div id="tab-settings" class="tab-content">
             <div class="control-section">
-                <div class="section-title">⚙️ Systemsteuerung</div>
+                <div class="section-title">⚙️ Einstellungen</div>
                 
-                <div style="margin-bottom: 20px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(0, 255, 255, 0.05); border: 1px solid rgba(0, 255, 255, 0.2); border-radius: 8px;">
-                        <div>
-                            <div style="font-weight: 600; color: #00ffff;">🌙 Automatisches Standby</div>
-                            <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); margin-top: 3px;">Nachtmodus-Standby deaktivieren</div>
-                        </div>
-                        <label style="display: flex; align-items: center; cursor: pointer;">
-                            <input type="checkbox" id="standby-toggle" style="cursor: pointer;">
-                            <span style="display: inline-block; width: 40px; height: 24px; background: rgba(0, 255, 255, 0.2); border-radius: 12px; margin-left: 10px; position: relative; transition: all 0.3s;">
-                                <span style="display: inline-block; width: 20px; height: 20px; background: #00ffff; border-radius: 10px; position: absolute; top: 2px; left: 2px; transition: left 0.3s;"></span>
-                            </span>
-                        </label>
+                <!-- iOS Switch for Standby Settings -->
+                <div class="switch-container">
+                    <div>
+                        <div class="switch-label-title">🌙 Automatisches Standby</div>
+                        <div class="switch-label-desc">Nachtmodus-Standby auf dem Display aktivieren</div>
+                    </div>
+                    <div class="switch-control">
+                        <input type="checkbox" id="standby-toggle">
+                        <label for="standby-toggle" class="switch-slider"></label>
                     </div>
                 </div>
                 
                 <div class="button-group">
-                    <button class="btn danger" id="btn-reload">🔄 Neu laden</button>
-                    <button class="btn secondary" id="btn-popups">👁️ Popups</button>
+                    <button class="btn secondary" id="btn-popups">👁️ Popups toggeln</button>
+                    <button class="btn danger" id="btn-reload">🔄 System neu starten</button>
                 </div>
             </div>
         </div>
-
-        <!-- No Display Selected Message -->
-        <div id="no-display-message">
-            <div class="no-display">
-                <div class="no-display-icon">📡</div>
-                <p>Wähle ein Display oben aus</p>
-            </div>
-        </div>
     </div>
 
-    <!-- BOTTOM NAVIGATION -->
+    <!-- Floating Dock Menu -->
     <div class="bottom-nav">
-        <div class="nav-item active" data-tab="display">
+        <div class="nav-item active" data-tab="display" onclick="switchTab('display')">
             <div class="nav-item-icon">📺</div>
-            <div>Anzeige</div>
+            <span>Display</span>
         </div>
-        <div class="nav-item" data-tab="timer">
+        <div class="nav-item" data-tab="timer" onclick="switchTab('timer')">
             <div class="nav-item-icon">⏱️</div>
-            <div>Timer</div>
+            <span>Timer</span>
         </div>
-        <div class="nav-item" data-tab="reminder">
+        <div class="nav-item" data-tab="reminder" onclick="switchTab('reminder')">
             <div class="nav-item-icon">🔔</div>
-            <div>Erinnern</div>
+            <span>Reminder</span>
         </div>
-        <div class="nav-item" data-tab="settings">
+        <div class="nav-item" data-tab="settings" onclick="switchTab('settings')">
             <div class="nav-item-icon">⚙️</div>
-            <div>System</div>
+            <span>Setup</span>
         </div>
     </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">✅ BEFEHL ERFOLGREICH</div>
 
     <script>
-        let selectedDisplayId = localStorage.getItem('selected-display') || null;
-        let displays = {};
-        let autoRefreshInterval;
+        let selectedDisplayId = localStorage.getItem('selected-display') || '';
+        let currentTab = localStorage.getItem('selected-tab') || 'display';
         let reminderLevel = 1;
-        let currentTab = 'display';
+        let displays = {};
+        let previousDisplaysJSON = '';
+        let autoRefreshInterval = null;
 
-        // Toast Notification
+        // Toast Helper
         function showToast(message, isError = false) {
-            const toast = document.createElement('div');
-            toast.className = isError ? 'toast error' : 'toast';
+            const toast = document.getElementById('toast');
             toast.textContent = message;
-            document.body.appendChild(toast);
-            
+            toast.classList.toggle('error', isError);
+            toast.classList.add('show');
             setTimeout(() => {
-                toast.style.animation = 'slideIn 0.3s ease reverse';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
+                toast.classList.remove('show');
+            }, 2500);
         }
 
-        // TAB NAVIGATION
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const tab = item.dataset.tab;
-                switchTab(tab);
-            });
-        });
-
+        // Tab Switching
         function switchTab(tab) {
-            // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
 
-            // Show selected tab
             document.getElementById(`tab-${tab}`).classList.add('active');
-            document.querySelector(`.nav-item[data-tab="${tab}"]`).classList.add('active');
+            const nav = document.querySelector(`.nav-item[data-tab="${tab}"]`);
+            if (nav) nav.classList.add('active');
+            
             currentTab = tab;
-
             localStorage.setItem('selected-tab', tab);
+            
+            if (selectedDisplayId) {
+                showControls();
+            } else {
+                hideControls();
+            }
         }
 
-        // Restore last tab
-        const lastTab = localStorage.getItem('selected-tab') || 'display';
-        switchTab(lastTab);
+        // Restore tab on load
+        switchTab(currentTab);
 
-        // Lade alle Displays
+        // Load displays from server (fixed 5s refresh rate)
         async function loadDisplays() {
             try {
                 const response = await fetch('/config/displays/status');
                 const data = await response.json();
                 
+                const currentJSON = JSON.stringify(data.displays);
                 displays = {};
-                const select = document.getElementById('display-select');
-                select.innerHTML = '';
                 
                 if (data.displays && data.displays.length > 0) {
                     data.displays.forEach(display => {
                         displays[display.displayId] = display;
                     });
+                }
+                
+                // Only rebuild dropdown if changes occurred
+                if (currentJSON !== previousDisplaysJSON) {
+                    previousDisplaysJSON = currentJSON;
+                    const select = document.getElementById('display-select');
+                    const prevSelection = select.value;
+                    select.innerHTML = '';
                     
-                    // Fülle Dropdown
-                    const option = document.createElement('option');
-                    option.value = '';
-                    option.textContent = '-- Wähle ein Display...';
-                    select.appendChild(option);
-                    
-                    data.displays.forEach(display => {
+                    if (data.displays && data.displays.length > 0) {
                         const option = document.createElement('option');
-                        option.value = display.displayId;
-                        option.textContent = `${display.name} (${display.ip})`;
+                        option.value = '';
+                        option.textContent = '-- Wähle ein Display...';
                         select.appendChild(option);
-                    });
+                        
+                        data.displays.forEach(display => {
+                            const option = document.createElement('option');
+                            option.value = display.displayId;
+                            option.textContent = `${display.name} (${display.ip})`;
+                            select.appendChild(option);
+                        });
+                        
+                        if (prevSelection && displays[prevSelection]) {
+                            select.value = prevSelection;
+                        } else if (selectedDisplayId && displays[selectedDisplayId]) {
+                            select.value = selectedDisplayId;
+                        }
+                    } else {
+                        select.innerHTML = '<option value="">KEINE DISPLAYS VERBUNDEN</option>';
+                    }
+                }
+                
+                const statusDot = document.getElementById('status-dot');
+                const statusText = document.getElementById('status-text');
+                const displayCount = document.getElementById('display-count');
+                
+                if (data.displays && data.displays.length > 0) {
+                    statusDot.classList.remove('offline');
+                    statusText.textContent = '✅ ONLINE';
+                    displayCount.textContent = `${data.onlineCount}/${data.configuredCount} DISPLAYS`;
                     
-                    // Aktualisiere Status
-                    document.getElementById('status-text').textContent = '✅ ONLINE';
-                    document.getElementById('display-count').textContent = `${data.onlineCount}/${data.configuredCount} DISPLAYS`;
-                    
-                    // Stelle vorheriges Display wieder her
                     if (selectedDisplayId && displays[selectedDisplayId]) {
-                        select.value = selectedDisplayId;
                         showControls();
+                        // Sync toggle status
+                        const currentStandbyEnabled = displays[selectedDisplayId]?.settings?.standbyEnabled !== false;
+                        document.getElementById('standby-toggle').checked = currentStandbyEnabled;
                     } else {
                         hideControls();
                     }
                 } else {
-                    select.innerHTML = '<option value="">KEINE DISPLAYS VERBUNDEN</option>';
-                    document.getElementById('status-text').textContent = '⏳ OFFLINE';
+                    statusDot.classList.add('offline');
+                    statusText.textContent = '⏳ OFFLINE';
+                    displayCount.textContent = '0 DISPLAYS';
                     hideControls();
                 }
             } catch (error) {
                 console.error('Fehler beim Laden der Displays:', error);
-                document.getElementById('status-text').textContent = '❌ ERROR';
-                showToast('Verbindungsfehler', true);
+                document.getElementById('status-dot').classList.add('offline');
+                document.getElementById('status-text').textContent = '❌ FEHLER';
             }
         }
 
@@ -837,11 +868,10 @@
             document.getElementById('no-display-message').style.display = 'block';
         }
 
-        // Display Selection
+        // Dropdown Event
         document.getElementById('display-select').addEventListener('change', (e) => {
             selectedDisplayId = e.target.value;
             localStorage.setItem('selected-display', selectedDisplayId);
-            
             if (selectedDisplayId) {
                 showControls();
                 loadQuality();
@@ -850,26 +880,27 @@
             }
         });
 
-        // API Call Helper
+        // API Request Helper
         async function apiCall(endpoint) {
             try {
                 const response = await fetch(endpoint);
-                const text = await response.text();
-                showToast('✅ BEFEHL GESENDET');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                showToast('🚀 BEFEHL GESENDET');
                 return true;
             } catch (error) {
                 console.error('API Error:', error);
-                showToast('❌ FEHLER', true);
+                showToast('❌ FEHLER BEIM SENDEN', true);
                 return false;
             }
         }
 
-        // Quality Control
+        // Quality Settings
         async function loadQuality() {
+            if (!selectedDisplayId) return;
             try {
                 const response = await fetch(`/display/${selectedDisplayId}/quality/animations`);
                 const data = await response.json();
-                document.getElementById('quality-select').value = data.quality;
+                document.getElementById('quality-select').value = data.quality || 'auto';
             } catch (error) {
                 console.error('Fehler beim Laden der Qualität:', error);
             }
@@ -893,16 +924,18 @@
             apiCall(`/display/${selectedDisplayId}/idle`);
         });
 
-        // Timer Control
+        // Timer actions
         function setTimerValue(seconds) {
             document.getElementById('timer-value').value = seconds;
+            const name = document.getElementById('timer-name').value || 'Timer';
+            apiCall(`/display/${selectedDisplayId}/timer/set/${seconds}?name=${encodeURIComponent(name)}`);
         }
 
         document.getElementById('btn-timer-set').addEventListener('click', () => {
             const value = document.getElementById('timer-value').value;
             const name = document.getElementById('timer-name').value || 'Timer';
             if (!value || value < 1) {
-                showToast('Gültige Zeit eingeben', true);
+                showToast('Bitte gültige Dauer angeben', true);
                 return;
             }
             apiCall(`/display/${selectedDisplayId}/timer/set/${value}?name=${encodeURIComponent(name)}`);
@@ -920,27 +953,25 @@
             apiCall(`/display/${selectedDisplayId}/timer/reset`);
         });
 
-        // Timer Presets
+        // Presets
         document.getElementById('preset-60').addEventListener('click', () => setTimerValue(60));
         document.getElementById('preset-300').addEventListener('click', () => setTimerValue(300));
         document.getElementById('preset-600').addEventListener('click', () => setTimerValue(600));
         document.getElementById('preset-900').addEventListener('click', () => setTimerValue(900));
         document.getElementById('preset-1800').addEventListener('click', () => setTimerValue(1800));
 
-        // Stopwatch Control
+        // Stopwatch actions
         document.getElementById('btn-stopwatch-start').addEventListener('click', () => {
             apiCall(`/display/${selectedDisplayId}/stopwatch/start`);
         });
-
         document.getElementById('btn-stopwatch-stop').addEventListener('click', () => {
             apiCall(`/display/${selectedDisplayId}/stopwatch/stop`);
         });
-
         document.getElementById('btn-stopwatch-reset').addEventListener('click', () => {
             apiCall(`/display/${selectedDisplayId}/stopwatch/reset`);
         });
 
-        // Reminder Levels
+        // Priority level
         document.querySelectorAll('.level-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
@@ -949,14 +980,14 @@
             });
         });
 
-        // Reminder with scheduling
+        // Reminders
         document.getElementById('btn-reminder').addEventListener('click', () => {
             const text = document.getElementById('reminder-text').value;
             const time = document.getElementById('reminder-time').value;
             const days = document.getElementById('reminder-days').value;
             
             if (!text) {
-                showToast('Text eingeben', true);
+                showToast('Bitte Erinnerungstext eingeben', true);
                 return;
             }
             
@@ -970,22 +1001,18 @@
             document.getElementById('reminder-days').value = '';
         });
 
-        // Andere Befehle
+        // Standby toggling
         document.getElementById('btn-standby').addEventListener('click', () => {
             apiCall(`/display/${selectedDisplayId}/standby`);
         });
 
-        // Standby Toggle
+        // Standby custom toggle switch
         document.getElementById('standby-toggle').addEventListener('change', (e) => {
-            const isDisabled = e.target.checked;
-            localStorage.setItem('standby-disabled', isDisabled ? 'true' : 'false');
-            apiCall(`/display/${selectedDisplayId}/standby/toggle/${isDisabled ? 'disable' : 'enable'}`);
-            showToast(isDisabled ? '🌙 Standby deaktiviert' : '🌙 Standby aktiviert');
+            const isEnabled = e.target.checked;
+            localStorage.setItem('standby-enabled', isEnabled ? 'true' : 'false');
+            apiCall(`/display/${selectedDisplayId}/standby/toggle/${isEnabled ? 'enable' : 'disable'}`);
+            showToast(isEnabled ? '🌙 Standby aktiviert' : '🌙 Standby deaktiviert');
         });
-
-        // Load standby state
-        const standbyDisabled = localStorage.getItem('standby-disabled') === 'true';
-        document.getElementById('standby-toggle').checked = standbyDisabled;
 
         document.getElementById('btn-reload').addEventListener('click', () => {
             apiCall(`/display/${selectedDisplayId}/reload`);
@@ -995,28 +1022,25 @@
             apiCall(`/display/${selectedDisplayId}/popup/alle`);
         });
 
-        // Brightness Control - synchronisiert mit localStorage und index.html
+        // Brightness
         document.getElementById('brightnessSlider').addEventListener('input', (e) => {
             const value = e.target.value;
             document.getElementById('brightness-value').textContent = value;
             localStorage.setItem('brightness-value', value);
-            
-            // Sende Helligkeit zum Server (global für alle Displays)
             fetch(`/brightness/${value}`).catch(e => console.error('Brightness update failed:', e));
         });
 
-        // Lade Helligkeit aus localStorage beim Start
+        // Restore brightness on load
         const savedBrightness = localStorage.getItem('brightness-value');
         if (savedBrightness) {
             document.getElementById('brightnessSlider').value = savedBrightness;
             document.getElementById('brightness-value').textContent = savedBrightness;
         }
 
-        // Auto-refresh displays (weniger häufig für bessere Performance)
+        // Initialize and refresh displays periodically (every 5 seconds)
         loadDisplays();
-        autoRefreshInterval = setInterval(loadDisplays, 10);
+        autoRefreshInterval = setInterval(loadDisplays, 5000);
 
-        // Cleanup on leave
         window.addEventListener('beforeunload', () => {
             clearInterval(autoRefreshInterval);
         });

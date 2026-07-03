@@ -4,10 +4,22 @@ let currentAudio = null;
 let timerAudio = null;
 let eventAudio = null;
 
-const IDLE_TIME = 20 * 1000; // 20 sekunden
-const STANDBY_TIME = 5 * 1000; // 5 sekunden nach Idle
-const NIGHT_START = 22 * 60 + 30; // 22:30
-const NIGHT_END = 6 * 60 + 0; // 6:00
+const IDLE_TIME = 15 * 1000; // 25 sekunden (gesamt 30 sekunden bis Standby)
+const STANDBY_TIME = 1 * 1000; // 5 sekunden nach Idle
+const NIGHT_START = 22 * 60; // Nachtmodus startet um 22:00 Uhr
+const NIGHT_END = 6 * 60 + 0; // Nachtmodus endet um 6:00 Uhr
+
+// Helper for displaying toast notifications
+function showSystemToast(text, duration = 3000) {
+    const toast = document.getElementById('mode-toast');
+    if (!toast) return;
+    toast.textContent = text;
+    if (window.toastTimeout) clearTimeout(window.toastTimeout);
+    toast.classList.add('toast-show');
+    window.toastTimeout = setTimeout(() => {
+        toast.classList.remove('toast-show');
+    }, duration);
+}
 
 // Helligkeit-Slider Setup (wartet bis DOM geladen ist)
 document.addEventListener('DOMContentLoaded', function () {
@@ -222,7 +234,11 @@ function adjustSpotifyWidgetPosition() {
     }
 }
 
+let cachedSpotifyPlayerRect = null;
+
 function getOpenSettingsSlotCoordinates(playerSlot) {
+    if (cachedSpotifyPlayerRect) return cachedSpotifyPlayerRect;
+
     const panel = document.getElementById('settings-panel');
     const sheet = document.querySelector('.settings-sheet');
     const spotifyAppBtn = document.getElementById('spotify-app-btn');
@@ -275,11 +291,13 @@ function getOpenSettingsSlotCoordinates(playerSlot) {
     sheet.style.transition = '';
     panel.style.transition = '';
 
+    cachedSpotifyPlayerRect = rect;
     return rect;
 }
 
 // Keep morph position synced on window resizing
 window.addEventListener('resize', () => {
+    cachedSpotifyPlayerRect = null;
     if (document.body.classList.contains('settings-active')) {
         adjustSpotifyWidgetPosition();
     }
@@ -317,7 +335,7 @@ function cancelReloadTimer() {
 // --- 🌙 NIGHT MODE AUTO-STANDBY SYSTEM ---
 let isNightMode = false;
 let lastActivityTime = Date.now();
-let standbyDisabled = localStorage.getItem('standby-disabled') === "true"; // Standby-Toggle State
+let standbyEnabled = localStorage.getItem('standby-enabled') !== "false"; // Standby-Toggle State (default enabled)
 
 function isCurrentlyNight() {
     const now = new Date();
@@ -357,8 +375,8 @@ function resetIdleTimer() {
     // Alles wieder normal anzeigen
     document.body.classList.remove('standby-active');
 
-    // Nur nachts aktiv UND wenn Standby nicht deaktiviert ist
-    if (isNightMode && standbyDisabled) {
+    // Nur nachts aktiv UND wenn Standby aktiviert ist
+    if (isNightMode && standbyEnabled) {
 
         // Erst Idle
         idleTimeout = setTimeout(() => {
@@ -366,6 +384,12 @@ function resetIdleTimer() {
 
             document.body.classList.remove('widget-active');
             document.getElementById('spotify-widget').classList.remove('active');
+
+            // Close settings panel when entering idle
+            const panel = document.getElementById('settings-panel');
+            if (panel && panel.classList.contains('active')) {
+                toggleSettingsPanel();
+            }
 
             // Danach Standby Timer starten
             standbyTimeout = setTimeout(() => {
@@ -380,8 +404,8 @@ function resetIdleTimer() {
 }
 
 function wakeDisplay(reason = 'unknown', force = false) {
-    // Nur nachts automatisch aufwecken (wenn nicht deaktiviert)
-    if ((!isNightMode || standbyDisabled) && !force) return;
+    // Nur nachts automatisch aufwecken (wenn Standby nicht aktiviert)
+    if ((!isNightMode || !standbyEnabled) && !force) return;
 
     console.log(`[Wake] Display geweckt durch: ${reason}`);
 
@@ -397,7 +421,7 @@ function wakeDisplay(reason = 'unknown', force = false) {
 
 // Benutzeraktivität erkennen
 function setupActivityListeners() {
-    const events = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'click'];
+    const events = ['mousedown', 'keydown', 'touchstart', 'click'];
 
     events.forEach(event => {
         document.addEventListener(event, () => {
@@ -553,7 +577,7 @@ async function initAnimationQuality() {
 
         // Auto-detect für Low-Power-Devices
         if (animationQuality === 'auto') {
-            animationQuality = await detectDeviceCapability() ? 'high' : 'low';
+            animationQuality = detectDeviceCapability();
         }
 
         applyAnimationQuality(animationQuality);
@@ -566,29 +590,45 @@ async function initAnimationQuality() {
 }
 
 function detectDeviceCapability() {
+    const ua = navigator.userAgent.toLowerCase();
+
+    // Google Nest Hub oder Fire Tablet Erkennung über UserAgent
+    const isNestHub = ua.includes('nest') || ua.includes('google home') || ua.includes('cast');
+    const isFireTablet = ua.includes('fire') || ua.includes('silk');
+
+    if (isNestHub || isFireTablet) {
+        return 'low-powered';
+    }
+
     // Prüfe GPU-Kapazität via WebGL
     try {
         const canvas = document.createElement('canvas');
         const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-        if (!gl) return false;
+        if (!gl) return 'low-powered';
 
-        const renderer = gl.getParameter(gl.RENDERER);
-        const vendor = gl.getParameter(gl.VENDOR);
+        const renderer = gl.getParameter(gl.RENDERER) || '';
+        const vendor = gl.getParameter(gl.VENDOR) || '';
 
-        // Low-Power-Devices erkennen
-        const lowPowerIndicators = ['Mali', 'Adreno', 'PowerVR', 'Apple A8', 'A9', 'Intel HD Graphics 4000'];
-        const isLowPower = lowPowerIndicators.some(indicator =>
-            renderer.includes(indicator) || vendor.includes(indicator)
-        );
+        // Extrem schwache GPUs / Mobil-GPUs
+        const potatoIndicators = ['Mali-T', 'Mali-G31', 'Mali-G52', 'PowerVR', 'Intel HD Graphics 500', 'Intel HD Graphics 505', 'Intel HD Graphics 510'];
+        if (potatoIndicators.some(ind => renderer.includes(ind) || vendor.includes(ind))) {
+            return 'low-powered';
+        }
 
-        return !isLowPower;
+        // Standard Low-Power GPUs
+        const lowPowerIndicators = ['Mali', 'Adreno', 'Intel HD Graphics 4000', 'Intel HD Graphics'];
+        if (lowPowerIndicators.some(indicator => renderer.includes(indicator) || vendor.includes(indicator))) {
+            return 'low';
+        }
+
+        return 'high';
     } catch (e) {
-        return true; // Fallback zu High-Quality wenn WebGL nicht verfügbar
+        return 'high'; // Fallback
     }
 }
 
 function applyAnimationQuality(quality) {
-    document.body.classList.remove('animation-high', 'animation-medium', 'animation-low');
+    document.body.classList.remove('animation-high', 'animation-medium', 'animation-low', 'animation-low-powered');
 
     if (quality === 'high') {
         document.body.classList.add('animation-high');
@@ -596,6 +636,8 @@ function applyAnimationQuality(quality) {
         document.body.classList.add('animation-medium');
     } else if (quality === 'low') {
         document.body.classList.add('animation-low');
+    } else if (quality === 'low-powered') {
+        document.body.classList.add('animation-low-powered');
     }
 }
 
@@ -1743,26 +1785,43 @@ eventSource.onmessage = function (event) {
         const data = JSON.parse(event.data);
         if (!data || !data.action) return;
 
+        // --- 🔄 SYSTEM RELOAD ---
+        if (data.action === 'reload') {
+            console.log('Server meldet Display-Reload. Schließe Event-Stream...');
+            eventSource.close();
+            console.log('Lade in 2 Sekunden neu...');
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+            return;
+        }
+
         // --- 📺 DISPLAY INITIALIZATION ---
         if (data.action === 'init-display') {
             displayId = data.displayId;
             displayName = data.name;
             displaySerial = data.serial || 'UNKNOWN';
             animationQuality = data.quality || 'auto';
+            standbyEnabled = data.standbyEnabled !== false;
 
             localStorage.setItem('display-id', displayId);
             localStorage.setItem('display-name', displayName);
             localStorage.setItem('display-serial', displaySerial);
             localStorage.setItem('animation-quality', animationQuality);
+            localStorage.setItem('standby-enabled', standbyEnabled ? 'true' : 'false');
 
-            console.log(`[Display] Initialisiert - ID: ${displayId} | Name: ${displayName} | Serial: ${displaySerial} | Quality: ${animationQuality}`);
+            console.log(`[Display] Initialisiert - ID: ${displayId} | Name: ${displayName} | Serial: ${displaySerial} | Quality: ${animationQuality} | Standby-Enabled: ${standbyEnabled}`);
+
+            // Show standby state toast on init
+            showSystemToast(standbyEnabled ? '🌙 Standby aktiviert' : '🌙 Standby deaktiviert', 3000);
 
             // Auto-detect für Low-Power-Devices wenn auto
             if (animationQuality === 'auto') {
-                animationQuality = detectDeviceCapability() ? 'high' : 'low';
+                animationQuality = detectDeviceCapability();
             }
 
             applyAnimationQuality(animationQuality);
+            loadWatchfaceConfigsFromServer();
             return;
         }
 
@@ -1772,6 +1831,19 @@ eventSource.onmessage = function (event) {
             applyAnimationQuality(animationQuality);
             localStorage.setItem('animation-quality', animationQuality);
             console.log(`[Animations] Quality geändert zu: ${animationQuality}`);
+            return;
+        }
+
+        // --- 🌙 STANDBY SETTINGS CHANGED ---
+        if (data.action === 'standby-settings-changed') {
+            standbyEnabled = data.standbyEnabled !== false;
+            localStorage.setItem('standby-enabled', standbyEnabled ? 'true' : 'false');
+            console.log(`[Standby] Status aktualisiert vom Server: ${standbyEnabled ? 'Aktiviert' : 'Deaktiviert'}`);
+            
+            // Show standby toggle toast on change
+            showSystemToast(standbyEnabled ? '🌙 Standby aktiviert' : '🌙 Standby deaktiviert', 3000);
+            
+            resetIdleTimer();
             return;
         }
 
@@ -2080,6 +2152,8 @@ eventSource.onmessage = function (event) {
                 document.getElementById('timer-display').textContent = "00:00";
                 document.getElementById('timer-label-text').textContent = "⏱️ Timer";
 
+                resetTimer(); // Stop the alarm sound
+
                 setTimeout(() => {
                     if (tPopup.classList.contains('popup-hide')) {
                         tPopup.style.display = 'none';
@@ -2217,6 +2291,9 @@ if (document.readyState === 'loading') {
 
     // Hauptfunktion: Daten laden
     async function spotify_fetchAndUpdateWidget() {
+        const root = spotify_getRoot();
+        if (!root || root.offsetParent === null) return;
+
         try {
             console.log('[Spotify Widget] Lade Daten aus spotify-cache.json...');
 
@@ -2433,11 +2510,11 @@ if (document.readyState === 'loading') {
         console.log('[Spotify Widget] Initialisiere...');
         spotify_fetchAndUpdateWidget();
 
-        // Auto-Refresh jede Sekunde
+        const interval = (animationQuality === 'low-powered') ? 5000 : spotify_updateInterval;
         if (spotify_updateTimer) clearInterval(spotify_updateTimer);
         spotify_updateTimer = setInterval(() => {
             spotify_fetchAndUpdateWidget();
-        }, spotify_updateInterval);
+        }, interval);
     }
 
     document.addEventListener('click', event => {
@@ -2889,11 +2966,61 @@ function applyWatchfaceTheme() {
     }
 }
 
+async function loadWatchfaceConfigsFromServer() {
+    if (!displayId) return;
+    try {
+        const response = await fetch(`/display/${displayId}/watchface-configs`);
+        if (response.ok) {
+            const serverConfigs = await response.json();
+            if (serverConfigs && typeof serverConfigs === 'object') {
+                watchfaceConfigs = serverConfigs;
+
+                // Sanitize and pad
+                if (!watchfaceConfigs["0"]) watchfaceConfigs["0"] = defaultConfigs["0"];
+                if (!watchfaceConfigs["1"]) watchfaceConfigs["1"] = defaultConfigs["1"];
+                if (!watchfaceConfigs["2"]) watchfaceConfigs["2"] = defaultConfigs["2"];
+
+                if (!watchfaceConfigs["2"].widgets || !Array.isArray(watchfaceConfigs["2"].widgets)) {
+                    watchfaceConfigs["2"].widgets = defaultConfigs["2"].widgets;
+                }
+
+                watchfaceConfigs["2"].widgets = watchfaceConfigs["2"].widgets.map(w => {
+                    if (w === undefined || w === null) return null;
+                    if (typeof w === 'string') {
+                        const size = (availableWidgets.find(aw => aw.id === w)?.size || 'small');
+                        return { id: w, size: size };
+                    }
+                    if (typeof w === 'object' && w.id) return w;
+                    return null;
+                });
+
+                padWidgetsToRowMultiple(false);
+
+                // Apply theme & render widgets
+                applyWatchfaceTheme();
+                renderWidgets();
+                console.log('[Watchface] Konfiguration erfolgreich vom Server geladen.');
+            }
+        }
+    } catch (e) {
+        console.error('[Watchface] Fehler beim Laden der Konfiguration vom Server:', e);
+    }
+}
+
 function saveWatchfaceConfigs() {
     try {
         localStorage.setItem('watchfaceConfigs', JSON.stringify(watchfaceConfigs));
     } catch (e) {
         console.error('[Storage Error] Failed to save watchfaceConfigs:', e);
+    }
+
+    // Server-Backup senden
+    if (displayId) {
+        fetch(`/display/${displayId}/watchface-configs/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(watchfaceConfigs)
+        }).catch(e => console.error('[Watchface] Server-Save fehlgeschlagen:', e));
     }
 }
 

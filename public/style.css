@@ -37,6 +37,12 @@ body.standby-active {
     background-image: none !important;
 }
 
+body.standby-active .watchface {
+    background: #000000 !important;
+    background-image: none !important;
+    border-color: transparent !important;
+}
+
 body.standby-active .aura-bg {
     opacity: 0 !important;
     visibility: hidden !important;
@@ -58,7 +64,8 @@ body.standby-active #clock {
 body,
 #clock,
 #weather,
-.aura-bg {
+.aura-bg,
+.watchface {
     transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
@@ -164,6 +171,161 @@ body.animation-low {
     --blob-opacity: 0;
     --anim-scale: 0;
     --glass-blur: none;
+}
+
+/* --- EXTREME POTATO / LOW-POWERED MODE --- */
+body.animation-low-powered {
+    --anim-duration: 1.5; /* Längere Animationszeiten für flüssigeren Verlauf */
+    --blur-strength: 0px !important;
+    --blob-opacity: 0 !important;
+    --anim-scale: 0 !important;
+    --glass-blur: none !important;
+    background: #020617 !important;
+}
+
+body.animation-low-powered .blob,
+body.animation-low-powered .aura-bg {
+    display: none !important;
+    animation: none !important;
+}
+
+/* Deaktiviere teure Filter & Schatten, behalte aber GPU-beschleunigte Transforms */
+body.animation-low-powered,
+body.animation-low-powered *,
+body.animation-low-powered ::before,
+body.animation-low-powered ::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+}
+
+/* Vereinfachte Übergänge & Kurven (Ausschließlich Transform & Opacity) */
+body.animation-low-powered .popup-box,
+body.animation-low-powered .widget-slot {
+    transition: transform calc(0.3s * var(--anim-duration)) ease-in-out, opacity calc(0.3s * var(--anim-duration)) ease-in-out !important;
+    will-change: transform, opacity;
+    transform: translateZ(0); /* Force GPU composite layer */
+}
+
+/* Die originalen Swipe-Up Transitions für das Quick-Settings-Menü beibehalten */
+body.animation-low-powered .settings-sheet {
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+}
+body.animation-low-powered #settings-panel {
+    transition: opacity 0.35s ease;
+    will-change: opacity;
+}
+body.animation-low-powered .settings-overlay {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* In low-power mode, disable expensive morphing of the floating Spotify card. Just fade it out. */
+body.animation-low-powered.settings-active .spotify-card {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: translate(-50%, 15px) scale(0.95) !important;
+    transition: opacity 0.25s ease, transform 0.25s ease !important;
+}
+
+/* Watchface Karussell & Wechsel-Optimierungen für leistungsschwache Mali/Cortex-A53 GPUs */
+body.animation-low-powered .watchface-container {
+    perspective: none !important;
+}
+
+body.animation-low-powered .watchface-carousel {
+    transform-style: flat !important;
+    transition: transform calc(0.25s * var(--anim-duration)) ease-in-out !important;
+    will-change: transform;
+}
+
+body.animation-low-powered .watchface {
+    opacity: 1 !important; /* Kein teures Opacity Blending während des Swipens */
+    transition: none !important;
+    background: transparent;
+    backdrop-filter: none !important;
+    transform: none !important;
+}
+
+body.animation-low-powered .watchface-container.popout .watchface-carousel,
+body.animation-low-powered.edit-mode .watchface-carousel {
+    transform: scale(0.65) translateX(var(--carousel-translate, 0%)) !important;
+}
+
+body.animation-low-powered .watchface-container.popout .watchface {
+    opacity: 0.4 !important;
+    background: #0d1527 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+}
+
+body.animation-low-powered .watchface-container.popout .watchface.active {
+    opacity: 1 !important;
+    box-shadow: none !important;
+}
+
+/* Ersetze teures Blur bei aktiven Widgets durch einfaches Abdunkeln */
+body.animation-low-powered.widget-active #desktop-surface {
+    opacity: 0.15 !important;
+}
+
+/* Reset aller Farbverläufe (Gradients) auf solide Farben */
+body.animation-low-powered .popup-box,
+body.animation-low-powered .widget-slot,
+body.animation-low-powered .spotify-card,
+body.animation-low-powered .reminder-box,
+body.animation-low-powered .todo-item,
+body.animation-low-powered .app-btn,
+body.animation-low-powered .desktop-app-card,
+body.animation-low-powered .hd-item,
+body.animation-low-powered .wd-ranking-item,
+body.animation-low-powered .wd-recent-item,
+body.animation-low-powered .history-item,
+body.animation-low-powered .ranking-item,
+body.animation-low-powered .todo-widget,
+body.animation-low-powered .widget-header,
+body.animation-low-powered .settings-sheet,
+body.animation-low-powered .calendar-container,
+body.animation-low-powered .calendar-header,
+body.animation-low-powered .calendar-event,
+body.animation-low-powered .calendar-day.today,
+body.animation-low-powered .calendar-card {
+    background: #0d1527 !important;
+    border-color: #1e293b !important;
+    background-image: none !important;
+}
+
+/* Text-Gradients retten */
+body.animation-low-powered h1,
+body.animation-low-powered h2,
+body.animation-low-powered h3,
+body.animation-low-powered .hd-title,
+body.animation-low-powered .wd-ranking-name,
+body.animation-low-powered .history-title,
+body.animation-low-powered .ranking-name,
+body.animation-low-powered .history-desktop-header h1 {
+    background: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    -webkit-text-fill-color: initial !important;
+    color: #ffffff !important;
+}
+
+/* ADHS-Popup drosseln */
+body.animation-low-powered #adhs-overlay .adhs-card {
+    border: 3px solid #ff0055 !important;
+    background: #000000 !important;
+    animation: cardPulse 0.8s infinite alternate ease-in-out !important;
+}
+body.animation-low-powered #adhs-overlay .adhs-flash-bg {
+    display: none !important;
 }
 
 /* --- LOW-POWERED MODE MEGA-OPTIMIZATIONS --- */
@@ -2467,12 +2629,20 @@ body.desktop-mode .desktop-icon-wrapped .desktop-icon-glyph {
 }
 
 body.desktop-mode .desktop-at-a-glance {
-    position: relative;
-    display: flex;
-    justify-content: flex-end;
-    align-items: flex-start;
-    min-width: 0;
+    position: absolute !important;
+    top: 46px !important;
+    right: 54px !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: auto !important;
+    height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: flex-start !important;
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1) !important;
     pointer-events: none;
+    z-index: 10;
 }
 
 body.desktop-mode .desktop-brand {
@@ -2841,10 +3011,48 @@ body.desktop-mode.widget-active #desktop-taskbar {
     opacity: 0.32;
 }
 
-body.desktop-mode.standby-active #desktop-surface,
+body.desktop-mode.standby-active #desktop-surface {
+    background: #000000 !important;
+}
+
+body.desktop-mode.standby-active .desktop-icon-grid,
+body.desktop-mode.standby-active .desktop-brand,
 body.desktop-mode.standby-active #desktop-taskbar {
-    opacity: 0;
-    pointer-events: none;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+body.desktop-mode.standby-active .desktop-at-a-glance {
+    position: absolute !important;
+    top: 50% !important;
+    right: 50% !important;
+    transform: translate(50%, -50%) !important;
+    width: auto !important;
+    height: auto !important;
+    display: flex !important; /* Force flex display to keep it visible on tablets/Nest Hub */
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+body.desktop-mode.standby-active #clock {
+    font-size: 7.5rem !important;
+    opacity: 0.35 !important;
+    transform: none !important;
+    display: block !important;
+}
+
+body.desktop-mode.standby-active #weather {
+    font-size: 2.2rem !important;
+    opacity: 0.25 !important;
+    transform: none !important;
+    margin-top: 15px !important;
+    display: block !important;
+}
+
+body.desktop-mode.standby-active #status-bar {
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 body.desktop-mode .desktop-icon {
@@ -2994,6 +3202,7 @@ body.desktop-mode.desktop-waking .desktop-icon:nth-child(7) {
     align-items: center;
     opacity: 0;
     transition: opacity 0.3s ease;
+    position: relative;
 }
 
 .watchface.active {
@@ -3206,9 +3415,10 @@ body.desktop-mode.desktop-waking .desktop-icon:nth-child(7) {
 }
 
 .watchface-btn-group {
+    position: absolute;
+    bottom: 60px;
     display: flex;
     gap: 12px;
-    margin-top: 30px;
     opacity: 0;
     transform: translateY(20px);
     transition: all 0.3s ease;
