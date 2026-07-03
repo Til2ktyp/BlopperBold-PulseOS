@@ -226,14 +226,6 @@ body.animation-low-powered .settings-overlay {
     -webkit-backdrop-filter: none !important;
 }
 
-/* In low-power mode, disable expensive morphing of the floating Spotify card. Just fade it out. */
-body.animation-low-powered.settings-active .spotify-card {
-    opacity: 0 !important;
-    pointer-events: none !important;
-    transform: translate(-50%, 15px) scale(0.95) !important;
-    transition: opacity 0.25s ease, transform 0.25s ease !important;
-}
-
 /* Watchface Karussell & Wechsel-Optimierungen für leistungsschwache Mali/Cortex-A53 GPUs */
 body.animation-low-powered .watchface-container {
     perspective: none !important;
@@ -248,7 +240,7 @@ body.animation-low-powered .watchface-carousel {
 body.animation-low-powered .watchface {
     opacity: 1 !important; /* Kein teures Opacity Blending während des Swipens */
     transition: none !important;
-    background: transparent;
+    /* background intentionally NOT overridden: preserves user-configured watchface colors */
     backdrop-filter: none !important;
     transform: none !important;
 }
@@ -260,7 +252,7 @@ body.animation-low-powered.edit-mode .watchface-carousel {
 
 body.animation-low-powered .watchface-container.popout .watchface {
     opacity: 0.4 !important;
-    background: #0d1527 !important;
+    /* background NOT overridden: preserve user-configured watchface colors even for inactive cards */
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     box-shadow: none !important;
