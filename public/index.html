@@ -96,20 +96,47 @@
                 </div>
             </div>
             
-            <!-- Analog Watchface -->
+            <!-- Analog Watchface (Timeless-Style) -->
             <div class="watchface" id="watchface-analog">
-                <div class="analog-clock">
-                    <div class="hand hour-hand" id="analog-hour"></div>
-                    <div class="hand minute-hand" id="analog-minute"></div>
-                    <div class="hand second-hand" id="analog-second"></div>
-                    <div class="center-dot"></div>
-                    <!-- Markers -->
-                    <div class="marker m12"></div>
-                    <div class="marker m3"></div>
-                    <div class="marker m6"></div>
-                    <div class="marker m9"></div>
+                <div class="analog-clock" id="analog-clock-wrap">
+                    <svg id="analog-svg" viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+                        <!-- Gradient defs for hands -->
+                        <defs>
+                            <linearGradient id="hand-grad-hour" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+                                <stop offset="0" stop-color="#ff3b2f" stop-opacity="1"/>
+                                <stop offset="1" stop-color="#ff3b2f" stop-opacity="0.75"/>
+                            </linearGradient>
+                            <linearGradient id="hand-grad-minute" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+                                <stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/>
+                                <stop offset="1" stop-color="#ff3b2f" stop-opacity="0.35"/>
+                            </linearGradient>
+                        </defs>
+                        <!-- Hour Hand -->
+                        <rect id="analog-hour"
+                            x="-18" y="-180" width="36" height="230"
+                            rx="18" ry="18"
+                            fill="url(#hand-grad-hour)"
+                            transform="translate(500,300) rotate(0)"/>
+                        <!-- Minute Hand -->
+                        <rect id="analog-minute"
+                            x="-12" y="-250" width="24" height="310"
+                            rx="12" ry="12"
+                            fill="url(#hand-grad-minute)"
+                            transform="translate(500,300) rotate(0)"/>
+                        <!-- Second Hand -->
+                        <line id="analog-second"
+                            x1="0" y1="50" x2="0" y2="-270"
+                            stroke="rgba(255,255,255,0.75)" stroke-width="3" stroke-linecap="round"
+                            transform="translate(500,300) rotate(0)"/>
+                        <!-- Center dot -->
+                        <circle cx="500" cy="300" r="14" fill="white" opacity="0.95"/>
+                    </svg>
                 </div>
-                <div class="analog-weather" id="analog-weather">☁️ --°C</div>
+                <div class="analog-info" id="analog-info">
+                    <span class="analog-digital-time" id="analog-digital-time">--:--</span>
+                    <span class="analog-info-separator">•</span>
+                    <span class="analog-weather" id="analog-weather">☁️ --°C</span>
+                </div>
                 
                 <div class="watchface-btn-group">
                     <button class="watchface-edit-btn" onclick="openInlineEditor()">Anpassen</button>
@@ -148,9 +175,15 @@
           </div>
       </div>
       <div class="spotify-controls">
-          <button class="spotify-control-btn" type="button" title="Vorheriger Song" data-spotify-previous-track>⏮</button>
-          <button id="spotify-toggle-play" class="spotify-control-btn spotify-toggle-play" type="button" title="Play/Pause" data-spotify-toggle-play>⏯</button>
-          <button class="spotify-control-btn" type="button" title="Nächster Song" data-spotify-next-track>⏭</button>
+          <button class="spotify-control-btn" type="button" title="Vorheriger Song" data-spotify-previous-track>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+          </button>
+          <button id="spotify-toggle-play" class="spotify-control-btn spotify-toggle-play" type="button" title="Play/Pause" data-spotify-toggle-play>
+              <svg id="spotify-play-icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <button class="spotify-control-btn" type="button" title="Nächster Song" data-spotify-next-track>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+          </button>
       </div>
       <div id="spotify-semi-countdown"></div>
     </div>
@@ -252,37 +285,46 @@
             </div>
         </div>
     </div>
+
     <!-- 🎨 WATCHFACE INLINE EDITOR (APPLE WATCH STYLE) -->
     <div id="inline-editor-overlay" class="inline-editor-overlay">
         <!-- Top Tabs -->
         <div class="editor-tabs">
-            <button class="editor-tab active" id="tab-color" onclick="switchEditorTab('color')">FARBE</button>
+            <button class="editor-tab active" id="tab-background" onclick="switchEditorTab('background')">HINTERGRUND</button>
+            <button class="editor-tab" id="tab-hands" onclick="switchEditorTab('hands')">ZEIGER</button>
             <button class="editor-tab" id="tab-widgets" onclick="switchEditorTab('widgets')">WIDGETS</button>
         </div>
         
         <!-- Right Color Column -->
         <div class="color-column" id="color-column">
             <div class="color-column-inner">
-                <button class="color-swatch midnight" data-theme="midnight" style="background: #0b0f19;" onclick="setWatchfaceTheme('midnight')"></button>
-                <button class="color-swatch abyss" data-theme="abyss" style="background: #032b45;" onclick="setWatchfaceTheme('abyss')"></button>
-                <button class="color-swatch plum" data-theme="plum" style="background: #3b0764;" onclick="setWatchfaceTheme('plum')"></button>
-                <button class="color-swatch forest" data-theme="forest" style="background: #022c22;" onclick="setWatchfaceTheme('forest')"></button>
-                <button class="color-swatch crimson" data-theme="crimson" style="background: #450a0a;" onclick="setWatchfaceTheme('crimson')"></button>
-                <button class="color-swatch black" data-theme="black" style="background: #000000;" onclick="setWatchfaceTheme('black')"></button>
-                <button class="color-swatch slate" data-theme="slate" style="background: #1e293b;" onclick="setWatchfaceTheme('slate')"></button>
-                <button class="color-swatch navy" data-theme="navy" style="background: #1e1b4b;" onclick="setWatchfaceTheme('navy')"></button>
-                <button class="color-swatch rose" data-theme="rose" style="background: #4c0519;" onclick="setWatchfaceTheme('rose')"></button>
-                <button class="color-swatch emerald" data-theme="emerald" style="background: #064e3b;" onclick="setWatchfaceTheme('emerald')"></button>
+                <!-- Color swatches will be dynamically populated in JS depending on active tab -->
             </div>
         </div>
         
-        <!-- Done Button & Opacity Control -->
-        <div class="editor-bottom-bar">
-            <div class="opacity-slider-container">
-                <span class="opacity-label">Deckkraft</span>
-                <input type="range" id="theme-opacity-slider" min="10" max="100" value="55" oninput="updateThemeOpacity(this.value)">
-                <span id="theme-opacity-value" class="opacity-value">55%</span>
+        <!-- Left Sliders Column (Vertical Sliders) -->
+        <div class="editor-left-sliders" id="editor-left-sliders">
+            <div class="vertical-slider-card" id="bg-opacity-slider-card">
+                <span class="vertical-slider-label">Hintergrund<br>Deckkraft</span>
+                <input type="range" id="theme-opacity-slider" min="10" max="100" value="55" oninput="updateThemeOpacity(this.value)" class="vertical-slider-input">
+                <span id="theme-opacity-value" class="vertical-slider-value">55%</span>
             </div>
+            
+            <div class="vertical-slider-card" id="hand-opacity-slider-card" style="display: none;">
+                <span class="vertical-slider-label">Zeiger<br>Deckkraft</span>
+                <input type="range" id="hand-opacity-slider" min="10" max="100" value="100" oninput="updateHandOpacity(this.value)" class="vertical-slider-input">
+                <span id="hand-opacity-value" class="vertical-slider-value">100%</span>
+            </div>
+
+            <div class="vertical-slider-card" id="hand-size-slider-card" style="display: none;">
+                <span class="vertical-slider-label">Zeiger<br>Größe</span>
+                <input type="range" id="hand-size-slider" min="50" max="150" value="100" oninput="handleHandSizeSliderInput(this.value)" class="vertical-slider-input">
+                <span id="hand-size-value" class="vertical-slider-value">100%</span>
+            </div>
+        </div>
+
+        <!-- Done Button -->
+        <div class="editor-bottom-bar">
             <button class="editor-done-btn" onclick="closeInlineEditor()">Fertig</button>
         </div>
     </div>

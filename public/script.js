@@ -4,8 +4,8 @@ let currentAudio = null;
 let timerAudio = null;
 let eventAudio = null;
 
-const IDLE_TIME = 15 * 1000; // 25 sekunden (gesamt 30 sekunden bis Standby)
-const STANDBY_TIME = 1 * 1000; // 5 sekunden nach Idle
+const IDLE_TIME = 15 * 1000; // 15 sekunden (gesamt 30 sekunden bis Standby)
+const STANDBY_TIME = 1 * 1000; // 1 sekunden nach Idle
 const NIGHT_START = 22 * 60; // Nachtmodus startet um 22:00 Uhr
 const NIGHT_END = 6 * 60 + 0; // Nachtmodus endet um 6:00 Uhr
 
@@ -674,18 +674,29 @@ function updateClock() {
         el.textContent = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
     });
 
-    // Analog
+    // Analog (SVG-based, Timeless-style)
     const seconds = now.getSeconds();
     const minutes = now.getMinutes();
     const hours = now.getHours();
 
-    const secondHand = document.getElementById('analog-second');
-    const minuteHand = document.getElementById('analog-minute');
-    const hourHand = document.getElementById('analog-hour');
+    const hourDeg   = (hours % 12) * 30 + minutes * 0.5;
+    const minuteDeg = minutes * 6 + seconds * 0.1;
+    const secondDeg = seconds * 6;
 
-    if (secondHand) secondHand.style.transform = `rotate(${seconds * 6}deg)`;
-    if (minuteHand) minuteHand.style.transform = `rotate(${minutes * 6 + seconds * 0.1}deg)`;
-    if (hourHand) hourHand.style.transform = `rotate(${(hours % 12) * 30 + minutes * 0.5}deg)`;
+    const analogHour   = document.getElementById('analog-hour');
+    const analogMinute = document.getElementById('analog-minute');
+    const analogSecond = document.getElementById('analog-second');
+
+    if (analogHour)   analogHour.setAttribute('transform',   `translate(500,300) rotate(${hourDeg})`);
+    if (analogMinute) analogMinute.setAttribute('transform', `translate(500,300) rotate(${minuteDeg})`);
+    if (analogSecond) analogSecond.setAttribute('transform', `translate(500,300) rotate(${secondDeg})`);
+
+    const analogTimeEl = document.getElementById('analog-digital-time');
+    if (analogTimeEl) {
+        const timeHours = String(hours).padStart(2, '0');
+        const timeMinutes = String(minutes).padStart(2, '0');
+        analogTimeEl.textContent = `${timeHours}:${timeMinutes}`;
+    }
 }
 
 setTimeout(() => {
@@ -2602,12 +2613,12 @@ const availableWidgets = [
     { id: 'weather-detail-medium', size: 'medium', label: '\ud83d\udca6 Wetter Details' }
 ];
 
-// Per-Watchface Configuration (Themes & Widgets)
+// Per-Watchface Configuration (Themes, Widgets & Hand Colors)
 const defaultConfigs = {
-    "0": { theme: "midnight", widgets: [] },
-    "1": { theme: "abyss", widgets: [] },
+    "0": { theme: "midnight", handColor: "#ff3b2f", handOpacity: 100, handSize: 100, widgets: [] },
+    "1": { theme: "abyss", handColor: "#ff3b2f", handOpacity: 100, handSize: 100, widgets: [] },
     "2": {
-        theme: "black", widgets: [
+        theme: "black", handColor: "#ff3b2f", widgets: [
             { id: "clock-medium", size: "medium" },
             null,
             { id: "weather-small", size: "small" },
@@ -2690,7 +2701,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!idleScreen || !carousel) return;
 
-    function updateWatchface(index) {
+    async function syncActiveWatchfaceFromServer() {
+        try {
+            const res = await fetch('/watchface/active');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.activeWatchface !== undefined) {
+                    updateWatchface(data.activeWatchface, false);
+                }
+            }
+        } catch (e) {
+            console.error('[Watchface Sync] Fehler beim Laden vom Server:', e);
+        }
+    }
+
+    function updateWatchface(index, postToServer = true) {
         currentWatchfaceIndex = index;
         carousel.style.setProperty('--carousel-translate', `-${index * 100}%`);
 
@@ -2702,12 +2727,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         applyWatchfaceTheme();
+        updateClock();
 
         if (watchfaces[index] === 'watchface-modular') {
             renderWidgets();
             fetchWidgetData();
         }
+
+        if (postToServer) {
+            fetch('/watchface/active', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ activeWatchface: index })
+            }).catch(err => console.error('[Watchface Sync] Fehler beim Speichern:', err));
+        }
     }
+    window.updateWatchface = updateWatchface;
 
     // Touch Events
     idleScreen.addEventListener('touchstart', e => {
@@ -2851,12 +2886,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Init
     initColorColumn();
-    applyWatchfaceTheme();
-    fetchWeather(); // Always fetch weather for digital/analog watchfaces
-    if (watchfaces[currentWatchfaceIndex] === 'watchface-modular') {
-        renderWidgets();
-        fetchWidgetData();
-    }
+    syncActiveWatchfaceFromServer().then(() => {
+        applyWatchfaceTheme();
+        fetchWeather(); // Always fetch weather for digital/analog watchfaces
+        if (watchfaces[currentWatchfaceIndex] === 'watchface-modular') {
+            renderWidgets();
+            fetchWidgetData();
+        }
+    });
 });
 
 // --- INLINE EDITOR LOGIC ---
@@ -2865,34 +2902,32 @@ let targetGallerySlot = null;
 
 function openInlineEditor() {
     document.body.classList.add('edit-mode');
+    
+    if (watchfaces[currentWatchfaceIndex] === 'watchface-analog') {
+        document.body.classList.add('analog-active');
+    } else {
+        document.body.classList.remove('analog-active');
+    }
     if (sortableInstance) sortableInstance.option('disabled', false);
 
-    // Disable WIDGETS tab if not modular watchface
+    // Show/Disable tab-widgets and tab-hands contextually
     const widgetTab = document.getElementById('tab-widgets');
-    if (watchfaces[currentWatchfaceIndex] !== 'watchface-modular') {
-        widgetTab.style.display = 'none';
-        switchEditorTab('color');
-    } else {
-        widgetTab.style.display = 'block';
+    if (widgetTab) {
+        widgetTab.style.display = (watchfaces[currentWatchfaceIndex] === 'watchface-modular') ? 'block' : 'none';
     }
 
-    // Highlight correct color swatch
-    const config = watchfaceConfigs[currentWatchfaceIndex];
-    const currentTheme = config.theme;
-    document.querySelectorAll('.color-swatch').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.theme === currentTheme);
-    });
+    const handsTab = document.getElementById('tab-hands');
+    if (handsTab) {
+        handsTab.style.display = (watchfaces[currentWatchfaceIndex] === 'watchface-analog') ? 'block' : 'none';
+    }
 
-    // Update opacity slider UI
-    const currentOpacity = config.opacity !== undefined ? config.opacity : 55;
-    const slider = document.getElementById('theme-opacity-slider');
-    const valueEl = document.getElementById('theme-opacity-value');
-    if (slider) slider.value = currentOpacity;
-    if (valueEl) valueEl.textContent = `${currentOpacity}%`;
+    // Default to background tab
+    switchEditorTab('background');
 }
 
 function closeInlineEditor() {
     document.body.classList.remove('edit-mode');
+    document.body.classList.remove('analog-active');
     if (sortableInstance) sortableInstance.option('disabled', true);
 }
 
@@ -2901,7 +2936,126 @@ function switchEditorTab(tab) {
     document.body.setAttribute('data-tab', tab);
 
     document.querySelectorAll('.editor-tab').forEach(t => t.classList.remove('active'));
-    document.getElementById(`tab-${tab}`).classList.add('active');
+    const activeTabBtn = document.getElementById(`tab-${tab}`);
+    if (activeTabBtn) activeTabBtn.classList.add('active');
+
+    const config = watchfaceConfigs[currentWatchfaceIndex];
+
+    const bgCard = document.getElementById('bg-opacity-slider-card');
+    const handOpacityCard = document.getElementById('hand-opacity-slider-card');
+    const handSizeCard = document.getElementById('hand-size-slider-card');
+
+    if (tab === 'background') {
+        initColorColumn(); // Populate HSL backgrounds
+        
+        if (bgCard) bgCard.style.display = 'flex';
+        if (handOpacityCard) handOpacityCard.style.display = 'none';
+        if (handSizeCard) handSizeCard.style.display = 'none';
+
+        const opacity = config.opacity !== undefined ? config.opacity : 55;
+        const slider = document.getElementById('theme-opacity-slider');
+        const valEl = document.getElementById('theme-opacity-value');
+        if (slider) slider.value = opacity;
+        if (valEl) valEl.textContent = `${opacity}%`;
+        
+    } else if (tab === 'hands') {
+        initHandColorColumn(); // Populate Nest Hub hand colors
+        
+        if (bgCard) bgCard.style.display = 'none';
+        if (handOpacityCard) handOpacityCard.style.display = 'flex';
+        if (handSizeCard) handSizeCard.style.display = 'flex';
+
+        // Load Hand Opacity
+        const handOpacity = config.handOpacity !== undefined ? config.handOpacity : 100;
+        const opSlider = document.getElementById('hand-opacity-slider');
+        const opValEl = document.getElementById('hand-opacity-value');
+        if (opSlider) opSlider.value = handOpacity;
+        if (opValEl) opValEl.textContent = `${handOpacity}%`;
+
+        // Load Hand Size
+        const handSize = config.handSize !== undefined ? config.handSize : 100;
+        const sizeSlider = document.getElementById('hand-size-slider');
+        const sizeValEl = document.getElementById('hand-size-value');
+        if (sizeSlider) sizeSlider.value = handSize;
+        if (sizeValEl) sizeValEl.textContent = `${handSize}%`;
+        
+    } else {
+        if (bgCard) bgCard.style.display = 'none';
+        if (handOpacityCard) handOpacityCard.style.display = 'none';
+        if (handSizeCard) handSizeCard.style.display = 'none';
+    }
+}
+
+function handleHandSizeSliderInput(val) {
+    updateHandSize(val);
+}
+
+function handleOpacitySliderInput(val) {
+    if (currentEditTab === 'background') {
+        updateThemeOpacity(val);
+    } else if (currentEditTab === 'hands') {
+        updateHandOpacity(val);
+    }
+}
+
+function updateHandSize(val) {
+    watchfaceConfigs[currentWatchfaceIndex].handSize = parseInt(val);
+    saveWatchfaceConfigs();
+    applyWatchfaceTheme();
+
+    const valueEl = document.getElementById('hand-size-value');
+    if (valueEl) valueEl.textContent = `${val}%`;
+}
+
+function updateHandOpacity(val) {
+    watchfaceConfigs[currentWatchfaceIndex].handOpacity = parseInt(val);
+    saveWatchfaceConfigs();
+    applyWatchfaceTheme();
+
+    const valueEl = document.getElementById('hand-opacity-value');
+    if (valueEl) valueEl.textContent = `${val}%`;
+}
+
+function updateThemeOpacity(val) {
+    watchfaceConfigs[currentWatchfaceIndex].opacity = parseInt(val);
+    saveWatchfaceConfigs();
+    applyWatchfaceTheme();
+
+    const valueEl = document.getElementById('theme-opacity-value');
+    if (valueEl) valueEl.textContent = `${val}%`;
+}
+
+function initHandColorColumn() {
+    const colorColumnInner = document.querySelector('.color-column-inner');
+    if (!colorColumnInner) return;
+    colorColumnInner.innerHTML = '';
+
+    const handColors = [
+        { name: 'Rot', value: '#ff3b2f' },
+        { name: 'Orange', value: '#ff9500' },
+        { name: 'Gelb', value: '#ffd60a' },
+        { name: 'Grün', value: '#34c759' },
+        { name: 'Blau', value: '#007aff' },
+        { name: 'Lila', value: '#bf5af2' },
+        { name: 'Weiß', value: '#ffffff' },
+        { name: 'Grau', value: '#8e8e93' }
+    ];
+
+    const config = watchfaceConfigs[currentWatchfaceIndex];
+    const currentHandColor = config.handColor || '#ff3b2f';
+
+    handColors.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'color-swatch';
+        btn.style.background = c.value;
+        if (c.value === '#ffffff') {
+            btn.style.outline = '1px solid rgba(255,255,255,0.3)';
+        }
+        btn.dataset.theme = c.value;
+        btn.classList.toggle('active', c.value === currentHandColor);
+        btn.onclick = () => setHandColor(c.value);
+        colorColumnInner.appendChild(btn);
+    });
 }
 
 function setWatchfaceTheme(theme) {
@@ -2964,6 +3118,91 @@ function applyWatchfaceTheme() {
             activeCard.classList.add(`theme-${theme}`);
         }
     }
+
+    // Apply saved hand color and opacity to analog SVG
+    const handColor = config.handColor || '#ff3b2f';
+    const handOpacity = config.handOpacity !== undefined ? config.handOpacity : 100;
+    applyAnalogHandColor(handColor, handOpacity);
+
+    // Apply saved hand size to analog SVG
+    const handSize = config.handSize !== undefined ? config.handSize : 100;
+    applyAnalogHandSize(handSize);
+}
+
+function applyAnalogHandSize(size = 100) {
+    const scale = size / 100;
+    const hour = document.getElementById('analog-hour');
+    const minute = document.getElementById('analog-minute');
+    const second = document.getElementById('analog-second');
+    const dot = document.querySelector('#analog-svg circle');
+
+    if (hour) {
+        const w = 36 * scale;
+        const h = 230 * scale;
+        const rx = w / 2;
+        hour.setAttribute('width', w.toString());
+        hour.setAttribute('height', h.toString());
+        hour.setAttribute('x', (-rx).toString());
+        hour.setAttribute('y', (-180 * scale).toString());
+        hour.setAttribute('rx', rx.toString());
+        hour.setAttribute('ry', rx.toString());
+    }
+    if (minute) {
+        const w = 24 * scale;
+        const h = 310 * scale;
+        const rx = w / 2;
+        minute.setAttribute('width', w.toString());
+        minute.setAttribute('height', h.toString());
+        minute.setAttribute('x', (-rx).toString());
+        minute.setAttribute('y', (-250 * scale).toString());
+        minute.setAttribute('rx', rx.toString());
+        minute.setAttribute('ry', rx.toString());
+    }
+    if (second) {
+        second.setAttribute('stroke-width', (3 * scale).toString());
+        second.setAttribute('y1', (50 * scale).toString());
+        second.setAttribute('y2', (-270 * scale).toString());
+    }
+    if (dot) {
+        dot.setAttribute('r', (14 * scale).toString());
+    }
+}
+
+function applyAnalogHandColor(color, opacity = 100) {
+    const svg = document.getElementById('analog-svg');
+    if (!svg) return;
+    
+    const opFactor = opacity / 100;
+    
+    // Stundenzeiger-Stops belegen mit der Farbe und Opacity
+    const hourStops = svg.querySelectorAll('#hand-grad-hour stop');
+    if (hourStops.length >= 2) {
+        hourStops[0].setAttribute('stop-color', color);
+        hourStops[0].setAttribute('stop-opacity', opFactor.toString());
+        hourStops[1].setAttribute('stop-color', color);
+        hourStops[1].setAttribute('stop-opacity', (opFactor * 0.75).toString());
+    }
+    
+    // Minutenzeiger: Erster Stopp bleibt weiß für den milchigen Effekt, zweiter Stopp nimmt die Akzentfarbe an
+    const minStops = svg.querySelectorAll('#hand-grad-minute stop');
+    if (minStops.length >= 2) {
+        minStops[0].setAttribute('stop-color', '#ffffff');
+        minStops[0].setAttribute('stop-opacity', (opFactor * 0.95).toString());
+        minStops[1].setAttribute('stop-color', color);
+        minStops[1].setAttribute('stop-opacity', (opFactor * 0.35).toString());
+    }
+}
+
+function setHandColor(color) {
+    watchfaceConfigs[currentWatchfaceIndex].handColor = color;
+    saveWatchfaceConfigs();
+    
+    const handOpacity = watchfaceConfigs[currentWatchfaceIndex].handOpacity !== undefined ? watchfaceConfigs[currentWatchfaceIndex].handOpacity : 100;
+    applyAnalogHandColor(color, handOpacity);
+
+    document.querySelectorAll('.color-swatch').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.theme === color);
+    });
 }
 
 async function loadWatchfaceConfigsFromServer() {

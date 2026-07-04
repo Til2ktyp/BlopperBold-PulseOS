@@ -345,7 +345,7 @@ function renderDesktopSongs(container, songs) {
     container.innerHTML = songs.map((song, index) => {
         const artistsStr = Array.isArray(song.artists) ? song.artists.join(', ') : song.artists;
         return `
-            <div class="wd-ranking-item" onclick="playSpotifyTrack('${song.trackId}')" style="cursor:pointer;">
+            <div class="wd-ranking-item" data-track-id="${song.trackId}" onclick="playSpotifyTrack('${song.trackId}')" style="cursor:pointer;">
                 <div class="wd-ranking-number">${index + 1}</div>
                 <div class="wd-ranking-info">
                     <div class="wd-ranking-name">${escapeHTML(song.title)}</div>
@@ -370,7 +370,7 @@ function renderDesktopRecent(container, history) {
         const artists = Array.isArray(item.artists) ? item.artists.join(', ') : item.artists;
         const playlistInfo = item.playlistName ? `<span class="wd-recent-playlist" style="color: rgba(255,255,255,0.35); font-weight: 500;"> • 💿 ${escapeHTML(item.playlistName)}</span>` : '';
         return `
-            <div class="wd-recent-item" onclick="playSpotifyTrack('${item.trackId}')" style="cursor:pointer;">
+            <div class="wd-recent-item" data-track-id="${item.trackId}" onclick="playSpotifyTrack('${item.trackId}')" style="cursor:pointer;">
                 <img src="${coverUrl}" class="wd-recent-cover" alt="" onerror="this.src='${fallbackCover}';">
                 <div class="wd-recent-info">
                     <div class="wd-recent-title">${escapeHTML(item.title)}</div>
@@ -432,7 +432,7 @@ async function initHistoryDesktopWidget() {
     const totalCountEl = document.getElementById('hd-total-count');
     if (!container) return;
     try {
-        const response = await fetch('/spotify/history?limit=200');
+        const response = await fetch('/spotify/history');
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         _hdAllHistory = data.history || [];
@@ -543,7 +543,7 @@ function hdRenderFilteredHistory() {
             const artists = Array.isArray(item.artists) ? item.artists.join(', ') : item.artists;
 
             return `
-                <div class="hd-item" onclick="playSpotifyTrack('${item.trackId}')" style="cursor:pointer;">
+                <div class="hd-item" data-track-id="${item.trackId}" onclick="playSpotifyTrack('${item.trackId}')" style="cursor:pointer;">
                     <img src="${coverUrl}" class="hd-cover" alt="" onerror="this.src='${fallbackCover}';">
                     <div class="hd-details">
                         <div class="hd-title">${escapeHTML(item.title)}</div>
@@ -618,5 +618,165 @@ function stopWidgetAutoRefresh() {
     if (_widgetRefreshInterval) {
         clearInterval(_widgetRefreshInterval);
         _widgetRefreshInterval = null;
+    }
+}
+
+// ===== 🖱️ CUSTOM CONTEXT MENU FOR EXCLUDING SONGS =====
+
+document.addEventListener('contextmenu', function(e) {
+    const songItem = e.target.closest('[data-track-id]');
+    if (!songItem) return;
+
+    // Prevent default context menu
+    e.preventDefault();
+
+    const trackId = songItem.dataset.trackId;
+    if (!trackId || trackId === 'undefined') return;
+
+    // Extract song details
+    const songTitle = songItem.querySelector('.wd-ranking-name, .wd-recent-title, .hd-title')?.textContent || 'dieser Song';
+    
+    showWrappedContextMenu(e.clientX, e.clientY, trackId, songTitle);
+});
+
+function showWrappedContextMenu(x, y, trackId, songTitle) {
+    let menu = document.getElementById('wrapped-context-menu');
+    if (!menu) {
+        menu = document.createElement('div');
+        menu.id = 'wrapped-context-menu';
+        menu.className = 'wrapped-context-menu';
+        menu.style.position = 'fixed';
+        menu.style.zIndex = '10000';
+        
+        // Dynamisches Styling hinzufügen
+        const style = document.createElement('style');
+        style.textContent = `
+            .wrapped-context-menu {
+                background: rgba(15, 23, 42, 0.95);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 16px;
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+                padding: 6px;
+                min-width: 250px;
+                display: flex;
+                flex-direction: column;
+                z-index: 10000;
+                animation: wrappedMenuFadeIn 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            @keyframes wrappedMenuFadeIn {
+                from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+                to { opacity: 1; transform: scale(1) translateY(0); }
+            }
+            .wrapped-context-item {
+                background: none;
+                border: none;
+                width: 100%;
+                text-align: left;
+                padding: 10px 14px;
+                color: #f1f5f9;
+                font-size: 0.85rem;
+                font-weight: 600;
+                border-radius: 10px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                transition: background 0.12s ease, color 0.12s ease;
+            }
+            .wrapped-context-item:hover {
+                background: rgba(239, 68, 68, 0.15);
+                color: #fca5a5;
+            }
+        `;
+        document.head.appendChild(style);
+        document.body.appendChild(menu);
+    }
+    
+    menu.innerHTML = `
+        <button class="wrapped-context-item" id="btn-remove-track">
+            🗑️ "${escapeHTML(songTitle)}" ausschließen
+        </button>
+    `;
+    
+    menu.style.display = 'flex';
+    
+    // Boundary check so the menu stays on screen
+    const menuWidth = 250;
+    const menuHeight = 44;
+    const winWidth = window.innerWidth;
+    const winHeight = window.innerHeight;
+    
+    let left = x;
+    let top = y;
+    
+    if (x + menuWidth > winWidth) {
+        left = winWidth - menuWidth - 10;
+    }
+    if (y + menuHeight > winHeight) {
+        top = winHeight - menuHeight - 10;
+    }
+    
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+    
+    // Action handler
+    const btn = menu.querySelector('#btn-remove-track');
+    btn.onclick = async function(evt) {
+        evt.stopPropagation();
+        menu.style.display = 'none';
+        
+        if (confirm(`Möchtest du "${songTitle}" wirklich dauerhaft aus deinem Geschmacksprofil ausschließen?`)) {
+            await removeTrackFromHistory(trackId, songTitle);
+        }
+    };
+    
+    // Dismiss helpers
+    const closeMenu = () => {
+        menu.style.display = 'none';
+        document.removeEventListener('click', closeMenu);
+        document.removeEventListener('wheel', closeMenu);
+    };
+    
+    setTimeout(() => {
+        document.addEventListener('click', closeMenu);
+        document.addEventListener('wheel', closeMenu);
+    }, 50);
+}
+
+async function removeTrackFromHistory(trackId, songTitle) {
+    try {
+        const res = await fetch('/spotify/history/remove', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ trackId })
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            const count = data.removedCount || 0;
+            
+            // Show toast notification
+            if (typeof showSystemToast === 'function') {
+                showSystemToast(`🗑️ ${songTitle} entfernt (${count}x)`, 3000);
+            } else {
+                console.log(`[Spotify History] Song entfernt: ${songTitle}`);
+            }
+            
+            // Instantly refresh widgets in place
+            if (typeof initWrappedDesktopWidget === 'function') {
+                initWrappedDesktopWidget();
+            }
+            if (typeof initHistoryDesktopWidget === 'function') {
+                initHistoryDesktopWidget();
+            }
+        } else {
+            const errData = await res.json();
+            alert(`Löschen fehlgeschlagen: ${errData.error || 'Unbekannter Fehler'}`);
+        }
+    } catch (e) {
+        console.error('[removeTrackFromHistory] Fehler:', e);
+        alert('Netzwerkfehler beim Löschen des Songs.');
     }
 }

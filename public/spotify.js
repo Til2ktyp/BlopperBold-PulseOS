@@ -144,8 +144,20 @@ window.onSpotifyWebPlaybackSDKReady = async () => {
 
   const getToggleButtons = () => document.querySelectorAll('[data-spotify-toggle-play]');
   const updateToggleButtons = label => {
+    let svgHtml = '';
+    if (label === '⏸') {
+      svgHtml = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+    } else {
+      svgHtml = '<svg id="spotify-play-icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+    }
+
     getToggleButtons().forEach(button => {
-      button.textContent = button.classList.contains('spotify-quick-toggle') ? `${label} Spotify` : label;
+      if (button.classList.contains('spotify-quick-toggle')) {
+        const textLabel = label === '⏸' ? 'Pause' : 'Play';
+        button.textContent = `${textLabel} Spotify`;
+      } else {
+        button.innerHTML = svgHtml;
+      }
     });
   };
 

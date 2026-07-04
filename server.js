@@ -1562,10 +1562,40 @@ function checkPlaylistRotationScheduling() {
 }
 
 app.get('/spotify/history', (req, res) => {
-    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit, 10) || 50));
     const history = loadSpotifyHistory();
-    const sortedHistory = [...history].reverse().slice(0, limit);
+    let sortedHistory = [...history].reverse();
+    if (req.query.limit) {
+        const limit = parseInt(req.query.limit, 10);
+        if (!isNaN(limit) && limit > 0) {
+            sortedHistory = sortedHistory.slice(0, limit);
+        }
+    }
     res.json({ history: sortedHistory });
+});
+
+app.post('/spotify/history/remove', (req, res) => {
+    const { trackId } = req.body;
+    if (!trackId) {
+        return res.status(400).json({ error: 'Track-ID fehlt' });
+    }
+
+    try {
+        const history = loadSpotifyHistory();
+        const initialCount = history.length;
+        const filteredHistory = history.filter(item => item.trackId !== trackId);
+        const removedCount = initialCount - filteredHistory.length;
+
+        if (removedCount > 0) {
+            saveSpotifyHistory(filteredHistory);
+            console.log(`[Spotify History] Song mit ID ${trackId} aus Verlauf entfernt. (${removedCount} Vorkommen)`);
+            sendToClients({ action: 'spotify-history-updated' });
+        }
+
+        res.json({ success: true, removedCount });
+    } catch (err) {
+        console.error('[Spotify History] Fehler beim Löschen:', err.message);
+        res.status(500).json({ error: 'Fehler beim Löschen des Songs' });
+    }
 });
 
 app.get('/spotify/stats', (req, res) => {
@@ -1891,6 +1921,49 @@ app.post('/brightness/:value', (req, res) => {
     brightnessValue = value;
     console.log(`[Brightness] Updated: ${value}%`);
     res.json({ brightness: brightnessValue });
+});
+
+// --- ⌚ WATCHFACE PERSISTENCE ENDPOINTS ---
+const clientWatchfacesFile = path.join(__dirname, 'client-watchfaces.json');
+
+function loadClientWatchfaces() {
+    try {
+        if (fs.existsSync(clientWatchfacesFile)) {
+            return JSON.parse(fs.readFileSync(clientWatchfacesFile, 'utf8'));
+        }
+    } catch (e) {
+        console.error('[Server] Fehler beim Laden der Client-Ziffernblätter:', e.message);
+    }
+    return {};
+}
+
+function saveClientWatchfaces(data) {
+    try {
+        fs.writeFileSync(clientWatchfacesFile, JSON.stringify(data, null, 2), 'utf8');
+    } catch (e) {
+        console.error('[Server] Fehler beim Speichern der Client-Ziffernblätter:', e.message);
+    }
+}
+
+app.get('/watchface/active', (req, res) => {
+    const clientIp = req.ip || req.connection.remoteAddress;
+    const data = loadClientWatchfaces();
+    const activeWatchface = data[clientIp] !== undefined ? data[clientIp] : 0;
+    res.json({ activeWatchface });
+});
+
+app.post('/watchface/active', (req, res) => {
+    const clientIp = req.ip || req.connection.remoteAddress;
+    const { activeWatchface } = req.body;
+    if (activeWatchface === undefined) {
+        return res.status(400).json({ error: 'activeWatchface fehlt' });
+    }
+
+    const data = loadClientWatchfaces();
+    data[clientIp] = parseInt(activeWatchface, 10);
+    saveClientWatchfaces(data);
+    console.log(`[Server] Client ${clientIp} hat Ziffernblatt auf Index ${activeWatchface} gesetzt.`);
+    res.json({ success: true });
 });
 
 // --- SERVER START ---

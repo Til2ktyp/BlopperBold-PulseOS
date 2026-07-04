@@ -3261,24 +3261,59 @@ body.desktop-mode.desktop-waking .desktop-icon:nth-child(7) {
     background: rgba(255, 255, 255, 0.9);
 }
 
-/* Analog Clock */
+
+
+/* Analog Clock – Timeless / Nest-Hub Style */
 .analog-clock {
     position: relative;
-    width: 300px;
-    height: 300px;
-    border-radius: 50%;
-    border: 8px solid rgba(255, 255, 255, 0.1);
-    background: rgba(0, 0, 0, 0.2);
-    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.5);
-    margin-bottom: 20px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
 }
 
-.analog-weather {
-    font-size: 1.5rem;
-    color: #fff;
-    opacity: 0.8;
+#analog-svg {
+    width: 100%;
+    height: 100%;
+    max-width: 90%;
+    max-height: 90%;
+    overflow: visible;
+    display: block;
 }
 
+/* SVG hand elements rotate via JS - disable transitions entirely to avoid jumpy switches */
+#analog-hour,
+#analog-minute,
+#analog-second,
+#analog-svg circle {
+    transition: none !important;
+}
+
+/* Position weather & digital clock overlay in the bottom left, matching the Google Nest Hub Timeless clock look */
+#watchface-analog .analog-info {
+    position: absolute;
+    bottom: 25px;
+    left: 30px;
+    font-size: 2.2rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
+
+#watchface-analog .analog-info-separator {
+    opacity: 0.35;
+    font-weight: 300;
+}
+
+/* Legacy hand/marker CSS kept for fallback safety - unused in new SVG design */
 .hand {
     position: absolute;
     bottom: 50%;
@@ -3287,79 +3322,11 @@ body.desktop-mode.desktop-waking .desktop-icon:nth-child(7) {
     border-radius: 4px;
     z-index: 10;
 }
-
-.hour-hand {
-    width: 8px;
-    height: 80px;
-    background: #fff;
-    margin-left: -4px;
-}
-
-.minute-hand {
-    width: 6px;
-    height: 120px;
-    background: #fff;
-    margin-left: -3px;
-    opacity: 0.8;
-}
-
-.second-hand {
-    width: 2px;
-    height: 140px;
-    background: #ff3b30;
-    margin-left: -1px;
-    z-index: 11;
-}
-
-.center-dot {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 16px;
-    height: 16px;
-    background: #fff;
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 12;
-    border: 4px solid #ff3b30;
-}
-
-.marker {
-    position: absolute;
-    background: rgba(255, 255, 255, 0.5);
-}
-
-.m12 {
-    top: 10px;
-    left: 50%;
-    width: 6px;
-    height: 20px;
-    margin-left: -3px;
-}
-
-.m6 {
-    bottom: 10px;
-    left: 50%;
-    width: 6px;
-    height: 20px;
-    margin-left: -3px;
-}
-
-.m3 {
-    right: 10px;
-    top: 50%;
-    width: 20px;
-    height: 6px;
-    margin-top: -3px;
-}
-
-.m9 {
-    left: 10px;
-    top: 50%;
-    width: 20px;
-    height: 6px;
-    margin-top: -3px;
-}
+.hour-hand { width: 8px; height: 80px; background: #fff; margin-left: -4px; display: none; }
+.minute-hand { width: 6px; height: 120px; background: #fff; margin-left: -3px; display: none; }
+.second-hand { width: 2px; height: 140px; background: #ff3b30; margin-left: -1px; display: none; }
+.center-dot { display: none; }
+.marker { display: none; }
 
 /* Todo / Reminders Watchface */
 .watchface-header {
@@ -3408,7 +3375,8 @@ body.desktop-mode.desktop-waking .desktop-icon:nth-child(7) {
 
 .watchface-btn-group {
     position: absolute;
-    bottom: 60px;
+    bottom: 40px;
+    left: 40px;
     display: flex;
     gap: 12px;
     opacity: 0;
@@ -3425,15 +3393,15 @@ body.desktop-mode.desktop-waking .desktop-icon:nth-child(7) {
 }
 
 .watchface-edit-btn {
-    padding: 14px 44px;
-    font-size: 1.2rem;
+    padding: 22px 56px;
+    font-size: 1.6rem;
     font-weight: 700;
     color: #000;
     background: #fff;
     border: none;
-    border-radius: 30px;
+    border-radius: 40px;
     cursor: pointer;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     transition: all 0.2s ease;
 }
 
@@ -3697,9 +3665,11 @@ body.edit-mode .editor-tabs {
     mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
 }
 
-body.edit-mode[data-tab="color"] .color-column {
+body.edit-mode[data-tab="background"] .color-column,
+body.edit-mode[data-tab="hands"] .color-column {
     opacity: 1;
     transform: translateY(-50%) translateX(0);
+    pointer-events: auto;
 }
 
 .color-column::-webkit-scrollbar {
@@ -3729,6 +3699,8 @@ body.edit-mode[data-tab="color"] .color-column {
     transform: scale(1.15);
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
 }
+
+
 
 /* Done & Opacity Bottom Bar */
 .editor-bottom-bar {
@@ -3778,31 +3750,8 @@ body.edit-mode .editor-bottom-bar {
     flex-shrink: 0;
 }
 
-#theme-opacity-slider {
-    flex: 1;
-    min-width: 0;
-    width: 100%;
-    -webkit-appearance: none;
-    background: rgba(255, 255, 255, 0.15);
-    height: 6px;
-    border-radius: 3px;
-    outline: none;
-    cursor: pointer;
-}
 
-#theme-opacity-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
-    transition: transform 0.1s ease;
-}
 
-#theme-opacity-slider::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
-}
 
 .opacity-value {
     font-size: 0.85rem;
@@ -4025,12 +3974,16 @@ body.edit-mode[data-tab="widgets"] .widget-add-btn {
     color: rgba(255, 255, 255, 0.8);
 }
 
-/* Opacity control ONLY in color tab */
+/* Opacity control visibility depending on active tab */
 .opacity-slider-container {
     display: none !important;
 }
 
-body[data-tab="color"] .opacity-slider-container {
+body[data-tab="background"] .opacity-slider-container:not(#hand-size-slider-container) {
+    display: flex !important;
+}
+
+body[data-tab="hands"] .opacity-slider-container {
     display: flex !important;
 }
 
@@ -4290,4 +4243,104 @@ body.edit-mode .watchface-indicators {
     .apps-grid.spotify-active .app-icon-label {
         font-size: 0.65rem !important;
     }
+}
+
+/* ===== 🎚️ VERTICAL SLIDERS FOR WATCHFACE EDIT MODE ===== */
+
+.editor-left-sliders {
+    position: absolute;
+    left: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 30px;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.vertical-slider-card {
+    position: relative;
+    background: rgba(10, 10, 20, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    padding: 24px 16px;
+    border-radius: 32px;
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    height: 480px; /* Long and tall card look */
+    width: 105px;
+    box-sizing: border-box;
+    pointer-events: auto;
+    animation: sliderFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes sliderFadeIn {
+    from { opacity: 0; transform: translateX(-15px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.vertical-slider-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    color: rgba(255, 255, 255, 0.45);
+    text-align: center;
+    line-height: 1.3;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.vertical-slider-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+
+.vertical-slider-input {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 380px; /* Taller drag area */
+    height: 50px; /* Thick slider track */
+    transform: translate(-50%, -50%) rotate(-90deg);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 25px;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    margin: 0;
+    overflow: hidden;
+    pointer-events: auto;
+}
+
+.vertical-slider-input::-webkit-slider-runnable-track {
+    background: transparent;
+    height: 50px;
+}
+
+.vertical-slider-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 50px; /* Circular thumb matching track width */
+    height: 50px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: -380px 0 0 380px rgba(255, 255, 255, 0.85), 0 0 10px rgba(255, 255, 255, 0.95);
+    border: none;
+    transition: background 0.1s ease;
+}
+
+.vertical-slider-input::-webkit-slider-thumb:active {
+    background: #e2e8f0;
+}
+
+/* Restore the slider fill box shadow in low-power mode, overriding the global shadow removal */
+body.animation-low-powered .vertical-slider-input::-webkit-slider-thumb {
+    box-shadow: -380px 0 0 380px rgba(255, 255, 255, 0.85) !important;
 }
