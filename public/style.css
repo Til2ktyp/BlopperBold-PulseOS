@@ -294,6 +294,11 @@ body.animation-low-powered .calendar-card {
     background-image: none !important;
 }
 
+body.animation-low-powered .spotify-card {
+    transition: opacity 0.25s ease-in-out !important;
+}
+
+
 /* Text-Gradients retten */
 body.animation-low-powered h1,
 body.animation-low-powered h2,
@@ -812,6 +817,24 @@ body.standby-active .spotify-card {
 /* When NOT active, buttons must never be clickable even if opacity transitions haven't finished */
 .spotify-card:not(.active) {
     pointer-events: none !important;
+}
+
+/* Position Spotify card to the bottom right when analog watchface is active (except when settings are open) */
+body.watchface-analog-active:not(.settings-active) .spotify-card.active {
+    left: auto !important;
+    right: 40px !important;
+    transform: none !important;
+    bottom: 40px !important;
+    width: 440px !important; /* Elegant compact size for the corner */
+}
+
+/* Also apply bottom-right placement in standby mode when analog watchface is active */
+body.watchface-analog-active.standby-active .spotify-card {
+    left: auto !important;
+    right: 40px !important;
+    transform: none !important;
+    bottom: 40px !important;
+    width: 440px !important;
 }
 
 body.settings-active .spotify-card.active {

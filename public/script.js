@@ -649,6 +649,7 @@ if (document.readyState === 'loading') {
 }
 
 function updateClock() {
+    if (document.hidden) return;
     const now = new Date();
     const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
@@ -1702,6 +1703,7 @@ function applySpotifyData(data) {
 }
 
 function updateSpotifyProgressBars() {
+    if (document.hidden) return;
     const progressPercent =
         (spotifyCurrentProgress / spotifyCurrentDuration) * 100;
 
@@ -2719,6 +2721,10 @@ document.addEventListener('DOMContentLoaded', () => {
         currentWatchfaceIndex = index;
         carousel.style.setProperty('--carousel-translate', `-${index * 100}%`);
 
+        document.body.classList.toggle('watchface-analog-active', watchfaces[index] === 'watchface-analog');
+        document.body.classList.toggle('watchface-digital-active', watchfaces[index] === 'watchface-digital');
+        document.body.classList.toggle('watchface-modular-active', watchfaces[index] === 'watchface-modular');
+
         document.querySelectorAll('.watchface').forEach((el, i) => {
             el.classList.toggle('active', i === index);
         });
@@ -3677,3 +3683,15 @@ async function fetchWeather() {
         });
     } catch (e) { console.error(e); }
 }
+
+// --- 🔋 PERFORMANCE: Page Visibility API (stoppt Intervalle im Hintergrund) ---
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        // Tab wieder im Vordergrund: Sofort synchronisieren
+        updateClock();
+        updateSpotifyProgressBars();
+        if (watchfaceConfigs[currentWatchfaceIndex] && watchfaces[currentWatchfaceIndex] === 'watchface-modular') {
+            fetchWidgetData();
+        }
+    }
+});
