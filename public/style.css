@@ -822,18 +822,18 @@ body.standby-active .spotify-card {
 /* Position Spotify card to the bottom right when analog watchface is active (except when settings are open) */
 body.watchface-analog-active:not(.settings-active) .spotify-card.active {
     left: auto !important;
-    right: 40px !important;
+    right: 30px !important;
     transform: none !important;
-    bottom: 40px !important;
+    bottom: 25px !important;
     width: 440px !important; /* Elegant compact size for the corner */
 }
 
 /* Also apply bottom-right placement in standby mode when analog watchface is active */
 body.watchface-analog-active.standby-active .spotify-card {
     left: auto !important;
-    right: 40px !important;
+    right: 30px !important;
     transform: none !important;
-    bottom: 40px !important;
+    bottom: 25px !important;
     width: 440px !important;
 }
 
@@ -1454,6 +1454,7 @@ body.animation-medium #widget-container {
     backdrop-filter: var(--glass-blur);
     padding: 10px;
     overflow-y: auto;
+    overflow-x: hidden;
     opacity: 0;
     transform: scale(0.95);
     filter: blur(10px);
