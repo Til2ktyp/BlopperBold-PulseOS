@@ -1817,6 +1817,33 @@ app.post('/spotify/play-track', async (req, res) => {
     }
 });
 
+app.post('/spotify/queue-track', async (req, res) => {
+    const trackId = req.body?.trackId;
+    if (!trackId) {
+        return res.status(400).json({ error: 'trackId fehlt' });
+    }
+
+    try {
+        const token = await getSpotifyAccessToken();
+        const response = await fetch(`https://api.spotify.com/v1/me/player/queue?uri=spotify:track:${trackId}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
+        });
+
+        if (!response.ok && response.status !== 204) {
+            const errorText = await response.text();
+            return res.status(response.status).json({ error: errorText || `Spotify Queue-Track Fehler (${response.status})` });
+        }
+
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+
 // --- POPUP / WIDGET TOGGLE SYSTEM (STREAM DECK) ---
 let allPopupsHidden = false;
 

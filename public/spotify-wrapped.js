@@ -1,22 +1,38 @@
 // public/spotify-wrapped.js
 
-// Spielt einen Song direkt auf Spotify ab (über den Server-Endpoint)
+// Spielt einen Song über die Spotify-Warteschlange ab (in die Queue legen und nach 1 Sekunde überspringen)
 async function playSpotifyTrack(trackId) {
     if (!trackId) return;
     try {
-        const res = await fetch('/spotify/play-track', {
+        const res = await fetch('/spotify/queue-track', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ trackId })
         });
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            console.error('[playSpotifyTrack] Fehler:', err.error || res.status);
+            console.error('[playSpotifyTrack] Queue-Fehler:', err.error || res.status);
+            return;
+        }
+
+        // 1 Sekunde warten, damit der Song sicher in der Queue ist
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Aktuellen Song überspringen, um den eingereihten Song abzuspielen
+        const skipRes = await fetch('/spotify/control', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'next' })
+        });
+        if (!skipRes.ok) {
+            const err = await skipRes.json().catch(() => ({}));
+            console.error('[playSpotifyTrack] Skip-Fehler:', err.error || skipRes.status);
         }
     } catch (e) {
         console.error('[playSpotifyTrack] Netzwerk-Fehler:', e);
     }
 }
+
 
 async function initHistoryWidget() {
     const container = document.getElementById('history-container');
