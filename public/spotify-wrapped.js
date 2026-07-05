@@ -630,7 +630,9 @@ function startWidgetAutoRefresh() {
             initWrappedWidget();
         }
         if (document.getElementById('history-desktop-container')) {
-            if (window._currentHdTab === 'excluded') {
+            if (window._hdSelectionModeActive) {
+                // Skip refresh during selection to prevent losing selected items
+            } else if (window._currentHdTab === 'excluded') {
                 if (typeof loadAndRenderExcludedSongs === 'function') loadAndRenderExcludedSongs();
             } else {
                 initHistoryDesktopWidget();
