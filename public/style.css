@@ -183,6 +183,21 @@ body.animation-low-powered {
     background: #020617 !important;
 }
 
+body.animation-low-powered #analog-second,
+body.animation-low #analog-second {
+    display: none !important;
+}
+
+body.animation-low-powered #analog-hour,
+body.animation-low #analog-hour {
+    fill: #ff3b2f !important;
+}
+
+body.animation-low-powered #analog-minute,
+body.animation-low #analog-minute {
+    fill: #ffffff !important;
+}
+
 body.animation-low-powered .blob,
 body.animation-low-powered .aura-bg {
     display: none !important;

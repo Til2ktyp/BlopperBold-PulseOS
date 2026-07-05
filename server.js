@@ -1100,7 +1100,7 @@ if (!fs.existsSync(SPOTIFY_CACHE_FILE)) {
 }
 
 app.get('/spotify/login', (req, res) => {
-    const scopes = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing user-top-read playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private';
+    const scopes = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing user-top-read playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private ugc-image-upload';
     res.redirect('https://accounts.spotify.com/authorize' +
         '?response_type=code' +
         '&client_id=' + SPOTIFY_CLIENT_ID +
@@ -1537,6 +1537,37 @@ async function rotateSpotifyPlaylist() {
 
         if (!updateRes.ok) {
             throw new Error(`Fehler beim Aktualisieren der Playlist-Tracks: ${updateRes.statusText}`);
+        }
+
+        // Upload custom playlist cover image
+        try {
+            const fs = require('fs');
+            const path = require('path');
+            const imgPath = path.join(__dirname, 'public', 'pulseos_logo_p_pulse.jpg');
+            if (fs.existsSync(imgPath)) {
+                console.log("[Spotify Rotation] Lade custom Playlist-Cover hoch...");
+                const imgBase64 = fs.readFileSync(imgPath, { encoding: 'base64' });
+                
+                const imageRes = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/images`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'image/jpeg'
+                    },
+                    body: imgBase64
+                });
+                
+                if (!imageRes.ok) {
+                    const text = await imageRes.text();
+                    console.warn(`[Spotify Rotation] Fehler beim Hochladen des Covers: ${imageRes.status} ${text}`);
+                } else {
+                    console.log("[Spotify Rotation] Playlist-Cover erfolgreich hochgeladen!");
+                }
+            } else {
+                console.warn("[Spotify Rotation] Custom Cover Image nicht gefunden unter public/pulseos_logo_p_pulse.jpg");
+            }
+        } catch (e) {
+            console.error("[Spotify Rotation] Fehler beim Upload des Cover-Bildes:", e.message);
         }
 
         console.log("[Spotify Rotation] Playlist-Rotation erfolgreich durchgeführt!");

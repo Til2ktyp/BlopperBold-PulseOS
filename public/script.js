@@ -583,9 +583,11 @@ async function initAnimationQuality() {
         applyAnimationQuality(animationQuality);
         localStorage.setItem('animation-quality', animationQuality);
         console.log(`[Animations] Quality-Mode: ${animationQuality}`);
+        initWakeLock(animationQuality);
     } catch (e) {
         console.warn("[Animations] Fehler beim Abrufen der Quality, nutze Default:", e);
         applyAnimationQuality('high');
+        initWakeLock('high');
     }
 }
 
@@ -641,6 +643,59 @@ function applyAnimationQuality(quality) {
     }
 }
 
+let wakeLockActive = false;
+let wakeLockObj = null;
+let wakeLockVideoElement = null;
+
+async function initWakeLock(quality) {
+    if (wakeLockActive) return;
+    wakeLockActive = true;
+    
+    // Try using modern Wake Lock API first (zero CPU overhead)
+    if ('wakeLock' in navigator) {
+        try {
+            wakeLockObj = await navigator.wakeLock.request('screen');
+            console.log('[WakeLock] Modern Wake Lock activated.');
+            
+            // Re-request when page becomes visible again
+            document.addEventListener('visibilitychange', async () => {
+                if (wakeLockObj !== null && document.visibilityState === 'visible') {
+                    try {
+                        wakeLockObj = await navigator.wakeLock.request('screen');
+                    } catch (e) {
+                        console.warn('[WakeLock] Re-request failed:', e.message);
+                    }
+                }
+            });
+            return;
+        } catch (err) {
+            console.warn('[WakeLock] Modern Wake Lock failed:', err.message);
+        }
+    }
+
+    // Fallback to video wake lock only on high/medium quality devices
+    if (quality !== 'low-powered' && quality !== 'low') {
+        console.log('[WakeLock] Falling back to video wake lock.');
+        if (!wakeLockVideoElement) {
+            wakeLockVideoElement = document.createElement('video');
+            wakeLockVideoElement.muted = true;
+            wakeLockVideoElement.loop = true;
+            wakeLockVideoElement.playsInline = true;
+            wakeLockVideoElement.style.display = 'none';
+            
+            const source = document.createElement('source');
+            source.src = '16x16.mp4';
+            source.type = 'video/mp4';
+            wakeLockVideoElement.appendChild(source);
+            
+            document.body.appendChild(wakeLockVideoElement);
+        }
+        wakeLockVideoElement.play().catch(e => console.warn('[WakeLock] Video play failed:', e));
+    } else {
+        console.log('[WakeLock] Skipping video wake lock on low-powered device.');
+    }
+}
+
 // Initialize animations beim Load
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initAnimationQuality);
@@ -648,9 +703,21 @@ if (document.readyState === 'loading') {
     initAnimationQuality();
 }
 
+let lastClockMinute = -1;
+
 function updateClock() {
     if (document.hidden) return;
     const now = new Date();
+    const currentMinute = now.getMinutes();
+    
+    const isLowPower = animationQuality === 'low-powered' || animationQuality === 'low';
+    
+    if (isLowPower) {
+        // Skip updates if the minute hasn't changed
+        if (currentMinute === lastClockMinute) return;
+    }
+    
+    lastClockMinute = currentMinute;
     const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
     // Digital
@@ -667,10 +734,15 @@ function updateClock() {
     document.querySelectorAll('[id^="wdg-"][id$="-clock"]').forEach(el => {
         el.textContent = timeStr;
     });
-    document.querySelectorAll('[id^="wdg-"][id$="-clock-sec"]').forEach(el => {
-        const secStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        el.textContent = secStr;
-    });
+    
+    // Only update seconds clock widgets if NOT in low power
+    if (!isLowPower) {
+        document.querySelectorAll('[id^="wdg-"][id$="-clock-sec"]').forEach(el => {
+            const secStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            el.textContent = secStr;
+        });
+    }
+    
     document.querySelectorAll('[id^="wdg-"][id$="-clock-date"]').forEach(el => {
         el.textContent = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
     });
@@ -681,7 +753,7 @@ function updateClock() {
     const hours = now.getHours();
 
     const hourDeg   = (hours % 12) * 30 + minutes * 0.5;
-    const minuteDeg = minutes * 6 + seconds * 0.1;
+    const minuteDeg = minutes * 6 + (isLowPower ? 0 : seconds * 0.1);
     const secondDeg = seconds * 6;
 
     const analogHour   = document.getElementById('analog-hour');
@@ -690,7 +762,10 @@ function updateClock() {
 
     if (analogHour)   analogHour.setAttribute('transform',   `translate(500,300) rotate(${hourDeg})`);
     if (analogMinute) analogMinute.setAttribute('transform', `translate(500,300) rotate(${minuteDeg})`);
-    if (analogSecond) analogSecond.setAttribute('transform', `translate(500,300) rotate(${secondDeg})`);
+    
+    if (analogSecond && !isLowPower) {
+        analogSecond.setAttribute('transform', `translate(500,300) rotate(${secondDeg})`);
+    }
 
     const analogTimeEl = document.getElementById('analog-digital-time');
     if (analogTimeEl) {

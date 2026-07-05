@@ -8,6 +8,16 @@
     <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
+    <script>
+        (function() {
+            try {
+                const q = localStorage.getItem('animation-quality');
+                if (q === 'low-powered' || q === 'low' || q === 'medium' || q === 'high') {
+                    document.body.classList.add('animation-' + q);
+                }
+            } catch (e) {}
+        })();
+    </script>
 
     <div class="aura-bg">
         <div class="blob blob1"></div>
@@ -59,9 +69,7 @@
         </div>
     </div>
 
-    <video autoplay muted loop playsinline style="display: none;">
-        <source src="16x16.mp4" type="video/mp4">
-    </video>
+    <!-- Dynamic wake lock will be initialized via script.js -->
 
     <div id="adhs-overlay">
         <div class="adhs-card">
