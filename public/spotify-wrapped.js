@@ -264,7 +264,12 @@ async function initWrappedDesktopWidget() {
         // Total songs & unique artists from top data
         const totalSongs = data.totalPlaysCount || (data.topTracks || []).reduce((sum, t) => sum + t.plays, 0);
         const uniqueArtists = data.uniqueArtistsCount || (data.topArtists || []).length;
-        const avgPerSong = totalSongs > 0 ? Math.round((data.totalTimeTodayMinutes || 0) / Math.max(1, totalSongs)) : 0;
+        
+        const totalMinutes = typeof data.totalTimeAllTimeMinutes !== 'undefined'
+            ? data.totalTimeAllTimeMinutes
+            : (data.totalTimeAllTimeHours ? data.totalTimeAllTimeHours * 60 : (data.totalTimeTodayMinutes || 0));
+        const avgVal = totalSongs > 0 ? totalMinutes / totalSongs : 0;
+        const avgPerSong = avgVal % 1 === 0 ? avgVal : avgVal.toFixed(1);
 
         if (statSongs) statSongs.textContent = totalSongs;
         if (statArtists) statArtists.textContent = uniqueArtists;

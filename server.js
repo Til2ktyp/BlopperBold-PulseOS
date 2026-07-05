@@ -1685,6 +1685,7 @@ app.get('/spotify/stats', (req, res) => {
 
     res.json({
         totalTimeTodayMinutes: Math.round(totalTimeTodayMs / 60000),
+        totalTimeAllTimeMinutes: Math.round(totalTimeAllTimeMs / 60000),
         totalTimeAllTimeHours: Math.round(totalTimeAllTimeMs / 3600000),
         dailyListenTime: Object.entries(dailyListenTime).map(([date, ms]) => ({
             date,
