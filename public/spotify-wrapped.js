@@ -915,3 +915,43 @@ function closeWdArtistModal() {
 window.showArtistSongsPopup = showArtistSongsPopup;
 window.closeWdArtistModal = closeWdArtistModal;
 
+async function triggerPlaylistRotation() {
+    const btn = document.getElementById('wd-sync-btn');
+    if (!btn || btn.classList.contains('spinning')) return;
+
+    btn.classList.add('spinning');
+    const label = btn.querySelector('.wd-sync-label');
+    const originalText = label ? label.textContent : 'Playlist rotieren';
+    if (label) label.textContent = 'Aktualisiere...';
+
+    try {
+        const res = await fetch('/spotify/playlist/rotate-now');
+        const data = await res.json();
+        
+        if (res.ok && data.ok) {
+            if (typeof showSystemToast === 'function') {
+                showSystemToast('🔄 Playlist erfolgreich aktualisiert!', 3000);
+            } else {
+                alert(data.message || 'Playlist erfolgreich aktualisiert!');
+            }
+            if (label) label.textContent = 'Aktualisiert!';
+            setTimeout(() => {
+                if (label) label.textContent = originalText;
+            }, 3000);
+        } else {
+            throw new Error(data.error || 'Fehler beim Aktualisieren');
+        }
+    } catch (err) {
+        console.error('[triggerPlaylistRotation] Fehler:', err);
+        alert(`Fehler: ${err.message}`);
+        if (label) label.textContent = 'Fehler!';
+        setTimeout(() => {
+            if (label) label.textContent = originalText;
+        }, 3000);
+    } finally {
+        btn.classList.remove('spinning');
+    }
+}
+window.triggerPlaylistRotation = triggerPlaylistRotation;
+
+
