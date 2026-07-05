@@ -346,7 +346,7 @@ function renderDesktopArtists(container, artists) {
     container.innerHTML = artists.map((artist, index) => {
         const displayTime = Math.round(artist.durationMs / 60000);
         return `
-            <div class="wd-ranking-item">
+            <div class="wd-ranking-item" data-artist-name="${escapeHTML(artist.name)}" onclick="showArtistSongsPopup(this.dataset.artistName)" style="cursor: pointer;">
                 <div class="wd-ranking-number">${index + 1}</div>
                 <div class="wd-ranking-info">
                     <div class="wd-ranking-name">${escapeHTML(artist.name)}</div>
@@ -801,3 +801,117 @@ async function removeTrackFromHistory(trackId, songTitle) {
         alert('Netzwerkfehler beim Löschen des Songs.');
     }
 }
+
+// ===== ARTIST SONGS MODAL POPUP (Wrapped Desktop) =====
+async function showArtistSongsPopup(artistName) {
+    if (!artistName) return;
+
+    let modal = document.getElementById('wd-artist-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'wd-artist-modal';
+        modal.className = 'wd-modal';
+        document.body.appendChild(modal);
+    }
+
+    // Set structure and loading state
+    modal.innerHTML = `
+        <div class="wd-modal-overlay" onclick="closeWdArtistModal()"></div>
+        <div class="wd-modal-content">
+            <button class="wd-modal-close" onclick="closeWdArtistModal()">×</button>
+            <div class="wd-modal-header">
+                <span class="wd-modal-icon">🎤</span>
+                <h3 id="wd-modal-artist-name">${escapeHTML(artistName)}</h3>
+            </div>
+            <div class="wd-modal-body" id="wd-modal-song-list">
+                <div class="wd-ranking-empty">Lade Songs...</div>
+            </div>
+        </div>
+    `;
+
+    // Display modal and trigger animation
+    modal.style.display = 'flex';
+    setTimeout(() => {
+        modal.classList.add('active');
+    }, 10);
+
+    try {
+        const res = await fetch('/spotify/history');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const history = data.history || [];
+
+        // Filter songs by artist
+        const artistSongs = history.filter(item => {
+            if (Array.isArray(item.artists)) {
+                return item.artists.some(a => a.toLowerCase() === artistName.toLowerCase());
+            } else if (typeof item.artists === 'string') {
+                return item.artists.toLowerCase() === artistName.toLowerCase();
+            }
+            return false;
+        });
+
+        const listContainer = document.getElementById('wd-modal-song-list');
+        if (!listContainer) return;
+
+        if (artistSongs.length === 0) {
+            listContainer.innerHTML = '<div class="wd-ranking-empty">Keine Songs für diesen Künstler gefunden.</div>';
+            return;
+        }
+
+        // Group by song
+        const songCounts = {};
+        artistSongs.forEach(item => {
+            const key = item.trackId || item.title;
+            if (!songCounts[key]) {
+                songCounts[key] = {
+                    trackId: item.trackId,
+                    title: item.title,
+                    albumImg: item.albumImg,
+                    plays: 0
+                };
+            }
+            songCounts[key].plays += 1;
+        });
+
+        const sortedSongs = Object.values(songCounts).sort((a, b) => b.plays - a.plays);
+        const fallbackCover = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.2)' stroke-width='2'><circle cx='12' cy='12' r='10'/></svg>";
+
+        listContainer.innerHTML = sortedSongs.map(song => {
+            const coverUrl = song.albumImg || fallbackCover;
+            const playAction = song.trackId ? `onclick="playSpotifyTrack('${song.trackId}'); event.stopPropagation();"` : '';
+            const cursorStyle = song.trackId ? 'style="cursor: pointer;"' : '';
+            return `
+                <div class="wd-modal-song-item" ${playAction} ${cursorStyle}>
+                    <img src="${coverUrl}" class="wd-modal-song-cover" alt="Cover" onerror="this.src='${fallbackCover}';">
+                    <div class="wd-modal-song-info">
+                        <div class="wd-modal-song-title">${escapeHTML(song.title)}</div>
+                        <div class="wd-modal-song-count">${song.plays} Plays</div>
+                    </div>
+                    <div class="wd-modal-song-badge">${song.plays}x</div>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        console.error('[showArtistSongsPopup] Fehler:', err);
+        const listContainer = document.getElementById('wd-modal-song-list');
+        if (listContainer) {
+            listContainer.innerHTML = '<div class="wd-ranking-empty" style="color: #ff453a;">Fehler beim Laden des Verlaufs.</div>';
+        }
+    }
+}
+
+function closeWdArtistModal() {
+    const modal = document.getElementById('wd-artist-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 200);
+    }
+}
+
+// Global exports
+window.showArtistSongsPopup = showArtistSongsPopup;
+window.closeWdArtistModal = closeWdArtistModal;
+

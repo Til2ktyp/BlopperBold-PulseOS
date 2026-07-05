@@ -348,6 +348,186 @@
         background: #1db954;
         border-radius: 2px;
     }
+
+    /* Modal Styles */
+    .wd-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 99999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s ease-in-out;
+    }
+
+    .wd-modal.active {
+        display: flex;
+        opacity: 1;
+    }
+
+    .wd-modal-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        transition: backdrop-filter 0.2s ease-in-out;
+    }
+
+    body.animation-low .wd-modal-overlay,
+    body.animation-low-powered .wd-modal-overlay {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background: rgba(0, 0, 0, 0.9);
+    }
+
+    .wd-modal-content {
+        position: relative;
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 28px;
+        padding: 28px;
+        width: 90%;
+        max-width: 480px;
+        max-height: 80vh;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
+        z-index: 100000;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        color: #ffffff;
+        transform: scale(0.9);
+        transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .wd-modal.active .wd-modal-content {
+        transform: scale(1);
+    }
+
+    .wd-modal-close {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.05);
+        border: none;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 1.5rem;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s, color 0.2s;
+    }
+
+    .wd-modal-close:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+    }
+
+    .wd-modal-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding-bottom: 12px;
+    }
+
+    .wd-modal-icon {
+        font-size: 1.8rem;
+    }
+
+    .wd-modal-header h3 {
+        font-size: 1.4rem;
+        font-weight: 800;
+        margin: 0;
+        background: linear-gradient(135deg, #f472b6 0%, #38bdf8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    body.animation-low .wd-modal-header h3,
+    body.animation-low-powered .wd-modal-header h3 {
+        background: none !important;
+        -webkit-background-clip: border-box !important;
+        -webkit-text-fill-color: #ffffff !important;
+        color: #ffffff;
+    }
+
+    .wd-modal-body {
+        overflow-y: auto;
+        max-height: 50vh;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding-right: 6px;
+    }
+
+    .wd-modal-body::-webkit-scrollbar { width: 5px; }
+    .wd-modal-body::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 10px; }
+    .wd-modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+
+    .wd-modal-song-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 14px;
+        padding: 10px 14px;
+        transition: transform 0.2s, background 0.2s;
+    }
+
+    .wd-modal-song-item:hover {
+        transform: translateX(4px);
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    .wd-modal-song-cover {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        object-fit: cover;
+        background: rgba(255,255,255,0.05);
+    }
+
+    .wd-modal-song-info {
+        flex-grow: 1;
+        min-width: 0;
+    }
+
+    .wd-modal-song-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #ffffff;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .wd-modal-song-count {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .wd-modal-song-badge {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #38bdf8;
+        background: rgba(56, 189, 248, 0.1);
+        padding: 4px 10px;
+        border-radius: 12px;
+    }
 </style>
 
 <div class="wrapped-desktop-wrapper">
