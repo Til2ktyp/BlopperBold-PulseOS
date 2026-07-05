@@ -1719,6 +1719,81 @@ app.post('/spotify/excluded/remove', (req, res) => {
     }
 });
 
+app.post('/spotify/history/remove-multiple', (req, res) => {
+    const { trackIds } = req.body;
+    if (!trackIds || !Array.isArray(trackIds) || trackIds.length === 0) {
+        return res.status(400).json({ error: 'Track-IDs fehlen oder ungültig' });
+    }
+
+    try {
+        const history = loadSpotifyHistory();
+        const initialCount = history.length;
+        const filteredHistory = history.filter(item => !trackIds.includes(item.trackId));
+        const removedCount = initialCount - filteredHistory.length;
+
+        if (removedCount > 0) {
+            saveSpotifyHistory(filteredHistory);
+            console.log(`[Spotify History] ${trackIds.length} Songs aus Verlauf entfernt. (${removedCount} Vorkommen gesamt)`);
+            sendToClients({ action: 'spotify-history-updated' });
+        }
+
+        res.json({ success: true, removedCount });
+    } catch (err) {
+        console.error('[Spotify History] Fehler beim Bulk-Löschen:', err.message);
+        res.status(500).json({ error: 'Fehler beim Bulk-Löschen' });
+    }
+});
+
+app.post('/spotify/history/exclude-multiple', (req, res) => {
+    const { trackIds } = req.body;
+    if (!trackIds || !Array.isArray(trackIds) || trackIds.length === 0) {
+        return res.status(400).json({ error: 'Track-IDs fehlen oder ungültig' });
+    }
+
+    try {
+        const history = loadSpotifyHistory();
+        const excluded = loadSpotifyExcluded();
+        let addedCount = 0;
+
+        trackIds.forEach(trackId => {
+            const trackToExclude = history.find(item => item.trackId === trackId);
+            if (trackToExclude) {
+                if (!excluded.some(x => x.trackId === trackId)) {
+                    excluded.push({
+                        trackId: trackToExclude.trackId,
+                        title: trackToExclude.title,
+                        artists: trackToExclude.artists,
+                        albumImg: trackToExclude.albumImg,
+                        timestamp: new Date().toISOString()
+                    });
+                    addedCount++;
+                }
+            }
+        });
+
+        if (addedCount > 0) {
+            saveSpotifyExcluded(excluded);
+            console.log(`[Spotify Excluded] ${addedCount} Songs zur Excluded-Liste hinzugefügt.`);
+        }
+
+        // Also remove them from history!
+        const initialCount = history.length;
+        const filteredHistory = history.filter(item => !trackIds.includes(item.trackId));
+        const removedCount = initialCount - filteredHistory.length;
+
+        if (removedCount > 0) {
+            saveSpotifyHistory(filteredHistory);
+            console.log(`[Spotify History] ${trackIds.length} Songs nach Ausschluss aus Verlauf entfernt.`);
+            sendToClients({ action: 'spotify-history-updated' });
+        }
+
+        res.json({ success: true, addedCount, removedCount });
+    } catch (err) {
+        console.error('[Spotify Excluded] Fehler beim Bulk-Ausschluss:', err.message);
+        res.status(500).json({ error: 'Fehler beim Bulk-Ausschluss' });
+    }
+});
+
 app.get('/spotify/stats', (req, res) => {
     const history = loadSpotifyHistory();
     const now = new Date();
