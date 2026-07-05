@@ -266,6 +266,42 @@
     .hd-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
     .hd-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
 
+    /* Selection Checkboxes Styles */
+    .hd-checkbox {
+        display: none;
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 6px;
+        margin-right: 8px;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    /* Selection Mode Active */
+    .history-desktop-wrapper.selection-mode-active .hd-checkbox {
+        display: flex;
+    }
+
+    .hd-item.selected .hd-checkbox {
+        background: #38bdf8;
+        border-color: #38bdf8;
+    }
+
+    .hd-item.selected .hd-checkbox::after {
+        content: '✓';
+        color: #000;
+        font-size: 0.75rem;
+        font-weight: 800;
+    }
+
+    .hd-item.selected {
+        background: rgba(56, 189, 248, 0.08) !important;
+        border-color: rgba(56, 189, 248, 0.3) !important;
+    }
+
     /* Excluded / Ignored List Styles */
     .hd-tabs {
         display: flex;
@@ -329,9 +365,22 @@
             <div class="hd-tabs">
                 <button id="hd-tab-history" class="hd-tab-btn active" onclick="switchHdTab('history')">Verlauf</button>
                 <button id="hd-tab-excluded" class="hd-tab-btn" onclick="switchHdTab('excluded')">Ignoriert</button>
+                <button id="hd-selection-mode-btn" class="hd-restore-btn" onclick="toggleSelectionMode()" style="margin-left: auto; background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.3); color: #38bdf8;">Auswahl</button>
             </div>
         </div>
         <div id="hd-total-count" class="hd-total-count"></div>
+    </div>
+
+    <!-- Selection Actions Bar -->
+    <div class="hd-selection-actions" style="display: none; align-items: center; gap: 10px; margin-bottom: 16px; padding: 12px 16px; background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.12); border-radius: 16px;">
+        <button class="hd-restore-btn" onclick="hdSelectAll()" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #fff;">Alle auswählen</button>
+        <button class="hd-restore-btn" onclick="hdDeselectAll()" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #fff;">Auswahl aufheben</button>
+        <span id="hd-selection-count" style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.6); font-weight: 600; margin-left: 8px;">0 ausgewählt</span>
+        
+        <div style="margin-left: auto; display: flex; gap: 8px;">
+            <button class="hd-restore-btn" onclick="bulkIgnoreSelected(event)" style="background: rgba(255, 159, 10, 0.15); border-color: rgba(255, 159, 10, 0.3); color: #ff9f0a;">🚫 Ignorieren</button>
+            <button class="hd-restore-btn" onclick="bulkDeleteSelected(event)" style="background: rgba(255, 69, 58, 0.15); border-color: rgba(255, 69, 58, 0.3); color: #ff453a;">🗑️ Löschen</button>
+        </div>
     </div>
 
     <!-- Filter Bar -->

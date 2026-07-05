@@ -449,6 +449,7 @@ window.switchWdTab = switchWdTab;
 let _hdAllHistory = [];
 
 async function initHistoryDesktopWidget() {
+    if (typeof toggleSelectionMode === 'function') toggleSelectionMode(false);
     const container = document.getElementById('history-desktop-container');
     const totalCountEl = document.getElementById('hd-total-count');
     if (!container) return;
@@ -563,8 +564,10 @@ function hdRenderFilteredHistory() {
             const coverUrl = item.albumImg || fallbackCover;
             const artists = Array.isArray(item.artists) ? item.artists.join(', ') : item.artists;
 
+            const isSelected = window._hdSelectedTrackIds && window._hdSelectedTrackIds.has(item.trackId) ? 'selected' : '';
             return `
-                <div class="hd-item" data-track-id="${item.trackId}" onclick="playSpotifyTrack('${item.trackId}')" style="cursor:pointer;">
+                <div class="hd-item ${isSelected}" data-track-id="${item.trackId}" onclick="handleHdItemClick(this, '${item.trackId}', event)" style="cursor:pointer;">
+                    <div class="hd-checkbox"></div>
                     <img src="${coverUrl}" class="hd-cover" alt="" onerror="this.src='${fallbackCover}';">
                     <div class="hd-details">
                         <div class="hd-title">${escapeHTML(item.title)}</div>
@@ -657,6 +660,13 @@ document.addEventListener('contextmenu', function(e) {
 
     const trackId = songItem.dataset.trackId;
     if (!trackId || trackId === 'undefined') return;
+
+    // Check if we have selected items in selection mode
+    const selectedCount = window._hdSelectedTrackIds ? window._hdSelectedTrackIds.size : 0;
+    if (window._hdSelectionModeActive && selectedCount > 0) {
+        showHdBulkContextMenu(e.clientX, e.clientY);
+        return;
+    }
 
     // Extract song details
     const songTitle = songItem.querySelector('.wd-ranking-name, .wd-recent-title, .hd-title')?.textContent || 'dieser Song';
@@ -1061,5 +1071,285 @@ async function restoreExcludedTrack(trackId, event) {
     }
 }
 window.restoreExcludedTrack = restoreExcludedTrack;
+
+// ===== BULK SELECTION MODE LOGIC FOR HISTORY DESKTOP =====
+window._hdSelectionModeActive = false;
+window._hdSelectedTrackIds = new Set();
+
+function toggleSelectionMode(forceState) {
+    const wrapper = document.querySelector('.history-desktop-wrapper');
+    if (!wrapper) return;
+
+    const btn = document.getElementById('hd-selection-mode-btn');
+    const actionsBar = document.querySelector('.hd-selection-actions');
+
+    const newState = typeof forceState === 'boolean' ? forceState : !window._hdSelectionModeActive;
+    window._hdSelectionModeActive = newState;
+
+    if (newState) {
+        wrapper.classList.add('selection-mode-active');
+        if (btn) {
+            btn.textContent = 'Fertig';
+            btn.style.background = 'rgba(29, 185, 84, 0.15)';
+            btn.style.borderColor = 'rgba(29, 185, 84, 0.3)';
+            btn.style.color = '#1db954';
+        }
+        if (actionsBar) actionsBar.style.display = 'flex';
+        window._hdSelectedTrackIds = new Set();
+        updateSelectionCountLabel();
+    } else {
+        wrapper.classList.remove('selection-mode-active');
+        if (btn) {
+            btn.textContent = 'Auswahl';
+            btn.style.background = 'rgba(56, 189, 248, 0.15)';
+            btn.style.borderColor = 'rgba(56, 189, 248, 0.3)';
+            btn.style.color = '#38bdf8';
+        }
+        if (actionsBar) actionsBar.style.display = 'none';
+        
+        // Remove .selected class from all items
+        document.querySelectorAll('.hd-item.selected').forEach(el => el.classList.remove('selected'));
+        window._hdSelectedTrackIds = new Set();
+    }
+}
+window.toggleSelectionMode = toggleSelectionMode;
+
+function handleHdItemClick(element, trackId, event) {
+    if (window._hdSelectionModeActive) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        toggleHdItemSelection(element);
+        return;
+    }
+    playSpotifyTrack(trackId);
+}
+window.handleHdItemClick = handleHdItemClick;
+
+function toggleHdItemSelection(element) {
+    const trackId = element.dataset.trackId;
+    if (!trackId || trackId === 'undefined') return;
+
+    if (window._hdSelectedTrackIds.has(trackId)) {
+        window._hdSelectedTrackIds.delete(trackId);
+        // Find all items with this trackId in the DOM and deselect them
+        document.querySelectorAll(`.hd-item[data-track-id="${trackId}"]`).forEach(el => el.classList.remove('selected'));
+    } else {
+        window._hdSelectedTrackIds.add(trackId);
+        // Find all items with this trackId in the DOM and select them
+        document.querySelectorAll(`.hd-item[data-track-id="${trackId}"]`).forEach(el => el.classList.add('selected'));
+    }
+    updateSelectionCountLabel();
+}
+window.toggleHdItemSelection = toggleHdItemSelection;
+
+function updateSelectionCountLabel() {
+    const label = document.getElementById('hd-selection-count');
+    if (label) {
+        const count = window._hdSelectedTrackIds ? window._hdSelectedTrackIds.size : 0;
+        label.textContent = `${count} ausgewählt`;
+    }
+}
+window.updateSelectionCountLabel = updateSelectionCountLabel;
+
+function hdSelectAll() {
+    const container = document.getElementById('history-desktop-container');
+    if (!container) return;
+    const items = container.querySelectorAll('.hd-item[data-track-id]');
+    items.forEach(item => {
+        const trackId = item.dataset.trackId;
+        if (trackId && trackId !== 'undefined') {
+            window._hdSelectedTrackIds.add(trackId);
+            item.classList.add('selected');
+        }
+    });
+    updateSelectionCountLabel();
+}
+window.hdSelectAll = hdSelectAll;
+
+function hdDeselectAll() {
+    const container = document.getElementById('history-desktop-container');
+    if (!container) return;
+    const items = container.querySelectorAll('.hd-item[data-track-id]');
+    items.forEach(item => {
+        item.classList.remove('selected');
+    });
+    window._hdSelectedTrackIds.clear();
+    updateSelectionCountLabel();
+}
+window.hdDeselectAll = hdDeselectAll;
+
+function showHdBulkContextMenu(x, y) {
+    let menu = document.getElementById('wrapped-context-menu');
+    if (!menu) {
+        menu = document.createElement('div');
+        menu.id = 'wrapped-context-menu';
+        menu.className = 'wrapped-context-menu';
+        menu.style.position = 'fixed';
+        menu.style.zIndex = '10000';
+        
+        // Dynamisches Styling hinzufügen (already added in showWrappedContextMenu, but ensuring it is loaded)
+        const style = document.createElement('style');
+        style.textContent = `
+            .wrapped-context-menu {
+                background: rgba(15, 23, 42, 0.95);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 16px;
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+                padding: 6px;
+                min-width: 250px;
+                display: flex;
+                flex-direction: column;
+                z-index: 10000;
+                animation: wrappedMenuFadeIn 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            @keyframes wrappedMenuFadeIn {
+                from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+                to { opacity: 1; transform: scale(1) translateY(0); }
+            }
+            .wrapped-context-item {
+                background: none;
+                border: none;
+                width: 100%;
+                text-align: left;
+                padding: 10px 14px;
+                color: #f1f5f9;
+                font-size: 0.85rem;
+                font-weight: 600;
+                border-radius: 10px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                transition: background 0.12s ease, color 0.12s ease;
+            }
+            .wrapped-context-item:hover {
+                background: rgba(239, 68, 68, 0.15);
+                color: #fca5a5;
+            }
+        `;
+        document.head.appendChild(style);
+        document.body.appendChild(menu);
+    }
+    
+    const count = window._hdSelectedTrackIds.size;
+    menu.innerHTML = `
+        <button class="wrapped-context-item" id="btn-bulk-ignore">
+            🚫 ${count} ausgewählte ignorieren
+        </button>
+        <button class="wrapped-context-item" id="btn-bulk-delete" style="color: #ff453a;">
+            🗑️ ${count} ausgewählte löschen
+        </button>
+    `;
+    
+    menu.style.display = 'flex';
+    
+    const menuWidth = 250;
+    const menuHeight = 88;
+    const winWidth = window.innerWidth;
+    const winHeight = window.innerHeight;
+    
+    let left = x;
+    let top = y;
+    
+    if (x + menuWidth > winWidth) {
+        left = winWidth - menuWidth - 10;
+    }
+    if (y + menuHeight > winHeight) {
+        top = winHeight - menuHeight - 10;
+    }
+    
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+    
+    // Action handlers
+    menu.querySelector('#btn-bulk-ignore').onclick = function(evt) {
+        bulkIgnoreSelected(evt);
+    };
+    menu.querySelector('#btn-bulk-delete').onclick = function(evt) {
+        bulkDeleteSelected(evt);
+    };
+    
+    const closeMenu = () => {
+        menu.style.display = 'none';
+        document.removeEventListener('click', closeMenu);
+        document.removeEventListener('wheel', closeMenu);
+    };
+    
+    setTimeout(() => {
+        document.addEventListener('click', closeMenu);
+        document.addEventListener('wheel', closeMenu);
+    }, 50);
+}
+window.showHdBulkContextMenu = showHdBulkContextMenu;
+
+async function bulkIgnoreSelected(event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById('wrapped-context-menu');
+    if (menu) menu.style.display = 'none';
+
+    const trackIds = Array.from(window._hdSelectedTrackIds);
+    if (trackIds.length === 0) return;
+
+    if (confirm(`Möchtest du die ${trackIds.length} ausgewählten Songs dauerhaft ignorieren und aus dem Verlauf löschen?`)) {
+        try {
+            const res = await fetch('/spotify/history/exclude-multiple', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trackIds })
+            });
+            if (res.ok) {
+                if (typeof showSystemToast === 'function') {
+                    showSystemToast(`🚫 ${trackIds.length} Songs ignoriert`, 3000);
+                }
+                window._hdSelectedTrackIds.clear();
+                toggleSelectionMode(false);
+                initHistoryDesktopWidget();
+            } else {
+                alert('Ausschluss fehlgeschlagen.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Netzwerkfehler.');
+        }
+    }
+}
+window.bulkIgnoreSelected = bulkIgnoreSelected;
+
+async function bulkDeleteSelected(event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById('wrapped-context-menu');
+    if (menu) menu.style.display = 'none';
+
+    const trackIds = Array.from(window._hdSelectedTrackIds);
+    if (trackIds.length === 0) return;
+
+    if (confirm(`Möchtest du die ${trackIds.length} ausgewählten Songs wirklich dauerhaft aus dem Verlauf löschen?`)) {
+        try {
+            const res = await fetch('/spotify/history/remove-multiple', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trackIds })
+            });
+            if (res.ok) {
+                if (typeof showSystemToast === 'function') {
+                    showSystemToast(`🗑️ ${trackIds.length} Songs gelöscht`, 3000);
+                }
+                window._hdSelectedTrackIds.clear();
+                toggleSelectionMode(false);
+                initHistoryDesktopWidget();
+            } else {
+                alert('Löschen fehlgeschlagen.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Netzwerkfehler.');
+        }
+    }
+}
+window.bulkDeleteSelected = bulkDeleteSelected;
 
 
