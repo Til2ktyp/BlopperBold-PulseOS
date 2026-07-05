@@ -18,7 +18,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 function loadDisplaysFromEnv() {
     const displays = {};
     const envVars = process.env;
-    
+
     let displayNum = 1;
     while (envVars[`DISPLAY_${displayNum}_IP`]) {
         const ip = envVars[`DISPLAY_${displayNum}_IP`];
@@ -33,7 +33,7 @@ function loadDisplaysFromEnv() {
 }
 
 function getSerial(displayId) {
-    const serial= envVars[`DISPLAY_${displayId}_SERIAL`] || `SERIAL_${displayId}`; 
+    const serial = envVars[`DISPLAY_${displayId}_SERIAL`] || `SERIAL_${displayId}`;
     return serial;
 }
 
@@ -54,7 +54,7 @@ function loadDisplaySettings() {
         }
         const data = fs.readFileSync(DISPLAY_SETTINGS_FILE, 'utf8');
         const settings = data ? JSON.parse(data) : {};
-        
+
         // Migrate old standbyDisabled to standbyEnabled
         let migrated = false;
         for (const id in settings) {
@@ -99,17 +99,17 @@ function getDisplayIdFromIp(ip) {
             return parseInt(displayId);
         }
     }
-    
+
     // 2. Check already assigned temporary display
     if (temporaryDisplays[ip]) {
         return temporaryDisplays[ip];
     }
-    
+
     // 3. Assign new unique temporary integer displayId
     const maxConfiguredId = Math.max(...Object.keys(CONFIGURED_DISPLAYS).map(Number), 0);
     const maxTempId = Math.max(...Object.values(temporaryDisplays), 0);
     const newId = Math.max(maxConfiguredId, maxTempId, 9) + 1; // Starts at 10 or higher
-    
+
     temporaryDisplays[ip] = newId;
     console.log(`[Display] Dynamic DisplayID ${newId} assigned for unconfigured IP ${ip}`);
     return newId;
@@ -117,9 +117,9 @@ function getDisplayIdFromIp(ip) {
 
 function getClientIp(req) {
     return req.headers['x-forwarded-for']?.split(',')[0].trim() ||
-           req.socket.remoteAddress?.replace('::ffff:', '') ||
-           req.ip ||
-           'unknown';
+        req.socket.remoteAddress?.replace('::ffff:', '') ||
+        req.ip ||
+        'unknown';
 }
 
 function getDisplayNameFromRequest(req) {
@@ -137,7 +137,7 @@ function sendToClients(data) {
     clients.forEach(client => {
         try {
             client.res.write(`data: ${JSON.stringify(data)}\n\n`);
-        } catch(e) {
+        } catch (e) {
             console.error("Fehler beim Senden an Client:", e.message);
         }
     });
@@ -149,7 +149,7 @@ function sendToDisplay(displayId, data) {
         if (client.displayId === displayId) {
             try {
                 client.res.write(`data: ${JSON.stringify(data)}\n\n`);
-            } catch(e) {
+            } catch (e) {
                 console.error(`Fehler beim Senden an Display ${displayId}:`, e.message);
             }
         }
@@ -163,35 +163,35 @@ app.get('/events', (req, res) => {
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive'
     });
-    
+
     // Herzschlag an den Browser senden, damit Chromium/Electron die Verbindung nicht trennt
-    res.write('\n'); 
+    res.write('\n');
 
     // Hole die Client-IP-Adresse
-    const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || 
-                     req.socket.remoteAddress?.replace('::ffff:', '') || 
-                     req.ip || 
-                     'unknown';
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+        req.socket.remoteAddress?.replace('::ffff:', '') ||
+        req.ip ||
+        'unknown';
 
     const displayId = getDisplayIdFromIp(clientIp);
     const clientId = Date.now();
     const displayName = (displayId && CONFIGURED_DISPLAYS[displayId]?.name) || 'Unknown';
-    
+
     clients.push({ id: clientId, res, ip: clientIp, displayId: displayId, name: displayName });
     console.log(`[SSE] Display verbunden - Name: ${displayName} | IP: ${clientIp} | DisplayID: ${displayId} | Aktive Displays: ${clients.length}`);
 
     // Sende die DisplayID zum Client
     if (displayId) {
         try {
-            res.write(`data: ${JSON.stringify({ 
-                action: 'init-display', 
-                displayId, 
-                name: displayName, 
-                quality: (displayId && displaySettings[displayId]?.animationQuality) || 'auto', 
+            res.write(`data: ${JSON.stringify({
+                action: 'init-display',
+                displayId,
+                name: displayName,
+                quality: (displayId && displaySettings[displayId]?.animationQuality) || 'auto',
                 standbyEnabled: (displayId && displaySettings[displayId]?.standbyEnabled !== false),
-                serial: (displayId && CONFIGURED_DISPLAYS[displayId]?.serial) || `TEMP_${displayId}` 
+                serial: (displayId && CONFIGURED_DISPLAYS[displayId]?.serial) || `TEMP_${displayId}`
             })}\n\n`);
-        } catch(e) {
+        } catch (e) {
             console.error("Fehler beim Senden der DisplayID:", e.message);
         }
     } else {
@@ -220,7 +220,7 @@ app.get('/update', (req, res) => {
     // Python-Skript im Hintergrund starten
     const scriptPath = path.join(__dirname, 'updater.py');
     console.log(`[Update] Starte Hintergrund-Skript: ${scriptPath}`);
-    
+
     const child = spawn('python', [scriptPath], {
         detached: true,
         stdio: 'ignore',
@@ -271,19 +271,19 @@ app.get('/widget/:name', (req, res) => {
 
     if (fs.existsSync(filePath)) {
         let htmlContent = fs.readFileSync(filePath, 'utf8');
-        
+
         // Für info.html: Ersetze {{SERIAL}} Placeholder
         if (widgetName === 'info') {
-            const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || 
-                            req.socket.remoteAddress?.replace('::ffff:', '') || 
-                            req.ip || 
-                            'unknown';
+            const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+                req.socket.remoteAddress?.replace('::ffff:', '') ||
+                req.ip ||
+                'unknown';
             const displayId = getDisplayIdFromIp(clientIp);
             const serial = displayId ? (CONFIGURED_DISPLAYS[displayId]?.serial || 'UNKNOWN') : 'UNMAPPED';
-            
+
             htmlContent = htmlContent.replace('{{SERIAL}}', serial);
         }
-        
+
         sendToClients({ action: 'show-widget', html: htmlContent, name: widgetName });
         res.send(`Widget [${widgetName}] geladen.\n`);
     } else {
@@ -299,13 +299,13 @@ app.get('/display/:displayId/widget/:name', (req, res) => {
 
     if (fs.existsSync(filePath)) {
         let htmlContent = fs.readFileSync(filePath, 'utf8');
-        
+
         // Für info.html: Ersetze {{SERIAL}} Placeholder
         if (widgetName === 'info') {
             const serial = CONFIGURED_DISPLAYS[displayId]?.serial || 'UNKNOWN';
             htmlContent = htmlContent.replace('{{SERIAL}}', serial);
         }
-        
+
         sendToDisplay(displayId, { action: 'show-widget', html: htmlContent, name: widgetName, displayId });
         res.send(`Widget [${widgetName}] für Display ${displayId} geladen.\n`);
     } else {
@@ -343,13 +343,13 @@ app.get('/display/:displayId/standby/toggle/:state', (req, res) => {
     const displayId = parseInt(req.params.displayId);
     const state = req.params.state;
     const isEnabled = (state === 'enable');
-    
+
     if (!displaySettings[displayId]) {
         displaySettings[displayId] = {};
     }
     displaySettings[displayId].standbyEnabled = isEnabled;
     saveDisplaySettings(displaySettings);
-    
+
     sendToDisplay(displayId, { action: 'standby-settings-changed', standbyEnabled: isEnabled });
     res.send(`Standby für Display ${displayId} auf ${isEnabled ? 'aktiviert' : 'deaktiviert'} gesetzt.\n`);
 });
@@ -364,13 +364,13 @@ app.get('/display/:displayId/watchface-configs', (req, res) => {
 app.post('/display/:displayId/watchface-configs/save', (req, res) => {
     const displayId = parseInt(req.params.displayId);
     const configs = req.body;
-    
+
     if (!displaySettings[displayId]) {
         displaySettings[displayId] = {};
     }
     displaySettings[displayId].watchfaceConfigs = configs;
     saveDisplaySettings(displaySettings);
-    
+
     res.send("Watchface-Konfiguration gespeichert.\n");
 });
 
@@ -397,7 +397,7 @@ app.get('/timer/stop', (req, res) => {
 });
 
 app.get('/timer/reset', (req, res) => {
-    try { if (typeof activeTimerInterval !== 'undefined') clearInterval(activeTimerInterval); } catch(e){}
+    try { if (typeof activeTimerInterval !== 'undefined') clearInterval(activeTimerInterval); } catch (e) { }
     sendToClients({ action: 'timer-reset' });
     res.send("Timer zurückgesetzt.\n");
 });
@@ -474,17 +474,17 @@ let animationQuality = 'medium'; // Globale Fallback
 
 app.get('/quality/animations', (req, res) => {
     // Hole IP des Clients
-    const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || 
-                     req.socket.remoteAddress?.replace('::ffff:', '') || 
-                     req.ip || 
-                     'unknown';
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+        req.socket.remoteAddress?.replace('::ffff:', '') ||
+        req.ip ||
+        'unknown';
     const displayId = getDisplayIdFromIp(clientIp);
-    
+
     // Nutze Display-spezifische Einstellung, sonst Global-Fallback
-    const quality = displayId && displaySettings[displayId]?.animationQuality ? 
-                    displaySettings[displayId].animationQuality : 
-                    animationQuality;
-    
+    const quality = displayId && displaySettings[displayId]?.animationQuality ?
+        displaySettings[displayId].animationQuality :
+        animationQuality;
+
     res.json({ quality, displayId });
 });
 
@@ -493,10 +493,10 @@ app.get('/quality/animations/set/:level', (req, res) => {
     if (!['high', 'medium', 'low', 'low-powered', 'auto'].includes(level)) {
         return res.status(400).send("Ungültiger Quality-Level. Erlaubt: high, medium, low, low-powered, auto\n");
     }
-    
+
     // Setze global für alle neuen Connections
     animationQuality = level;
-    
+
     // Speichere auch für alle aktiven Displays
     clients.forEach(client => {
         if (client.displayId) {
@@ -506,7 +506,7 @@ app.get('/quality/animations/set/:level', (req, res) => {
             displaySettings[client.displayId].animationQuality = level;
         }
     });
-    
+
     saveDisplaySettings(displaySettings);
     sendToClients({ action: 'animation-quality-changed', quality: level });
     res.send(`Animations-Qualität auf ${level} gesetzt.\n`);
@@ -516,17 +516,17 @@ app.get('/quality/animations/set/:level', (req, res) => {
 app.get('/display/:displayId/quality/animations/set/:level', (req, res) => {
     const displayId = parseInt(req.params.displayId);
     const level = req.params.level;
-    
+
     if (!['high', 'medium', 'low', 'low-powered', 'auto'].includes(level)) {
         return res.status(400).send("Ungültiger Quality-Level. Erlaubt: high, medium, low, low-powered, auto\n");
     }
-    
+
     if (!displaySettings[displayId]) {
         displaySettings[displayId] = {};
     }
     displaySettings[displayId].animationQuality = level;
     saveDisplaySettings(displaySettings);
-    
+
     sendToDisplay(displayId, { action: 'animation-quality-changed', quality: level });
     res.send(`Animations-Qualität für Display ${displayId} auf ${level} gesetzt.\n`);
 });
@@ -726,16 +726,16 @@ function loadTodos() {
         if (!fs.existsSync(TODO_FILE)) return [];
         const data = fs.readFileSync(TODO_FILE, 'utf8');
         return data ? JSON.parse(data) : [];
-    } catch (e) { 
+    } catch (e) {
         console.error("Fehler beim Lesen der todo.json:", e);
-        return []; 
+        return [];
     }
 }
 
 function saveAndBroadcast(todos) {
     try {
         fs.writeFileSync(TODO_FILE, JSON.stringify(todos, null, 2));
-        
+
         let itemsHTML = todos.map((item, index) => `
             <div class="todo-item ${item.done ? 'done' : ''}" onclick="toggleTodo(${index})">
                 <div class="todo-checkbox">${item.done ? '✓' : ''}</div>
@@ -1232,7 +1232,7 @@ function startSpotifyPolling() {
 
     // Sofort erste Wiedergabe-Daten fetchen (nicht 12 Sekunden warten!)
     fetchAndCacheCurrentPlayback();
-    
+
     // Danach regelmäßig updaten
     setInterval(fetchAndCacheCurrentPlayback, 12000);
 }
@@ -1272,11 +1272,11 @@ async function fetchAndCacheCurrentPlayback() {
                 const now = Date.now();
                 if (!currentSession || currentSession.trackId !== playback.item.id) {
                     finalizeCurrentSession();
-                    
+
                     const history = loadSpotifyHistory();
                     const lastSession = history[history.length - 1];
                     const mergeWindowMs = 15 * 60 * 1000; // 15 Minuten
-                    
+
                     if (lastSession && lastSession.trackId === playback.item.id && (Date.now() - new Date(lastSession.timestamp).getTime()) < mergeWindowMs) {
                         history.pop();
                         saveSpotifyHistory(history);
@@ -1509,7 +1509,7 @@ async function rotateSpotifyPlaylist() {
             }
             const playlistsData = await playlistsRes.json();
             const playlists = playlistsData.items || [];
-            
+
             const existing = playlists.find(p => p.name === 'PulseOS Highlights');
             if (existing) {
                 playlistId = existing.id;
@@ -1532,7 +1532,7 @@ async function rotateSpotifyPlaylist() {
                 body: JSON.stringify({
                     name: 'PulseOS Highlights',
                     public: true,
-                    description: 'Deine PulseOS Highlights der letzten 20 Tage (wird automatisch aktualisiert)'
+                    description: 'Deine Top Songs aus PulseOS Wrapped der letzten 28 Tage (Jeden Tag um 10:00 automatisch aktualisiert)'
                 })
             });
             if (!createRes.ok) {
@@ -1567,7 +1567,7 @@ async function rotateSpotifyPlaylist() {
             if (fs.existsSync(imgPath)) {
                 console.log("[Spotify Rotation] Lade custom Playlist-Cover hoch...");
                 const imgBase64 = fs.readFileSync(imgPath, { encoding: 'base64' });
-                
+
                 const imageRes = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/images`, {
                     method: 'PUT',
                     headers: {
@@ -1576,7 +1576,7 @@ async function rotateSpotifyPlaylist() {
                     },
                     body: imgBase64
                 });
-                
+
                 if (!imageRes.ok) {
                     const text = await imageRes.text();
                     console.warn(`[Spotify Rotation] Fehler beim Hochladen des Covers: ${imageRes.status} ${text}`);
@@ -1901,22 +1901,22 @@ let allPopupsHidden = false;
 
 app.get('/popup/:name', (req, res) => {
     const name = req.params.name;
-    const requestedMode = req.query.mode; 
+    const requestedMode = req.query.mode;
 
     if (name === 'alle') {
         allPopupsHidden = !allPopupsHidden;
-        sendToClients({ 
-            action: 'toggle-popup', 
-            target: 'alle', 
-            visible: !allPopupsHidden 
+        sendToClients({
+            action: 'toggle-popup',
+            target: 'alle',
+            visible: !allPopupsHidden
         });
         return res.send(`Alle Popups werden ${allPopupsHidden ? 'versteckt' : 'eingeblendet'}.\n`);
     }
 
-    sendToClients({ 
-        action: 'toggle-popup', 
+    sendToClients({
+        action: 'toggle-popup',
         target: name,
-        mode: requestedMode 
+        mode: requestedMode
     });
 
     if (requestedMode) {
@@ -1930,10 +1930,10 @@ app.get('/popup/:name', (req, res) => {
 app.get('/display/:displayId/popup/:name', (req, res) => {
     const displayId = parseInt(req.params.displayId);
     const name = req.params.name;
-    const requestedMode = req.query.mode; 
+    const requestedMode = req.query.mode;
 
-    sendToDisplay(displayId, { 
-        action: 'toggle-popup', 
+    sendToDisplay(displayId, {
+        action: 'toggle-popup',
         target: name,
         mode: requestedMode,
         displayId
@@ -1956,7 +1956,7 @@ app.get('/config/displays', (req, res) => {
         online: clients.some(c => c.displayId === parseInt(id)),
         settings: displaySettings[id] || {}
     }));
-    
+
     // Add online temporary displays
     clients.forEach(client => {
         const id = client.displayId;
