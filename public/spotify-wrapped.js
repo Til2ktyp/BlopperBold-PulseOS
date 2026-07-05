@@ -627,7 +627,11 @@ function startWidgetAutoRefresh() {
             initWrappedWidget();
         }
         if (document.getElementById('history-desktop-container')) {
-            initHistoryDesktopWidget();
+            if (window._currentHdTab === 'excluded') {
+                if (typeof loadAndRenderExcludedSongs === 'function') loadAndRenderExcludedSongs();
+            } else {
+                initHistoryDesktopWidget();
+            }
         }
         if (document.getElementById('wrapped-desktop-grid')) {
             initWrappedDesktopWidget();
@@ -953,5 +957,109 @@ async function triggerPlaylistRotation() {
     }
 }
 window.triggerPlaylistRotation = triggerPlaylistRotation;
+
+// ===== EXCLUDED SONGS & TABS FOR HISTORY DESKTOP =====
+window._currentHdTab = 'history';
+
+function switchHdTab(tabName) {
+    window._currentHdTab = tabName;
+    const historyTabBtn = document.getElementById('hd-tab-history');
+    const excludedTabBtn = document.getElementById('hd-tab-excluded');
+    const historyContainer = document.getElementById('history-desktop-container');
+    const excludedContainer = document.getElementById('history-excluded-container');
+    const filterBar = document.querySelector('.hd-filter-bar');
+    const resultInfo = document.getElementById('hd-result-info');
+
+    if (tabName === 'history') {
+        if (historyTabBtn) historyTabBtn.classList.add('active');
+        if (excludedTabBtn) excludedTabBtn.classList.remove('active');
+        if (historyContainer) historyContainer.style.display = 'block';
+        if (excludedContainer) excludedContainer.style.display = 'none';
+        if (filterBar) filterBar.style.display = 'flex';
+        hdRenderFilteredHistory();
+    } else if (tabName === 'excluded') {
+        if (historyTabBtn) historyTabBtn.classList.remove('active');
+        if (excludedTabBtn) excludedTabBtn.classList.add('active');
+        if (historyContainer) historyContainer.style.display = 'none';
+        if (excludedContainer) excludedContainer.style.display = 'block';
+        if (filterBar) filterBar.style.display = 'none';
+        if (resultInfo) resultInfo.classList.remove('visible');
+        loadAndRenderExcludedSongs();
+    }
+}
+window.switchHdTab = switchHdTab;
+
+async function loadAndRenderExcludedSongs() {
+    const container = document.getElementById('history-excluded-container');
+    const totalCountEl = document.getElementById('hd-total-count');
+    if (!container) return;
+
+    try {
+        const res = await fetch('/spotify/excluded');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const excludedList = data.excluded || [];
+
+        if (totalCountEl) {
+            totalCountEl.textContent = `${excludedList.length} ignorierte Songs`;
+        }
+
+        if (excludedList.length === 0) {
+            container.innerHTML = '<div class="hd-empty">Keine Songs ausgeschlossen 🎵</div>';
+            return;
+        }
+
+        const fallbackCover = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='44' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.2)' stroke-width='2'><circle cx='12' cy='12' r='10'/></svg>";
+
+        container.innerHTML = `
+            <div class="hd-date-group">
+                <div class="hd-grid">
+                    ${excludedList.map(item => {
+                        const coverUrl = item.albumImg || fallbackCover;
+                        const artists = Array.isArray(item.artists) ? item.artists.join(', ') : item.artists;
+                        return `
+                            <div class="hd-item hd-excluded-item" style="cursor: default;">
+                                <img src="${coverUrl}" class="hd-cover" alt="" onerror="this.src='${fallbackCover}';">
+                                <div class="hd-details">
+                                    <div class="hd-title">${escapeHTML(item.title)}</div>
+                                    <div class="hd-artist">${escapeHTML(artists)}</div>
+                                </div>
+                                <button class="hd-restore-btn" onclick="restoreExcludedTrack('${item.trackId}', event)">Zulassen</button>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    } catch (err) {
+        console.error('[Excluded Songs List] Fehler:', err);
+        container.innerHTML = '<div class="hd-empty" style="color: #ff453a;">Fehler beim Laden der Liste.</div>';
+    }
+}
+window.loadAndRenderExcludedSongs = loadAndRenderExcludedSongs;
+
+async function restoreExcludedTrack(trackId, event) {
+    if (event) event.stopPropagation();
+    try {
+        const res = await fetch('/spotify/excluded/remove', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ trackId })
+        });
+        if (res.ok) {
+            if (typeof showSystemToast === 'function') {
+                showSystemToast('🎵 Song wieder zugelassen!', 3000);
+            }
+            loadAndRenderExcludedSongs();
+        } else {
+            const err = await res.json();
+            alert(`Fehler: ${err.error || 'Aktion fehlgeschlagen'}`);
+        }
+    } catch (err) {
+        console.error('[restoreExcludedTrack] Fehler:', err);
+        alert('Netzwerkfehler.');
+    }
+}
+window.restoreExcludedTrack = restoreExcludedTrack;
 
 

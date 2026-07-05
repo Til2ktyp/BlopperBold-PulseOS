@@ -265,13 +265,71 @@
     .hd-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 10px; }
     .hd-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
     .hd-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+    /* Excluded / Ignored List Styles */
+    .hd-tabs {
+        display: flex;
+        gap: 16px;
+        margin-top: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding-bottom: 8px;
+    }
+    .hd-tab-btn {
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        padding: 4px 8px;
+        position: relative;
+        transition: color 0.2s ease;
+    }
+    .hd-tab-btn:hover {
+        color: rgba(255, 255, 255, 0.8);
+    }
+    .hd-tab-btn.active {
+        color: #ffffff;
+    }
+    .hd-tab-btn.active::after {
+        content: '';
+        position: absolute;
+        bottom: -9px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: #38bdf8;
+        border-radius: 2px;
+    }
+
+    .hd-restore-btn {
+        background: rgba(56, 189, 248, 0.1);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        color: #38bdf8;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 6px 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex-shrink: 0;
+        font-family: 'Inter', -apple-system, sans-serif;
+    }
+    .hd-restore-btn:hover {
+        background: rgba(56, 189, 248, 0.2);
+        border-color: rgba(56, 189, 248, 0.5);
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.15);
+    }
 </style>
 
 <div class="history-desktop-wrapper">
     <div class="history-desktop-header">
         <div>
             <h1>📜 Musik-Verlauf</h1>
-            <p>Deine zuletzt gehörten Songs — Desktop Edition (ab 30 Sek. Spieldauer)</p>
+            <div class="hd-tabs">
+                <button id="hd-tab-history" class="hd-tab-btn active" onclick="switchHdTab('history')">Verlauf</button>
+                <button id="hd-tab-excluded" class="hd-tab-btn" onclick="switchHdTab('excluded')">Ignoriert</button>
+            </div>
         </div>
         <div id="hd-total-count" class="hd-total-count"></div>
     </div>
@@ -307,6 +365,9 @@
     <div class="hd-scroll">
         <div id="history-desktop-container">
             <div class="hd-empty">Lade Verlauf...</div>
+        </div>
+        <div id="history-excluded-container" style="display: none;">
+            <div class="hd-empty">Lade ignorierte Songs...</div>
         </div>
     </div>
 </div>

@@ -975,6 +975,7 @@ const SPOTIFY_ACCESS_TOKEN = process.env.SPOTIFY_ACCESS_TOKEN;
 let SPOTIFY_REFRESH_TOKEN = process.env.SPOTIFY_REFRESH_TOKEN;
 const SPOTIFY_CACHE_FILE = path.join(__dirname, 'public', 'spotify-cache.json'); // Im public Ordner!
 const SPOTIFY_HISTORY_FILE = path.join(__dirname, 'spotify-history.json');
+const SPOTIFY_EXCLUDED_FILE = path.join(__dirname, 'spotify-excluded.json');
 const playlistNameCache = {};
 
 async function getPlaylistNameCached(playlistId, token) {
@@ -1015,12 +1016,39 @@ function saveSpotifyHistory(history) {
     }
 }
 
+function loadSpotifyExcluded() {
+    try {
+        if (!fs.existsSync(SPOTIFY_EXCLUDED_FILE)) return [];
+        const data = fs.readFileSync(SPOTIFY_EXCLUDED_FILE, 'utf8');
+        return data ? JSON.parse(data) : [];
+    } catch (e) {
+        console.error('[Spotify Excluded] Fehler beim Laden:', e);
+        return [];
+    }
+}
+
+function saveSpotifyExcluded(excluded) {
+    try {
+        fs.writeFileSync(SPOTIFY_EXCLUDED_FILE, JSON.stringify(excluded, null, 2));
+    } catch (e) {
+        console.error('[Spotify Excluded] Fehler beim Speichern:', e);
+    }
+}
+
 let currentSession = null;
 let lastDiscardedSession = null;
 
 function finalizeCurrentSession() {
     if (!currentSession) return;
     if (currentSession.listenedMs >= 30000) { // 30 Sekunden
+        const excluded = loadSpotifyExcluded();
+        const isExcluded = excluded.some(x => x.trackId === currentSession.trackId);
+        if (isExcluded) {
+            console.log(`[Spotify History] Song "${currentSession.title}" ignoriert, da er auf der Excluded-Liste steht.`);
+            currentSession = null;
+            return;
+        }
+
         const history = loadSpotifyHistory();
         const sessionToSave = {
             id: currentSession.id,
@@ -1636,6 +1664,23 @@ app.post('/spotify/history/remove', (req, res) => {
         const filteredHistory = history.filter(item => item.trackId !== trackId);
         const removedCount = initialCount - filteredHistory.length;
 
+        // Add to excluded list
+        const trackToExclude = history.find(item => item.trackId === trackId);
+        if (trackToExclude) {
+            const excluded = loadSpotifyExcluded();
+            if (!excluded.some(x => x.trackId === trackId)) {
+                excluded.push({
+                    trackId: trackToExclude.trackId,
+                    title: trackToExclude.title,
+                    artists: trackToExclude.artists,
+                    albumImg: trackToExclude.albumImg,
+                    timestamp: new Date().toISOString()
+                });
+                saveSpotifyExcluded(excluded);
+                console.log(`[Spotify Excluded] Song "${trackToExclude.title}" (${trackId}) zur Excluded-Liste hinzugefügt.`);
+            }
+        }
+
         if (removedCount > 0) {
             saveSpotifyHistory(filteredHistory);
             console.log(`[Spotify History] Song mit ID ${trackId} aus Verlauf entfernt. (${removedCount} Vorkommen)`);
@@ -1646,6 +1691,31 @@ app.post('/spotify/history/remove', (req, res) => {
     } catch (err) {
         console.error('[Spotify History] Fehler beim Löschen:', err.message);
         res.status(500).json({ error: 'Fehler beim Löschen des Songs' });
+    }
+});
+
+app.get('/spotify/excluded', (req, res) => {
+    res.json({ excluded: loadSpotifyExcluded() });
+});
+
+app.post('/spotify/excluded/remove', (req, res) => {
+    const { trackId } = req.body;
+    if (!trackId) {
+        return res.status(400).json({ error: 'Track-ID fehlt' });
+    }
+    try {
+        const excluded = loadSpotifyExcluded();
+        const initialCount = excluded.length;
+        const filtered = excluded.filter(x => x.trackId !== trackId);
+        if (filtered.length !== initialCount) {
+            saveSpotifyExcluded(filtered);
+            console.log(`[Spotify Excluded] Song mit ID ${trackId} aus Excluded-Liste entfernt.`);
+            sendToClients({ action: 'spotify-history-updated' });
+        }
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[Spotify Excluded] Fehler beim Entfernen:', err.message);
+        res.status(500).json({ error: 'Fehler beim Entfernen aus der Excluded-Liste' });
     }
 });
 
