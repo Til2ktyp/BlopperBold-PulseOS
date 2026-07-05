@@ -1503,7 +1503,7 @@ async function rotateSpotifyPlaylist() {
 
         if (!playlistId) {
             console.log("[Spotify Rotation] Erstelle neue Playlist 'PulseOS Highlights'...");
-            const createRes = await fetch(`https://api.spotify.com/v1/users/${userId}/playlists`, {
+            const createRes = await fetch(`https://api.spotify.com/v1/me/playlists`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1524,7 +1524,7 @@ async function rotateSpotifyPlaylist() {
 
         // Replace playlist tracks
         console.log(`[Spotify Rotation] Aktualisiere Playlist mit ${trackUris.length} Songs...`);
-        const updateRes = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+        const updateRes = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/items`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
