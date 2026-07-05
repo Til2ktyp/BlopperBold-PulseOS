@@ -1100,7 +1100,27 @@ if (!fs.existsSync(SPOTIFY_CACHE_FILE)) {
 }
 
 app.get('/spotify/login', (req, res) => {
-    const scopes = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing user-top-read playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private ugc-image-upload';
+    const scopes = [
+        'ugc-image-upload',
+        'user-read-playback-state',
+        'user-modify-playback-state',
+        'user-read-currently-playing',
+        'app-remote-control',
+        'streaming',
+        'playlist-read-private',
+        'playlist-read-collaborative',
+        'playlist-modify-public',
+        'playlist-modify-private',
+        'user-follow-modify',
+        'user-follow-read',
+        'user-library-modify',
+        'user-library-read',
+        'user-read-email',
+        'user-read-private',
+        'user-top-read',
+        'user-read-recently-played',
+        'user-read-playback-position'
+    ].join(' ');
     res.redirect('https://accounts.spotify.com/authorize' +
         '?response_type=code' +
         '&client_id=' + SPOTIFY_CLIENT_ID +
