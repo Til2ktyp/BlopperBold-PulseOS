@@ -102,6 +102,21 @@
         letter-spacing: 0.5px;
     }
 
+    /* --- Text and Value Transitions --- */
+    .wd-hero-value,
+    .wd-hero-label,
+    #wd-chart-title-text {
+        transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        display: inline-block;
+    }
+
+    .wd-hero-value.text-changing,
+    .wd-hero-label.text-changing,
+    #wd-chart-title-text.text-changing {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
     /* Chart - spans full width */
     .wd-chart-card {
         grid-column: span 3;
@@ -109,10 +124,31 @@
 
     .wd-chart-container {
         height: 160px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .wd-chart-inner {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: calc(100% - 15px);
         display: flex;
         align-items: flex-end;
         justify-content: space-around;
-        padding-top: 15px;
+        transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .wd-chart-inner.slide-out {
+        transform: translateX(-30px);
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .wd-chart-inner.slide-in-start {
+        transform: translateX(30px);
+        opacity: 0;
     }
 
     .wd-chart-bar-wrapper {
@@ -580,6 +616,36 @@
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
     }
+
+    /* Timeframe Filter Buttons */
+    .wd-timeframe-btn {
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.6);
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .wd-timeframe-btn:hover:not(.active) {
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .wd-timeframe-btn.active {
+        background: linear-gradient(135deg, #f472b6 0%, #38bdf8 100%);
+        color: #ffffff !important;
+        box-shadow: 0 2px 8px rgba(244, 114, 182, 0.3);
+    }
+
+    body.animation-low .wd-timeframe-btn.active,
+    body.animation-low-powered .wd-timeframe-btn.active {
+        background: #f472b6 !important;
+        box-shadow: none !important;
+    }
 </style>
 
 <div class="wrapped-desktop-wrapper">
@@ -625,7 +691,15 @@
 
         <!-- Weekly Chart - full width -->
         <div class="wd-card wd-chart-card">
-            <h2>📊 Letzte 7 Tage (Hörzeit)</h2>
+            <div class="wd-chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 10px;">
+                <h2 id="wd-chart-title-text" style="margin: 0; display: flex; align-items: center; gap: 8px;">📊 Letzte 7 Tage (Hörzeit)</h2>
+                <div class="wd-timeframe-buttons" style="display: flex; gap: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 4px;">
+                    <button class="wd-timeframe-btn active" data-timeframe="7d" onclick="changeWdTimeframe('7d')">7 Tage</button>
+                    <button class="wd-timeframe-btn" data-timeframe="30d" onclick="changeWdTimeframe('30d')">30 Tage</button>
+                    <button class="wd-timeframe-btn" data-timeframe="6m" onclick="changeWdTimeframe('6m')">6 Monate</button>
+                    <button class="wd-timeframe-btn" data-timeframe="lifetime" onclick="changeWdTimeframe('lifetime')">Lifetime</button>
+                </div>
+            </div>
             <div class="wd-chart-container" id="wd-chart-container">
                 <!-- Bars injected here -->
             </div>
@@ -653,11 +727,17 @@
             </div>
         </div>
 
-        <!-- Recent Activity -->
+        <!-- Recent Activity & Devices -->
         <div class="wd-card wd-recent-card">
-            <h2>🕐 Zuletzt Gehört</h2>
+            <div class="wd-card-tabs-header">
+                <button id="wd-tab-recent" class="wd-tab-btn active" onclick="switchWdRecentTab('recent')">🕐 Zuletzt Gehört</button>
+                <button id="wd-tab-devices" class="wd-tab-btn" onclick="switchWdRecentTab('devices')">📱 Geräte</button>
+            </div>
             <div id="wd-recent-container" class="wd-recent-list">
                 <div class="wd-ranking-empty">Lade...</div>
+            </div>
+            <div id="wd-devices-container" class="wd-ranking-list" style="display: none;">
+                <div class="wd-ranking-empty">Lade Geräte...</div>
             </div>
         </div>
     </div>

@@ -382,14 +382,8 @@ function resetIdleTimer() {
         idleTimeout = setTimeout(() => {
             console.log('[Idle] Wechsel zu Idle-Screen');
 
-            document.body.classList.remove('widget-active');
+            closeWidget();
             document.getElementById('spotify-widget').classList.remove('active');
-
-            // Close settings panel when entering idle
-            const panel = document.getElementById('settings-panel');
-            if (panel && panel.classList.contains('active')) {
-                toggleSettingsPanel();
-            }
 
             // Danach Standby Timer starten
             standbyTimeout = setTimeout(() => {
@@ -531,6 +525,18 @@ function closeWidget() {
     slotA.innerHTML = '';
     slotB.innerHTML = '';
     setActiveWidgetSlot(null);
+
+    // Clean up any dynamic modals from Spotify Wrapped
+    const modalsToClean = [
+        'wd-device-detail-modal',
+        'wd-chart-detail-modal',
+        'wd-artist-songs-modal',
+        'wd-playlist-detail-modal'
+    ];
+    modalsToClean.forEach(id => {
+        const modal = document.getElementById(id);
+        if (modal) modal.remove();
+    });
 
     const backBtn = document.getElementById('status-back-btn');
     if (backBtn) backBtn.style.display = 'none';
@@ -865,7 +871,13 @@ function triggerDesktopWakeAnimation() {
 let wasDesktopStandbyActive = document.body.classList.contains('standby-active');
 const desktopStandbyObserver = new MutationObserver(() => {
     const isDesktopStandbyActive = document.body.classList.contains('standby-active');
-    if (wasDesktopStandbyActive && !isDesktopStandbyActive) {
+    if (isDesktopStandbyActive) {
+        // Close active widget when entering standby to prevent overlay block on wake
+        if (document.body.classList.contains('widget-active')) {
+            console.log('[Standby] Widget auto-closed on standby entry');
+            closeWidget();
+        }
+    } else if (wasDesktopStandbyActive && !isDesktopStandbyActive) {
         triggerDesktopWakeAnimation();
     }
     wasDesktopStandbyActive = isDesktopStandbyActive;
@@ -1277,6 +1289,103 @@ async function syncCalendarEvents() {
     }
 }
 
+function initInfoWidget() {
+    const migrateBtn = document.getElementById('migrateBtn');
+    if (!migrateBtn) return;
+    
+    let pressTimer = null;
+    const progressEl = document.getElementById('migrateProgress');
+    const textEl = document.getElementById('migrateBtnText');
+    const duration = 3000; // 3 seconds
+    let isMigrating = false;
+
+    function startPress(e) {
+        if (isMigrating) return;
+        e.preventDefault();
+        
+        // Visual indicator that it's active
+        migrateBtn.style.background = 'rgba(56, 189, 248, 0.12)';
+        migrateBtn.style.borderColor = 'rgba(56, 189, 248, 0.4)';
+        migrateBtn.style.color = '#38bdf8';
+        
+        if (progressEl) {
+            progressEl.style.transition = 'width 3s linear';
+            progressEl.style.width = '100%';
+        }
+        
+        pressTimer = setTimeout(triggerMigration, duration);
+    }
+
+    function cancelPress() {
+        if (isMigrating) return;
+        if (pressTimer) {
+            clearTimeout(pressTimer);
+            pressTimer = null;
+        }
+        if (progressEl) {
+            progressEl.style.transition = 'width 0.15s ease';
+            progressEl.style.width = '0%';
+        }
+        migrateBtn.style.background = 'rgba(255, 255, 255, 0.05)';
+        migrateBtn.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+        migrateBtn.style.color = 'rgba(255,255,255,0.7)';
+    }
+
+    async function triggerMigration() {
+        isMigrating = true;
+        pressTimer = null;
+        if (textEl) textEl.textContent = 'Migriere Lieder...';
+        if (progressEl) {
+            progressEl.style.transition = 'none';
+            progressEl.style.width = '100%';
+            progressEl.style.background = '#a855f7'; // purple
+        }
+        
+        try {
+            const res = await fetch('/spotify/migrate-devices', { method: 'POST' });
+            const data = await res.json();
+            
+            if (data.success) {
+                if (textEl) textEl.textContent = `✓ ${data.migratedCount} Lieder migriert!`;
+                migrateBtn.style.borderColor = '#10b981'; // green
+                migrateBtn.style.background = 'rgba(16, 185, 129, 0.12)';
+                migrateBtn.style.color = '#10b981';
+                if (progressEl) progressEl.style.background = '#10b981';
+                
+                // Force reload of Wrapped desktop content if it is open in DOM
+                if (typeof initWrappedDesktopWidget === 'function') {
+                    initWrappedDesktopWidget().catch(() => {});
+                }
+            } else {
+                throw new Error(data.error || 'Serverfehler');
+            }
+        } catch (err) {
+            console.error('[Migration] Failed:', err);
+            if (textEl) textEl.textContent = '✕ Fehler bei der Migration';
+            migrateBtn.style.borderColor = '#ef4444'; // red
+            migrateBtn.style.background = 'rgba(239, 68, 68, 0.12)';
+            migrateBtn.style.color = '#ef4444';
+            if (progressEl) progressEl.style.background = '#ef4444';
+            
+            setTimeout(() => {
+                isMigrating = false;
+                cancelPress();
+                if (textEl) textEl.textContent = 'Lieder auf AfDBook migrieren (Gedrückt halten)';
+            }, 3000);
+        }
+    }
+
+    // Touch events
+    migrateBtn.addEventListener('touchstart', startPress, { passive: false });
+    migrateBtn.addEventListener('touchend', cancelPress, { passive: true });
+    migrateBtn.addEventListener('touchcancel', cancelPress, { passive: true });
+    
+    // Mouse events
+    migrateBtn.addEventListener('mousedown', startPress);
+    migrateBtn.addEventListener('mouseup', cancelPress);
+    migrateBtn.addEventListener('mouseleave', cancelPress);
+}
+
 function initCalendarWidget() {
     if (!hasCalendarWidget()) return;
 
@@ -1360,6 +1469,10 @@ function initDynamicWidget(widgetName) {
 
     if (widgetName === 'wrapped-desktop' || document.getElementById('wrapped-desktop-grid')) {
         setTimeout(initWrappedDesktopWidget, 0);
+    }
+
+    if (widgetName === 'info' || document.getElementById('migrateBtn')) {
+        setTimeout(initInfoWidget, 0);
     }
 
     // Start auto-refresh for any history/wrapped widget
@@ -2106,18 +2219,11 @@ eventSource.onmessage = function (event) {
         }
 
         if (data.action === 'go-idle') {
-            const wasWidgetActive = document.body.classList.contains('widget-active');
             const wasStandbyActive = document.body.classList.contains('standby-active');
-            document.body.classList.remove('widget-active');
+            closeWidget();
             document.body.classList.remove('standby-active');
             document.getElementById('spotify-widget').classList.remove('active');
             adjustSpotifyWidgetPosition();
-            const backBtn = document.getElementById('status-back-btn');
-            if (backBtn) backBtn.style.display = 'none';
-            if (wasWidgetActive && document.body.classList.contains('desktop-mode')) {
-                document.body.classList.add('desktop-icons-returning');
-                setTimeout(() => document.body.classList.remove('desktop-icons-returning'), 900);
-            }
             if (wasStandbyActive) {
                 triggerDesktopWakeAnimation();
             }
@@ -2125,10 +2231,8 @@ eventSource.onmessage = function (event) {
 
         if (data.action === 'toggle-standby') {
             wakeDisplay('toggle-standby', true);
-            document.body.classList.remove('widget-active');
+            closeWidget();
             document.getElementById('spotify-widget').classList.remove('active');
-            const backBtn = document.getElementById('status-back-btn');
-            if (backBtn) backBtn.style.display = 'none';
 
             document.body.classList.toggle('standby-active');
             console.log("Standby-Modus getoggelt. Aktiv:", document.body.classList.contains('standby-active'));

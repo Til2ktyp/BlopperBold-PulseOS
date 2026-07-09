@@ -997,11 +997,21 @@ async function getPlaylistNameCached(playlistId, token) {
     return null;
 }
 
+let cachedSpotifyHistory = null;
+let cachedSpotifyExcluded = null;
+
 function loadSpotifyHistory() {
+    if (cachedSpotifyHistory !== null) {
+        return cachedSpotifyHistory;
+    }
     try {
-        if (!fs.existsSync(SPOTIFY_HISTORY_FILE)) return [];
+        if (!fs.existsSync(SPOTIFY_HISTORY_FILE)) {
+            cachedSpotifyHistory = [];
+            return cachedSpotifyHistory;
+        }
         const data = fs.readFileSync(SPOTIFY_HISTORY_FILE, 'utf8');
-        return data ? JSON.parse(data) : [];
+        cachedSpotifyHistory = data ? JSON.parse(data) : [];
+        return cachedSpotifyHistory;
     } catch (e) {
         console.error('[Spotify History] Fehler beim Laden:', e);
         return [];
@@ -1009,18 +1019,28 @@ function loadSpotifyHistory() {
 }
 
 function saveSpotifyHistory(history) {
+    cachedSpotifyHistory = history;
     try {
-        fs.writeFileSync(SPOTIFY_HISTORY_FILE, JSON.stringify(history, null, 2));
+        fs.writeFile(SPOTIFY_HISTORY_FILE, JSON.stringify(history, null, 2), 'utf8', (err) => {
+            if (err) console.error('[Spotify History] Fehler beim Speichern (async):', err.message);
+        });
     } catch (e) {
         console.error('[Spotify History] Fehler beim Speichern:', e);
     }
 }
 
 function loadSpotifyExcluded() {
+    if (cachedSpotifyExcluded !== null) {
+        return cachedSpotifyExcluded;
+    }
     try {
-        if (!fs.existsSync(SPOTIFY_EXCLUDED_FILE)) return [];
+        if (!fs.existsSync(SPOTIFY_EXCLUDED_FILE)) {
+            cachedSpotifyExcluded = [];
+            return cachedSpotifyExcluded;
+        }
         const data = fs.readFileSync(SPOTIFY_EXCLUDED_FILE, 'utf8');
-        return data ? JSON.parse(data) : [];
+        cachedSpotifyExcluded = data ? JSON.parse(data) : [];
+        return cachedSpotifyExcluded;
     } catch (e) {
         console.error('[Spotify Excluded] Fehler beim Laden:', e);
         return [];
@@ -1028,8 +1048,11 @@ function loadSpotifyExcluded() {
 }
 
 function saveSpotifyExcluded(excluded) {
+    cachedSpotifyExcluded = excluded;
     try {
-        fs.writeFileSync(SPOTIFY_EXCLUDED_FILE, JSON.stringify(excluded, null, 2));
+        fs.writeFile(SPOTIFY_EXCLUDED_FILE, JSON.stringify(excluded, null, 2), 'utf8', (err) => {
+            if (err) console.error('[Spotify Excluded] Fehler beim Speichern (async):', err.message);
+        });
     } catch (e) {
         console.error('[Spotify Excluded] Fehler beim Speichern:', e);
     }
@@ -1040,7 +1063,7 @@ let lastDiscardedSession = null;
 
 function finalizeCurrentSession() {
     if (!currentSession) return;
-    if (currentSession.listenedMs >= 30000) { // 30 Sekunden
+    if (currentSession.listenedMs >= 60000) { // 1 Minute
         const excluded = loadSpotifyExcluded();
         const isExcluded = excluded.some(x => x.trackId === currentSession.trackId);
         if (isExcluded) {
@@ -1060,7 +1083,8 @@ function finalizeCurrentSession() {
             url: currentSession.url,
             durationMs: currentSession.durationMs,
             listenedMs: currentSession.listenedMs,
-            timestamp: currentSession.timestamp
+            timestamp: currentSession.timestamp,
+            device: currentSession.device || null
         };
         history.push(sessionToSave);
         saveSpotifyHistory(history);
@@ -1320,7 +1344,8 @@ async function fetchAndCacheCurrentPlayback() {
                             listenedMs: lastSession.listenedMs,
                             timestamp: lastSession.timestamp,
                             lastProgress: playback.progress_ms,
-                            lastUpdated: now
+                            lastUpdated: now,
+                            device: lastSession.device || playback.device?.name || null
                         };
                         console.log(`[Spotify History] Session fortgesetzt (aus Verlauf wiederhergestellt): "${currentSession.title}"`);
                     } else if (lastDiscardedSession && lastDiscardedSession.trackId === playback.item.id && (Date.now() - lastDiscardedSession.lastUpdated) < mergeWindowMs) {
@@ -1348,7 +1373,8 @@ async function fetchAndCacheCurrentPlayback() {
                             listenedMs: 0,
                             timestamp: new Date().toISOString(),
                             lastProgress: playback.progress_ms,
-                            lastUpdated: now
+                            lastUpdated: now,
+                            device: playback.device?.name || null
                         };
                         console.log(`[Spotify History] Neue Session gestartet: "${currentSession.title}" (Playlist: ${playlistName || 'Keine'})`);
                     }
@@ -1794,13 +1820,143 @@ app.post('/spotify/history/exclude-multiple', (req, res) => {
     }
 });
 
+app.post('/spotify/migrate-devices', (req, res) => {
+    try {
+        const history = loadSpotifyHistory();
+        let migratedCount = 0;
+        const targetDevice = "AfDBook Pro von Til dem Juden";
+        
+        for (let i = 0; i < history.length; i++) {
+            if (!history[i].device) {
+                history[i].device = targetDevice;
+                migratedCount++;
+            }
+        }
+        
+        if (migratedCount > 0) {
+            saveSpotifyHistory(history);
+        }
+        
+        console.log(`[Migration] ${migratedCount} Einträge erfolgreich auf "${targetDevice}" migriert.`);
+        res.json({ success: true, migratedCount });
+    } catch (error) {
+        console.error('[Migration] Fehler:', error);
+        res.status(500).json({ error: 'Migration fehlgeschlagen: ' + error.message });
+    }
+});
+
 app.get('/spotify/stats', (req, res) => {
     const history = loadSpotifyHistory();
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
+    const range = req.query.range || 'lifetime';
+    const startParam = req.query.start;
+    const endParam = req.query.end;
+    const deviceParam = req.query.device;
+
+    // 1. Calculate Structured Chart Data based on range
+    const chartData = [];
+
+    if (range === '7d') {
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            d.setDate(d.getDate() - i);
+            const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+            const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+            const ms = history.reduce((sum, item) => {
+                const t = new Date(item.timestamp);
+                return (t >= start && t <= end) ? sum + (item.listenedMs || 0) : sum;
+            }, 0);
+            chartData.push({
+                label: d.toLocaleDateString('de-DE', { weekday: 'short' }),
+                minutes: Math.round(ms / 60000),
+                startDate: start.toISOString(),
+                endDate: end.toISOString()
+            });
+        }
+    } else if (range === '30d') {
+        for (let i = 3; i >= 0; i--) {
+            const startDay = i * 7 + 6;
+            const endDay = i * 7;
+            const start = new Date(now.getTime() - startDay * 24 * 60 * 60 * 1000);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(now.getTime() - endDay * 24 * 60 * 60 * 1000);
+            end.setHours(23, 59, 59, 999);
+            const ms = history.reduce((sum, item) => {
+                const t = new Date(item.timestamp);
+                return (t >= start && t <= end) ? sum + (item.listenedMs || 0) : sum;
+            }, 0);
+            const label = `${String(start.getDate()).padStart(2, '0')}.${String(start.getMonth() + 1).padStart(2, '0')} - ${String(end.getDate()).padStart(2, '0')}.${String(end.getMonth() + 1).padStart(2, '0')}`;
+            chartData.push({
+                label,
+                minutes: Math.round(ms / 60000),
+                startDate: start.toISOString(),
+                endDate: end.toISOString()
+            });
+        }
+    } else if (range === '6m') {
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const start = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
+            const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+            const ms = history.reduce((sum, item) => {
+                const t = new Date(item.timestamp);
+                return (t >= start && t <= end) ? sum + (item.listenedMs || 0) : sum;
+            }, 0);
+            chartData.push({
+                label: d.toLocaleDateString('de-DE', { month: 'short' }),
+                minutes: Math.round(ms / 60000),
+                startDate: start.toISOString(),
+                endDate: end.toISOString()
+            });
+        }
+    } else {
+        // Lifetime: Last 12 calendar months
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const start = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
+            const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+            const ms = history.reduce((sum, item) => {
+                const t = new Date(item.timestamp);
+                return (t >= start && t <= end) ? sum + (item.listenedMs || 0) : sum;
+            }, 0);
+            chartData.push({
+                label: d.toLocaleDateString('de-DE', { month: 'short' }),
+                minutes: Math.round(ms / 60000),
+                startDate: start.toISOString(),
+                endDate: end.toISOString()
+            });
+        }
+    }
+
+    // 2. Compute Filter boundaries
+    let startCutoff = null;
+    let endCutoff = null;
+
+    if (startParam && endParam) {
+        startCutoff = new Date(startParam).getTime();
+        endCutoff = new Date(endParam).getTime();
+    } else if (range === '7d') {
+        startCutoff = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+    } else if (range === '30d') {
+        startCutoff = now.getTime() - 30 * 24 * 60 * 60 * 1000;
+    } else if (range === '6m') {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 6);
+        startCutoff = d.getTime();
+    }
+
+    const startOfTodayMs = startOfToday.getTime();
+
+    // 3. Optimized processing in a single pass
     let totalTimeTodayMs = 0;
-    let totalTimeAllTimeMs = 0;
+    let totalTimeFilteredMs = 0;
+
+    const trackCounts = {};
+    const artistCounts = {};
+    const deviceCounts = {};
+    const playlistCounts = {};
 
     const dailyListenTime = {};
     for (let i = 0; i < 7; i++) {
@@ -1809,63 +1965,96 @@ app.get('/spotify/stats', (req, res) => {
         dailyListenTime[dateKey] = 0;
     }
 
-    const trackCounts = {};
-    const artistCounts = {};
-    const playlistCounts = {};
-
-    history.forEach(session => {
+    let filteredCount = 0;
+    const len = history.length;
+    for (let i = 0; i < len; i++) {
+        const session = history[i];
         const sessionTime = session.listenedMs || 0;
-        totalTimeAllTimeMs += sessionTime;
+        const timestampMs = new Date(session.timestamp).getTime();
 
-        const sessionDate = new Date(session.timestamp);
-        if (sessionDate >= startOfToday) {
+        // Today's time
+        if (timestampMs >= startOfTodayMs) {
             totalTimeTodayMs += sessionTime;
         }
 
-        const dateKey = `${sessionDate.getFullYear()}-${String(sessionDate.getMonth() + 1).padStart(2, '0')}-${String(sessionDate.getDate()).padStart(2, '0')}`;
-        if (dailyListenTime[dateKey] !== undefined) {
-            dailyListenTime[dateKey] += sessionTime;
-        }
-
-        if (session.trackId) {
-            if (!trackCounts[session.trackId]) {
-                trackCounts[session.trackId] = {
-                    trackId: session.trackId,
-                    title: session.title,
-                    artists: session.artists,
-                    plays: 0,
-                    durationMs: session.durationMs
-                };
-            }
-            trackCounts[session.trackId].plays += 1;
-        }
-
-        if (session.artists && Array.isArray(session.artists)) {
-            session.artists.forEach(artist => {
-                if (!artistCounts[artist]) {
-                    artistCounts[artist] = {
-                        name: artist,
-                        plays: 0,
-                        durationMs: 0
-                    };
-                }
-                artistCounts[artist].plays += 1;
-                artistCounts[artist].durationMs += sessionTime;
-            });
-        }
-
+        // Playlists (always lifetime)
         if (session.playlistName) {
-            if (!playlistCounts[session.playlistName]) {
-                playlistCounts[session.playlistName] = {
+            let p = playlistCounts[session.playlistName];
+            if (!p) {
+                p = playlistCounts[session.playlistName] = {
                     name: session.playlistName,
                     plays: 0,
                     durationMs: 0
                 };
             }
-            playlistCounts[session.playlistName].plays += 1;
-            playlistCounts[session.playlistName].durationMs += sessionTime;
+            p.plays += 1;
+            p.durationMs += sessionTime;
         }
-    });
+
+        // Backwards compatible dailyListenTime
+        const sessionDate = new Date(session.timestamp);
+        const dateKey = `${sessionDate.getFullYear()}-${String(sessionDate.getMonth() + 1).padStart(2, '0')}-${String(sessionDate.getDate()).padStart(2, '0')}`;
+        if (dailyListenTime[dateKey] !== undefined) {
+            dailyListenTime[dateKey] += sessionTime;
+        }
+
+        // Timeframe and device filtering
+        let inRange = true;
+        if (startCutoff !== null && timestampMs < startCutoff) inRange = false;
+        if (endCutoff !== null && timestampMs > endCutoff) inRange = false;
+        if (deviceParam && (!session.device || session.device.toLowerCase() !== deviceParam.toLowerCase())) {
+            inRange = false;
+        }
+
+        if (inRange) {
+            totalTimeFilteredMs += sessionTime;
+            filteredCount++;
+
+            if (session.trackId) {
+                let t = trackCounts[session.trackId];
+                if (!t) {
+                    t = trackCounts[session.trackId] = {
+                        trackId: session.trackId,
+                        title: session.title,
+                        artists: session.artists,
+                        plays: 0,
+                        durationMs: session.durationMs
+                    };
+                }
+                t.plays += 1;
+            }
+
+            if (session.artists && Array.isArray(session.artists)) {
+                const artLen = session.artists.length;
+                for (let j = 0; j < artLen; j++) {
+                    const artist = session.artists[j];
+                    let a = artistCounts[artist];
+                    if (!a) {
+                        a = artistCounts[artist] = {
+                            name: artist,
+                            plays: 0,
+                            durationMs: 0
+                        };
+                    }
+                    a.plays += 1;
+                    a.durationMs += sessionTime;
+                }
+            }
+
+            if (session.device) {
+                let dev = deviceCounts[session.device];
+                if (!dev) {
+                    dev = deviceCounts[session.device] = {
+                        name: session.device,
+                        plays: 0,
+                        durationMs: 0
+                    };
+                }
+                dev.plays += 1;
+                dev.durationMs += sessionTime;
+            }
+        }
+    }
 
     const topTracks = Object.values(trackCounts)
         .sort((a, b) => b.plays - a.plays)
@@ -1879,19 +2068,25 @@ app.get('/spotify/stats', (req, res) => {
         .sort((a, b) => b.plays - a.plays)
         .slice(0, 50);
 
+    const deviceStats = Object.values(deviceCounts)
+        .sort((a, b) => b.durationMs - a.durationMs)
+        .slice(0, 50);
+
     res.json({
         totalTimeTodayMinutes: Math.round(totalTimeTodayMs / 60000),
-        totalTimeAllTimeMinutes: Math.round(totalTimeAllTimeMs / 60000),
-        totalTimeAllTimeHours: Math.round(totalTimeAllTimeMs / 3600000),
+        totalTimeAllTimeMinutes: Math.round(totalTimeFilteredMs / 60000),
+        totalTimeAllTimeHours: Math.round(totalTimeFilteredMs / 3600000),
         dailyListenTime: Object.entries(dailyListenTime).map(([date, ms]) => ({
             date,
             minutes: Math.round(ms / 60000)
         })).reverse(),
+        chartData,
         topTracks,
         topArtists,
         topPlaylists,
+        deviceStats,
         uniqueArtistsCount: Object.keys(artistCounts).length,
-        totalPlaysCount: history.length
+        totalPlaysCount: filteredCount
     });
 });
 
