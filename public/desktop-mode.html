@@ -6,6 +6,7 @@
     <title>BlopperBold PulseOS Desktop Mode</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap">
     <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="custom-mix.css">
 </head>
 <body class="desktop-mode">
     <script>
@@ -104,6 +105,10 @@
                 <span class="desktop-icon-glyph">🎁</span>
                 <span class="desktop-icon-label">Wrapped</span>
             </button>
+            <button class="desktop-icon desktop-icon-ai" onclick="openWidget('custom-mix-desktop')" title="PulseOS Mix">
+                <span class="desktop-icon-glyph">✨</span>
+                <span class="desktop-icon-label">PulseOS Mix</span>
+            </button>
             <button class="desktop-icon desktop-icon-vim" onclick="openWidget('vim')" title="Vim">
                 <span class="desktop-icon-glyph">⌘</span>
                 <span class="desktop-icon-label">Vim</span>
@@ -174,6 +179,7 @@
             <div id="spotify-semi-countdown"></div>
         </div>
         <button class="desktop-taskbar-btn desktop-spotify-fallback" onclick="openWidget('desktop-spotify')" title="Spotify">♫</button>
+        <button class="desktop-taskbar-btn" onclick="openWidget('custom-mix-desktop')" title="PulseOS Mix">✨</button>
         <button class="desktop-taskbar-btn" onclick="openWidget('calendar')" title="Kalender">17</button>
         <button class="desktop-taskbar-btn" onclick="openWidget('timer')" title="Timer">⏱</button>
         <button class="desktop-taskbar-btn" onclick="openWidget('homeassistant')" title="Home Assistant">⌂</button>
@@ -208,6 +214,7 @@
                 <option value="spotify">Spotify</option>
                 <option value="history-desktop">Spotify History</option>
                 <option value="wrapped-desktop">Spotify Wrapped</option>
+                <option value="custom-mix-desktop">PulseOS Mix</option>
                 <option value="homeassistant">Home Assistant</option>
                 <option value="calendar">Kalender</option>
                 <option value="timer">Timer</option>
@@ -265,5 +272,6 @@
 
     <script src="script.js"></script>
     <script src="spotify-wrapped.js"></script>
+    <script src="custom-mix.js"></script>
 </body>
 </html>

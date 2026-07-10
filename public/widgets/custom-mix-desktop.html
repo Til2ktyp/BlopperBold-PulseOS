@@ -1,0 +1,99 @@
+<div id="custom-mix-desktop-container" class="custom-mix-widget-container">
+    <div class="custom-mix-header">
+        <div class="custom-mix-title">PulseOS Custom Mix</div>
+        <div class="custom-mix-subtitle">Deine Playlists, basierend auf deiner Hör-History</div>
+    </div>
+    
+    <div class="custom-mix-grid" id="custom-mix-grid">
+        <!-- Pinned Highlights Playlist -->
+        <div class="custom-mix-card" onclick="playHighlightsPlaylist()">
+            <div class="custom-mix-card-inner">
+                <div class="custom-mix-cover-placeholder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                    </svg>
+                </div>
+            </div>
+            <div class="custom-mix-text">PulseOS<br>Highlights</div>
+        </div>
+
+        <!-- Create New Button -->
+        <div class="custom-mix-card custom-mix-create-btn" onclick="openCustomMixModal()">
+            <div class="custom-mix-card-inner">
+                <div class="custom-mix-cover-placeholder dark-bg">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </div>
+            </div>
+            <div class="custom-mix-text">Neu<br>erstellen...</div>
+        </div>
+        
+        <!-- Dynamic Generated Playlists will be injected here -->
+    </div>
+    
+    <!-- Context Menu -->
+    <div id="custom-mix-context-menu" class="custom-mix-context-menu" style="display: none;">
+        <div class="custom-mix-context-item" onclick="renameCustomMix()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            Umbenennen
+        </div>
+        <div class="custom-mix-context-item danger" onclick="deleteCustomMix()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Löschen
+        </div>
+    </div>
+</div>
+
+<!-- Custom Mix Creator Modal -->
+<div id="custom-mix-modal" class="custom-mix-modal" style="display: none;">
+    <div class="custom-mix-modal-content">
+        <div class="custom-mix-modal-header">
+            <h3>PulseOS Custom Mix erstellen</h3>
+            <button class="custom-mix-close-btn" onclick="closeCustomMixModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div class="custom-mix-modal-body">
+            <p class="custom-mix-instruction">Wie soll dein neuer Mix heißen?</p>
+            <div class="custom-mix-name-input-wrapper">
+                <span class="custom-mix-name-prefix">PulseOS</span>
+                <input type="text" id="custom-mix-name-input" class="custom-mix-name-input" placeholder="Mix Name...">
+            </div>
+            <p class="custom-mix-instruction">Wähle Künstler aus deiner Historie, um einen Mix zu generieren.</p>
+            <div class="custom-mix-search-container">
+                <svg class="custom-mix-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="custom-mix-search" placeholder="Künstler suchen..." oninput="filterCustomMixArtists()">
+            </div>
+            <div class="custom-mix-artists-grid" id="custom-mix-artists-grid">
+                <!-- Artists injected here -->
+            </div>
+        </div>
+        <div class="custom-mix-modal-footer">
+            <div class="custom-mix-footer-left">
+                <div class="custom-mix-selection-count" id="custom-mix-selection-count">0 Künstler ausgewählt</div>
+                <label class="custom-mix-toggle-container">
+                    <input type="checkbox" id="custom-mix-fill-toggle" checked>
+                    <span class="custom-mix-toggle-slider"></span>
+                    <span class="custom-mix-toggle-label">Mit verwandten Songs auf 50 auffüllen</span>
+                </label>
+            </div>
+            <button class="custom-mix-generate-btn" id="custom-mix-generate-btn" onclick="generatePulseOsCustomMix()" disabled>Playlist generieren</button>
+        </div>
+        <!-- Loading Overlay inside modal -->
+        <div id="custom-mix-loading-overlay" class="custom-mix-loading-overlay" style="display: none; flex-direction: column; align-items: center; justify-content: center;">
+            <div id="custom-mix-initial-loader" style="display: flex; flex-direction: column; align-items: center;">
+                <div class="custom-mix-spinner"></div>
+                <div class="custom-mix-loading-text">Mix wird erstellt...</div>
+            </div>
+            
+            <div id="custom-mix-progress-container" style="display: none; width: 80%; max-width: 400px; text-align: center; margin-top: 20px;">
+                <div id="custom-mix-progress-text" style="font-size: 14px; margin-bottom: 12px; font-weight: 500; color: rgba(255,255,255,0.9); font-family: 'Outfit', sans-serif;">(0/50 PREPARING)</div>
+                <div class="custom-mix-progress-bar-bg" style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);">
+                    <div id="custom-mix-progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #1db954, #1ed760); border-radius: 4px; transition: width 0.1s linear, box-shadow 0.2s ease; box-shadow: 0 0 10px rgba(29, 185, 84, 0.5);"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

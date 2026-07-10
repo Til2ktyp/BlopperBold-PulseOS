@@ -1,0 +1,494 @@
+/* PulseOS Custom Mix Widget Styles */
+.custom-mix-widget-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-sizing: border-box;
+    background: rgba(20, 20, 25, 0.6);
+    border-radius: 24px;
+}
+
+.custom-mix-header {
+    margin-bottom: 25px;
+}
+
+.custom-mix-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 5px;
+}
+
+.custom-mix-subtitle {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.custom-mix-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 20px;
+    flex: 1;
+    overflow-y: auto;
+    align-content: start;
+    padding-bottom: 20px;
+}
+
+.custom-mix-grid::-webkit-scrollbar {
+    width: 0px;
+}
+
+.custom-mix-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.custom-mix-card:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.custom-mix-card-inner {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+}
+
+.custom-mix-cover-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1db954, #191414);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+}
+
+.custom-mix-cover-placeholder.dark-bg {
+    background: linear-gradient(135deg, #2b2b36, #141419);
+}
+
+.custom-mix-cover-placeholder svg {
+    width: 40px;
+    height: 40px;
+}
+
+.custom-mix-text {
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    text-align: center;
+    line-height: 1.3;
+}
+
+/* Modal Styles */
+.custom-mix-modal {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(20px);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    opacity: 0;
+    animation: customMixFadeIn 0.3s forwards;
+}
+
+@keyframes customMixFadeIn {
+    to { opacity: 1; }
+}
+
+.custom-mix-modal-content {
+    background: #1e1e24;
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    border-radius: 24px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+    position: relative;
+    overflow: hidden;
+    transform: translateY(20px);
+    animation: customMixSlideUp 0.4s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+
+@keyframes customMixSlideUp {
+    to { transform: translateY(0); }
+}
+
+.custom-mix-modal-header {
+    padding: 25px 30px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.custom-mix-modal-header h3 {
+    margin: 0;
+    color: white;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.custom-mix-close-btn {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.5);
+    cursor: pointer;
+    padding: 5px;
+    transition: color 0.2s;
+}
+
+.custom-mix-close-btn:hover {
+    color: white;
+}
+
+.custom-mix-close-btn svg {
+    width: 24px;
+    height: 24px;
+}
+
+.custom-mix-modal-body {
+    padding: 30px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.custom-mix-instruction {
+    color: rgba(255,255,255,0.7);
+    margin: 0 0 15px 0;
+    font-size: 15px;
+}
+
+.custom-mix-name-input-wrapper {
+    display: flex;
+    align-items: center;
+    margin-bottom: 25px;
+    background: rgba(255,255,255,0.05);
+    padding: 12px 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: border-color 0.2s;
+}
+
+.custom-mix-name-input-wrapper:focus-within {
+    border-color: rgba(255,255,255,0.3);
+}
+
+.custom-mix-name-prefix {
+    color: #60c5e7;
+    font-weight: bold;
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+.custom-mix-name-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: white;
+    outline: none;
+    font-size: 16px;
+}
+
+.custom-mix-search-container {
+    position: relative;
+    margin-bottom: 25px;
+}
+
+.custom-mix-search-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    color: rgba(255,255,255,0.4);
+}
+
+.custom-mix-search-container input {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 15px 15px 15px 45px;
+    color: white;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.custom-mix-search-container input:focus {
+    border-color: rgba(255,255,255,0.3);
+}
+
+.custom-mix-artists-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 20px;
+}
+
+.custom-mix-artist-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+}
+
+.custom-mix-artist-card img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 12px;
+    border: 3px solid transparent;
+    transition: all 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.custom-mix-artist-card .name {
+    color: white;
+    font-size: 13px;
+    text-align: center;
+    font-weight: 500;
+    max-width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.custom-mix-artist-card.selected img {
+    border-color: #60c5e7;
+    transform: scale(1.05);
+}
+
+.custom-mix-artist-card .check-icon {
+    position: absolute;
+    top: 0;
+    right: 10px;
+    background: #60c5e7;
+    color: #1e1e24;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.2s;
+    border: 2px solid #1e1e24;
+}
+
+.custom-mix-artist-card.selected .check-icon {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.custom-mix-artist-card .check-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.custom-mix-modal-footer {
+    padding: 20px 30px;
+    background: rgba(0,0,0,0.2);
+    border-top: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.custom-mix-footer-left {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.custom-mix-selection-count {
+    color: rgba(255,255,255,0.7);
+    font-size: 15px;
+}
+
+/* Toggle Switch Styles */
+.custom-mix-toggle-container {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+    user-select: none;
+}
+
+.custom-mix-toggle-container:hover {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.custom-mix-toggle-container input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.custom-mix-toggle-slider {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    margin-right: 10px;
+    transition: 0.3s;
+}
+
+.custom-mix-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.custom-mix-toggle-container input:checked + .custom-mix-toggle-slider {
+    background-color: #60c5e7;
+}
+
+.custom-mix-toggle-container input:checked + .custom-mix-toggle-slider:before {
+    transform: translateX(16px);
+}
+
+.custom-mix-generate-btn {
+    background: #60c5e7;
+    color: #1e1e24;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 20px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: not-allowed;
+    opacity: 0.5;
+    transition: all 0.2s;
+}
+
+.custom-mix-generate-btn:hover:not(:disabled) {
+    transform: scale(1.05);
+    background: #73d1f0;
+}
+
+/* Loading Overlay */
+.custom-mix-loading-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(30, 30, 36, 0.9);
+    backdrop-filter: blur(10px);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-radius: 24px;
+}
+
+.custom-mix-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(255,255,255,0.1);
+    border-top-color: #60c5e7;
+    border-radius: 50%;
+    animation: customMixSpin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes customMixSpin {
+    to { transform: rotate(360deg); }
+}
+
+.custom-mix-loading-text {
+    color: white;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+/* Context Menu */
+.custom-mix-context-menu {
+    position: absolute;
+    background: rgba(30, 30, 40, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    min-width: 180px;
+    z-index: 10000;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    transform-origin: top left;
+    animation: contextMenuPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes contextMenuPop {
+    0% { opacity: 0; transform: scale(0.9); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.custom-mix-context-item {
+    padding: 12px 16px;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background 0.2s, color 0.2s;
+}
+
+.custom-mix-context-item svg {
+    width: 18px;
+    height: 18px;
+    margin-right: 12px;
+    opacity: 0.7;
+}
+
+.custom-mix-context-item:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.custom-mix-context-item.danger {
+    color: #ff4d4d;
+}
+
+.custom-mix-context-item.danger svg {
+    color: #ff4d4d;
+    opacity: 1;
+}
+
+.custom-mix-context-item.danger:hover {
+    background: rgba(255, 77, 77, 0.15);
+}

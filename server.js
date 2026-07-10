@@ -1029,6 +1029,36 @@ function saveSpotifyHistory(history) {
     }
 }
 
+const SPOTIFY_PULSEOS_PLAYLISTS_FILE = path.join(__dirname, 'pulseos-playlists.json');
+let cachedPulseOSPlaylists = null;
+
+function loadPulseOSPlaylists() {
+    if (cachedPulseOSPlaylists !== null) return cachedPulseOSPlaylists;
+    try {
+        if (!fs.existsSync(SPOTIFY_PULSEOS_PLAYLISTS_FILE)) {
+            cachedPulseOSPlaylists = [];
+            return cachedPulseOSPlaylists;
+        }
+        const data = fs.readFileSync(SPOTIFY_PULSEOS_PLAYLISTS_FILE, 'utf8');
+        cachedPulseOSPlaylists = data ? JSON.parse(data) : [];
+        return cachedPulseOSPlaylists;
+    } catch (e) {
+        console.error('[PulseOS Playlists] Fehler beim Laden:', e);
+        return [];
+    }
+}
+
+function savePulseOSPlaylists(playlists) {
+    cachedPulseOSPlaylists = playlists;
+    try {
+        fs.writeFile(SPOTIFY_PULSEOS_PLAYLISTS_FILE, JSON.stringify(playlists, null, 2), 'utf8', (err) => {
+            if (err) console.error('[PulseOS Playlists] Fehler beim Speichern (async):', err.message);
+        });
+    } catch (e) {
+        console.error('[PulseOS Playlists] Fehler beim Speichern:', e);
+    }
+}
+
 function loadSpotifyExcluded() {
     if (cachedSpotifyExcluded !== null) {
         return cachedSpotifyExcluded;
@@ -1282,11 +1312,12 @@ function startSpotifyPolling() {
     updateTopTracksCache();
     setInterval(updateTopTracksCache, 30 * 60 * 1000);
 
-    // Sofort erste Wiedergabe-Daten fetchen (nicht 12 Sekunden warten!)
+    // Sofort erste Wiedergabe-Daten fetchen (nicht warten!)
     fetchAndCacheCurrentPlayback();
 
-    // Danach regelmäßig updaten
-    setInterval(fetchAndCacheCurrentPlayback, 12000);
+    // Danach regelmäßig updaten (3 Sekunden)
+    // Die Player-API von Spotify (v1/me/player) ist dafür ausgelegt und hält das locker aus.
+    setInterval(fetchAndCacheCurrentPlayback, 3000);
 }
 
 async function fetchAndCacheCurrentPlayback() {
@@ -2096,6 +2127,360 @@ app.get('/spotify/playlist/rotate-now', async (req, res) => {
         res.json({ ok: true, message: `Playlist 'PulseOS Highlights' erfolgreich rotiert mit ${result.tracksCount} Songs.` });
     } else {
         res.status(500).json({ ok: false, error: result.error });
+    }
+});
+app.get('/spotify/pulseos-playlists', (req, res) => {
+    res.json({ playlists: loadPulseOSPlaylists() });
+});
+
+app.get('/spotify/top-artists-custom', async (req, res) => {
+    try {
+        const historyData = loadSpotifyHistory();
+        const artistStats = {};
+        
+        // Aggregate listening time per artist
+        for (const track of historyData) {
+            if (!track.artists || !track.listenedMs) continue;
+            for (const artistName of track.artists) {
+                if (!artistStats[artistName]) {
+                    artistStats[artistName] = { name: artistName, listenedMs: 0, defaultImage: track.albumImg };
+                }
+                artistStats[artistName].listenedMs += track.listenedMs;
+            }
+        }
+        
+        // Sort and take top 50 to give a good selection
+        const sortedArtists = Object.values(artistStats)
+            .sort((a, b) => b.listenedMs - a.listenedMs)
+            .slice(0, 50);
+            
+        const token = await getSpotifyAccessToken();
+        
+        // Bypass Search API entirely to avoid 429 Rate Limits
+        const artists = [];
+        let artistCache = {};
+        const fs = require('fs');
+        if (fs.existsSync('artist-cache.json')) {
+            try { artistCache = JSON.parse(fs.readFileSync('artist-cache.json', 'utf8')); } catch (e) {}
+        }
+
+        // 1. Gather tracks for artists we don't have in cache
+        let missingArtists = [];
+        for (const artist of sortedArtists) {
+            if (artistCache[artist.name]) {
+                artists.push({ id: artistCache[artist.name].id || artist.name, name: artist.name, image: artistCache[artist.name].image || artistCache[artist.name] });
+            } else {
+                missingArtists.push(artist);
+            }
+        }
+
+        if (missingArtists.length > 0) {
+            // Find one trackId for each missing artist from history
+            const historyData = loadSpotifyHistory();
+            const trackIdsToFetch = [];
+            const trackIdToArtist = {};
+
+            for (const artist of missingArtists) {
+                const track = historyData.find(t => t.artists && t.artists.includes(artist.name) && t.trackId);
+                if (track) {
+                    trackIdsToFetch.push(track.trackId);
+                    trackIdToArtist[track.trackId] = artist;
+                } else {
+                    // Fallback
+                    artistCache[artist.name] = { id: artist.name, image: artist.defaultImage };
+                    artists.push({ id: artist.name, name: artist.name, image: artist.defaultImage });
+                }
+            }
+
+            // Chunk trackIds into groups of 50 (API Limit)
+            let artistIdsToFetch = [];
+            let artistIdToArtist = {};
+
+            for (let i = 0; i < trackIdsToFetch.length; i += 50) {
+                const chunk = trackIdsToFetch.slice(i, i + 50);
+                try {
+                    const res = await fetch(`https://api.spotify.com/v1/tracks?ids=${chunk.join(',')}`, { headers: { 'Authorization': 'Bearer ' + token } });
+                    if (res.ok) {
+                        const data = await res.json();
+                        data.tracks.forEach((t, idx) => {
+                            if (t && t.artists && t.artists.length > 0) {
+                                const originalArtist = trackIdToArtist[chunk[idx]];
+                                // Find the closest matching artist ID on this track
+                                const normalize = str => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                const matched = t.artists.find(a => normalize(a.name) === normalize(originalArtist.name) || normalize(a.name).includes(normalize(originalArtist.name))) || t.artists[0];
+                                artistIdsToFetch.push(matched.id);
+                                artistIdToArtist[matched.id] = originalArtist;
+                            }
+                        });
+                    }
+                } catch (e) { console.error(e); }
+            }
+
+            // Fetch Artist Profiles in chunks of 50
+            for (let i = 0; i < artistIdsToFetch.length; i += 50) {
+                const chunk = artistIdsToFetch.slice(i, i + 50);
+                try {
+                    const res = await fetch(`https://api.spotify.com/v1/artists?ids=${chunk.join(',')}`, { headers: { 'Authorization': 'Bearer ' + token } });
+                    if (res.ok) {
+                        const data = await res.json();
+                        data.artists.forEach((a, idx) => {
+                            if (a) {
+                                const originalArtist = artistIdToArtist[chunk[idx]];
+                                const img = a.images && a.images.length > 0 ? a.images[0].url : originalArtist.defaultImage;
+                                artistCache[originalArtist.name] = { id: a.id, image: img };
+                                artists.push({ id: a.id, name: originalArtist.name, image: img });
+                            }
+                        });
+                    }
+                } catch (e) { console.error(e); }
+            }
+
+            fs.writeFileSync('artist-cache.json', JSON.stringify(artistCache, null, 2));
+        }
+        
+        res.json({ artists });
+    } catch (err) {
+        console.error('[Top Artists Custom Error]', err);
+        res.status(500).json({ error: err.stack || err.message });
+    }
+});
+
+app.post('/spotify/generate-custom-mix', async (req, res) => {
+    const { seedArtistNames, playlistName, fillWithRandom } = req.body;
+    if (!seedArtistNames || seedArtistNames.length === 0) return res.status(400).json({ error: 'Keine Artists angegeben' });
+
+    try {
+        const token = await getSpotifyAccessToken();
+        
+        // 1. Get most listened songs from local history for selected artists
+        const trackStats = {};
+        const historyData = loadSpotifyHistory(); 
+        
+        for (const track of historyData) {
+            const match = track.artists && track.artists.some(artistName => 
+                seedArtistNames.some(seed => artistName.toLowerCase() === seed.toLowerCase())
+            );
+            
+            if (match && track.trackId) {
+                if (!trackStats[track.trackId]) {
+                    trackStats[track.trackId] = { trackId: track.trackId, name: track.trackName || 'Unbekannter Track', listenedMs: 0 };
+                }
+                trackStats[track.trackId].listenedMs += track.listenedMs;
+            }
+        }
+        
+        // Sort by listenedMs descending
+        const sortedTracks = Object.values(trackStats)
+            .sort((a, b) => b.listenedMs - a.listenedMs)
+            .slice(0, 50);
+            
+        let finalTracksInfo = sortedTracks.map(t => ({ uri: `spotify:track:${t.trackId}`, name: t.name }));
+        const uris = finalTracksInfo.map(t => t.uri);
+        
+        if (uris.length === 0) throw new Error('Keine Songs für die ausgewählten Künstler im Verlauf gefunden.');
+
+        // Fill with Spotify Recommendations if requested and less than 50
+        if (fillWithRandom && uris.length < 50 && sortedTracks.length > 0) {
+            try {
+                let additionalUrisInfo = [];
+                let trackCache = {};
+                const trackCacheFile = 'track-cache.json';
+                if (fs.existsSync(trackCacheFile)) {
+                    try { trackCache = JSON.parse(fs.readFileSync(trackCacheFile, 'utf8')); } catch (e) {}
+                }
+
+                for (const artistName of seedArtistNames) {
+                    const normalizedArtistForCache = artistName.toLowerCase().trim();
+                    if (trackCache[normalizedArtistForCache] && trackCache[normalizedArtistForCache].length > 0) {
+                        // Load from Cache
+                        additionalUrisInfo.push(...trackCache[normalizedArtistForCache]);
+                        continue;
+                    }
+                    
+                    let artistTracksFound = [];
+                    // 1. Get Artist ID from Cache or History
+                    let artistId = trackCache[normalizedArtistForCache]?.artistId;
+                    if (!artistId) {
+                        const artistCacheData = JSON.parse(fs.readFileSync('artist-cache.json', 'utf8') || '{}');
+                        if (artistCacheData[artistName] && artistCacheData[artistName].id) {
+                            artistId = artistCacheData[artistName].id;
+                        } else {
+                            // Find from history fallback
+                            const historyData = loadSpotifyHistory();
+                            const track = historyData.find(t => t.artists && t.artists.includes(artistName) && t.trackId);
+                            if (track) {
+                                try {
+                                    const res = await fetch(`https://api.spotify.com/v1/tracks/${track.trackId}`, { headers: { 'Authorization': 'Bearer ' + token }});
+                                    if (res.ok) {
+                                        const tData = await res.json();
+                                        const normalize = str => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                        const matched = tData.artists.find(a => normalize(a.name) === normalize(artistName) || normalize(a.name).includes(normalize(artistName))) || tData.artists[0];
+                                        artistId = matched.id;
+                                    }
+                                } catch(e){}
+                            }
+                        }
+                    }
+
+                    if (artistId) {
+                        try {
+                            // 2. Fetch Albums for Artist (up to 10 to get variety)
+                            const albumRes = await fetch(`https://api.spotify.com/v1/artists/${artistId}/albums?limit=10&include_groups=album,single`, {
+                                headers: { 'Authorization': 'Bearer ' + token }
+                            });
+                            if (albumRes.ok) {
+                                const albumData = await albumRes.json();
+                                const albumIds = albumData.items.map(a => a.id);
+                                
+                                // 3. Fetch all tracks from those albums (up to 20 albums at once)
+                                if (albumIds.length > 0) {
+                                    const chunk = albumIds.slice(0, 20);
+                                    const fullAlbumsRes = await fetch(`https://api.spotify.com/v1/albums?ids=${chunk.join(',')}`, {
+                                        headers: { 'Authorization': 'Bearer ' + token }
+                                    });
+                                    if (fullAlbumsRes.ok) {
+                                        const fullAlbumsData = await fullAlbumsRes.json();
+                                        fullAlbumsData.albums.forEach(album => {
+                                            if (album && album.tracks && album.tracks.items) {
+                                                album.tracks.items.forEach(track => {
+                                                    const trackUri = `spotify:track:${track.id}`;
+                                                    if (!uris.includes(trackUri) && !additionalUrisInfo.some(t => t.uri === trackUri)) {
+                                                        const trackObj = { uri: trackUri, name: track.name };
+                                                        additionalUrisInfo.push(trackObj);
+                                                        artistTracksFound.push(trackObj);
+                                                    }
+                                                });
+                                            }
+                                        });
+                                    }
+                                }
+                            }
+                        } catch(e) { console.error("Error fetching albums for " + artistName, e); }
+                    }
+                    
+                    // Save to Cache
+                    if (artistTracksFound.length > 0) {
+                        trackCache[normalizedArtistForCache] = artistTracksFound;
+                        fs.writeFileSync(trackCacheFile, JSON.stringify(trackCache, null, 2));
+                    }
+                }
+                
+                additionalUrisInfo = additionalUrisInfo.sort(() => Math.random() - 0.5);
+                const needed = 50 - uris.length;
+                const toAdd = additionalUrisInfo.slice(0, Math.max(0, needed));
+                uris.push(...toAdd.map(t => t.uri));
+                finalTracksInfo.push(...toAdd);
+            } catch (e) {
+                console.error('Error fetching recommendations:', e);
+            }
+        }
+
+        // 2. Create Playlist (Using /v1/me/playlists like rotate-now does to avoid 403)
+        const finalName = playlistName || `PulseOS Mix: ${new Date().toLocaleDateString('de-DE')}`;
+        const createRes = await fetch(`https://api.spotify.com/v1/me/playlists`, {
+            method: 'POST',
+            headers: { 
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: finalName,
+                description: 'Dein persönlicher PulseOS Mix basierend auf deiner Hör-History.',
+                public: true
+            })
+        });
+        if (!createRes.ok) {
+            const errBody = await createRes.text();
+            throw new Error(`Create API Error ${createRes.status}: ${errBody}`);
+        }
+        const playlistData = await createRes.json();
+
+        // 3. Add Tracks
+        const addRes = await fetch(`https://api.spotify.com/v1/playlists/${playlistData.id}/items`, {
+            method: 'POST',
+            headers: { 
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ uris })
+        });
+        if (!addRes.ok) throw new Error('Add API Error ' + addRes.status);
+
+        // 4. Save to local DB
+        const generated = loadPulseOSPlaylists();
+        const newPlaylist = {
+            id: playlistData.id,
+            name: playlistData.name,
+            uri: playlistData.uri,
+            url: playlistData.external_urls.spotify,
+            createdAt: new Date().toISOString(),
+            images: playlistData.images
+        };
+        generated.push(newPlaylist);
+        savePulseOSPlaylists(generated);
+
+        res.json({ ok: true, playlist: newPlaylist, playlistUri: playlistData.uri, addedTracks: finalTracksInfo.map(t => t.name) });
+    } catch (err) {
+        console.error('[Generate Custom Mix Error]', err);
+        res.status(500).json({ error: err.stack || err.message });
+    }
+});
+app.put('/spotify/playlists/:id/rename', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name } = req.body;
+        if (!name) return res.status(400).json({ error: 'Name is required' });
+
+        const token = await getSpotifyAccessToken();
+        const spotifyRes = await fetch(`https://api.spotify.com/v1/playlists/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name })
+        });
+
+        if (!spotifyRes.ok) throw new Error('Spotify API Error ' + spotifyRes.status);
+
+        // Update locally
+        const playlists = loadPulseOSPlaylists();
+        const pl = playlists.find(p => p.id === id);
+        if (pl) {
+            pl.name = name;
+            savePulseOSPlaylists(playlists);
+        }
+
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('[Rename Error]', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/spotify/playlists/:id/delete', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const token = await getSpotifyAccessToken();
+        
+        const spotifyRes = await fetch(`https://api.spotify.com/v1/playlists/${id}/followers`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
+        });
+
+        if (!spotifyRes.ok) throw new Error('Spotify API Error ' + spotifyRes.status);
+
+        // Update locally
+        let playlists = loadPulseOSPlaylists();
+        playlists = playlists.filter(p => p.id !== id);
+        savePulseOSPlaylists(playlists);
+
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('[Delete Error]', err);
+        res.status(500).json({ error: err.message });
     }
 });
 

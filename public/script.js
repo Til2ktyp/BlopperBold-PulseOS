@@ -1475,6 +1475,12 @@ function initDynamicWidget(widgetName) {
         setTimeout(initInfoWidget, 0);
     }
 
+    if (widgetName === 'custom-mix-desktop' || document.getElementById('custom-mix-desktop-container')) {
+        if (typeof loadCustomMixPlaylists === 'function') {
+            setTimeout(loadCustomMixPlaylists, 0);
+        }
+    }
+
     // Start auto-refresh for any history/wrapped widget
     if (['history', 'wrapped', 'history-desktop', 'wrapped-desktop'].includes(widgetName)) {
         if (typeof startWidgetAutoRefresh === 'function') startWidgetAutoRefresh();
