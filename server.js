@@ -1538,9 +1538,18 @@ app.get('/spotify/refresh', async (req, res) => {
 
 app.get('/spotify/playlists', async (req, res) => {
     try {
-        const limit = Math.max(1, Math.min(50, parseInt(req.query.limit, 10) || 12));
+        let limit = parseInt(req.query.limit, 10) || 12;
         const token = await getSpotifyAccessToken();
-        const response = await fetch(`https://api.spotify.com/v1/me/playlists?limit=${limit}`, {
+        
+        // Hole User-ID um eigene Playlists zu identifizieren
+        const userRes = await fetch('https://api.spotify.com/v1/me', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const userData = await userRes.json();
+        const userId = userData.id;
+
+        // Hole mehr Playlists als das Limit, da wir filtern werden
+        const response = await fetch(`https://api.spotify.com/v1/me/playlists?limit=50`, {
             headers: { 'Authorization': 'Bearer ' + token }
         });
 
@@ -1550,8 +1559,14 @@ app.get('/spotify/playlists', async (req, res) => {
         }
 
         const data = await response.json();
+        
+        // Nur Playlists behalten, die dem User gehören oder kollaborativ sind
+        const editablePlaylists = (data.items || []).filter(playlist => 
+            playlist.owner.id === userId || playlist.collaborative === true
+        );
+        
         res.json({
-            playlists: (data.items || []).map(playlist => ({
+            playlists: editablePlaylists.slice(0, limit).map(playlist => ({
                 id: playlist.id,
                 name: playlist.name,
                 uri: playlist.uri,
@@ -1571,7 +1586,7 @@ app.post('/spotify/playlists/:id/tracks', async (req, res) => {
         if (!trackId) return res.status(400).json({ error: "trackId missing" });
         
         const token = await getSpotifyAccessToken();
-        const response = await fetch(`https://api.spotify.com/v1/playlists/${id}/tracks`, {
+        const response = await fetch(`https://api.spotify.com/v1/playlists/${id}/items`, {
             method: 'POST',
             headers: { 
                 'Authorization': 'Bearer ' + token,
