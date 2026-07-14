@@ -1822,6 +1822,16 @@ app.get('/spotify/excluded', (req, res) => {
     res.json({ excluded: loadSpotifyExcluded() });
 });
 
+app.get('/spotify/skipped', (req, res) => {
+    const skipped = loadSpotifySkipped();
+    let sortedSkipped = [...skipped].reverse();
+    const limit = parseInt(req.query.limit, 10);
+    if (limit && limit > 0) {
+        sortedSkipped = sortedSkipped.slice(0, limit);
+    }
+    res.json({ skipped: sortedSkipped });
+});
+
 app.post('/spotify/excluded/remove', (req, res) => {
     const { trackId } = req.body;
     if (!trackId) {
