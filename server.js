@@ -1088,6 +1088,36 @@ function saveSpotifyExcluded(excluded) {
     }
 }
 
+const SPOTIFY_SKIPPED_FILE = path.join(__dirname, 'spotify-skipped.json');
+let cachedSpotifySkipped = null;
+
+function loadSpotifySkipped() {
+    if (cachedSpotifySkipped !== null) return cachedSpotifySkipped;
+    try {
+        if (!fs.existsSync(SPOTIFY_SKIPPED_FILE)) {
+            cachedSpotifySkipped = [];
+            return cachedSpotifySkipped;
+        }
+        const data = fs.readFileSync(SPOTIFY_SKIPPED_FILE, 'utf8');
+        cachedSpotifySkipped = data ? JSON.parse(data) : [];
+        return cachedSpotifySkipped;
+    } catch (e) {
+        console.error('[Spotify Skipped] Fehler beim Laden:', e);
+        return [];
+    }
+}
+
+function saveSpotifySkipped(skipped) {
+    cachedSpotifySkipped = skipped;
+    try {
+        fs.writeFile(SPOTIFY_SKIPPED_FILE, JSON.stringify(skipped, null, 2), 'utf8', (err) => {
+            if (err) console.error('[Spotify Skipped] Fehler beim Speichern (async):', err.message);
+        });
+    } catch (e) {
+        console.error('[Spotify Skipped] Fehler beim Speichern:', e);
+    }
+}
+
 let currentSession = null;
 let lastDiscardedSession = null;
 
@@ -1392,6 +1422,15 @@ async function fetchAndCacheCurrentPlayback() {
                             playlistName = await getPlaylistNameCached(playlistId, token);
                         }
 
+                        // NEW SONG STARTED - definitively skipped previous discarded session
+                        if (lastDiscardedSession) {
+                            const skipped = loadSpotifySkipped();
+                            skipped.push(lastDiscardedSession);
+                            saveSpotifySkipped(skipped);
+                            console.log(`[Spotify Skipped] Endgültig als übersprungen markiert: "${lastDiscardedSession.title}"`);
+                            lastDiscardedSession = null;
+                        }
+
                         currentSession = {
                             id: `session-${Date.now()}-${Math.random().toString(16).slice(2)}`,
                             trackId: playback.item.id,
@@ -1513,12 +1552,40 @@ app.get('/spotify/playlists', async (req, res) => {
         const data = await response.json();
         res.json({
             playlists: (data.items || []).map(playlist => ({
+                id: playlist.id,
                 name: playlist.name,
                 uri: playlist.uri,
                 tracks: Number.isFinite(playlist.tracks?.total) ? playlist.tracks.total : null,
                 image: playlist.images?.[0]?.url || ''
             }))
         });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/spotify/playlists/:id/tracks', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { trackId } = req.body;
+        if (!trackId) return res.status(400).json({ error: "trackId missing" });
+        
+        const token = await getSpotifyAccessToken();
+        const response = await fetch(`https://api.spotify.com/v1/playlists/${id}/tracks`, {
+            method: 'POST',
+            headers: { 
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ uris: [`spotify:track:${trackId}`] })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            return res.status(response.status).json({ error: errorText || `Fehler beim Hinzufügen (${response.status})` });
+        }
+
+        res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

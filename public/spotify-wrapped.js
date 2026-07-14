@@ -1091,6 +1091,8 @@ function startWidgetAutoRefresh() {
                 // Skip refresh during selection to prevent losing selected items
             } else if (window._currentHdTab === 'excluded') {
                 if (typeof loadAndRenderExcludedSongs === 'function') loadAndRenderExcludedSongs();
+            } else if (window._currentHdTab === 'skipped') {
+                if (typeof loadAndRenderSkippedSongs === 'function') loadAndRenderSkippedSongs();
             } else {
                 initHistoryDesktopWidget();
             }
@@ -1180,6 +1182,10 @@ function showWrappedContextMenu(x, y, trackId, songTitle) {
                 transition: background 0.12s ease, color 0.12s ease;
             }
             .wrapped-context-item:hover {
+                background: rgba(56, 189, 248, 0.15);
+                color: #38bdf8;
+            }
+            .wrapped-context-item.danger:hover {
                 background: rgba(239, 68, 68, 0.15);
                 color: #fca5a5;
             }
@@ -1188,17 +1194,55 @@ function showWrappedContextMenu(x, y, trackId, songTitle) {
         document.body.appendChild(menu);
     }
     
-    menu.innerHTML = `
-        <button class="wrapped-context-item" id="btn-remove-track">
-            🗑️ "${escapeHTML(songTitle)}" ausschließen
-        </button>
-    `;
+    function renderMainMenu() {
+        menu.innerHTML = `
+            <button class="wrapped-context-item" id="btn-add-to-playlist">
+                ➕ Zu Playlist hinzufügen 
+                <span style="margin-left: auto;">▶</span>
+            </button>
+            <button class="wrapped-context-item danger" id="btn-remove-track">
+                🗑️ "${escapeHTML(songTitle)}" ausschließen
+            </button>
+        `;
+
+        menu.querySelector('#btn-remove-track').onclick = async (evt) => {
+            evt.stopPropagation();
+            menu.style.display = 'none';
+            if (confirm(`Möchtest du "${songTitle}" wirklich dauerhaft aus deinem Geschmacksprofil ausschließen?`)) {
+                await removeTrackFromHistory(trackId, songTitle);
+            }
+        };
+
+        menu.querySelector('#btn-add-to-playlist').onclick = async (evt) => {
+            evt.stopPropagation();
+            menu.innerHTML = `<div style="padding: 10px; color: rgba(255,255,255,0.5); font-size: 0.85rem; text-align: center;">Lade Playlists...</div>`;
+            try {
+                const res = await fetch('/spotify/playlists?limit=10&t=' + Date.now());
+                const data = await res.json();
+                if (!res.ok || !data.playlists) throw new Error(data.error || 'Fehler beim Laden');
+                
+                let html = `<div style="padding: 4px 8px; font-size: 0.75rem; color: rgba(255,255,255,0.4); font-weight: bold; text-transform: uppercase;">Zuletzt gehört</div>`;
+                data.playlists.forEach(pl => {
+                    html += `
+                        <button class="wrapped-context-item" onclick="addTrackToPlaylist('${pl.id}', '${trackId}', '${escapeHTML(pl.name)}')">
+                            <img src="${pl.image}" style="width: 24px; height: 24px; border-radius: 4px; object-fit: cover;">
+                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;">${escapeHTML(pl.name)}</span>
+                        </button>
+                    `;
+                });
+                menu.innerHTML = html;
+            } catch (err) {
+                menu.innerHTML = `<div style="padding: 10px; color: #ff453a; font-size: 0.85rem; text-align: center;">${err.message}</div>`;
+            }
+        };
+    }
     
+    renderMainMenu();
     menu.style.display = 'flex';
     
     // Boundary check so the menu stays on screen
     const menuWidth = 250;
-    const menuHeight = 44;
+    const menuHeight = 250; // allow more height for playlists
     const winWidth = window.innerWidth;
     const winHeight = window.innerHeight;
     
@@ -1209,20 +1253,27 @@ function showWrappedContextMenu(x, y, trackId, songTitle) {
         left = winWidth - menuWidth - 10;
     }
     if (y + menuHeight > winHeight) {
-        top = winHeight - menuHeight - 10;
+        top = Math.max(10, winHeight - menuHeight - 10);
     }
     
     menu.style.left = `${left}px`;
     menu.style.top = `${top}px`;
     
-    // Action handler
-    const btn = menu.querySelector('#btn-remove-track');
-    btn.onclick = async function(evt) {
-        evt.stopPropagation();
-        menu.style.display = 'none';
-        
-        if (confirm(`Möchtest du "${songTitle}" wirklich dauerhaft aus deinem Geschmacksprofil ausschließen?`)) {
-            await removeTrackFromHistory(trackId, songTitle);
+    // Global function to add track
+    window.addTrackToPlaylist = async function(playlistId, trId, plName) {
+        menu.innerHTML = `<div style="padding: 10px; color: #38bdf8; font-size: 0.85rem; text-align: center;">Hinzufügen...</div>`;
+        try {
+            const res = await fetch(`/spotify/playlists/${playlistId}/tracks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trackId: trId })
+            });
+            if (!res.ok) throw new Error('Fehler');
+            menu.innerHTML = `<div style="padding: 10px; color: #34c759; font-size: 0.85rem; text-align: center;">✅ Hinzugefügt zu ${plName}</div>`;
+            setTimeout(() => { menu.style.display = 'none'; }, 1500);
+        } catch (e) {
+            menu.innerHTML = `<div style="padding: 10px; color: #ff453a; font-size: 0.85rem; text-align: center;">❌ Fehler beim Hinzufügen</div>`;
+            setTimeout(() => { menu.style.display = 'none'; }, 2000);
         }
     };
     
@@ -1433,30 +1484,83 @@ window._currentHdTab = 'history';
 function switchHdTab(tabName) {
     window._currentHdTab = tabName;
     const historyTabBtn = document.getElementById('hd-tab-history');
+    const skippedTabBtn = document.getElementById('hd-tab-skipped');
     const excludedTabBtn = document.getElementById('hd-tab-excluded');
+    
     const historyContainer = document.getElementById('history-desktop-container');
+    const skippedContainer = document.getElementById('history-skipped-container');
     const excludedContainer = document.getElementById('history-excluded-container');
+    
     const filterBar = document.querySelector('.hd-filter-bar');
     const resultInfo = document.getElementById('hd-result-info');
 
+    if (historyTabBtn) historyTabBtn.classList.toggle('active', tabName === 'history');
+    if (skippedTabBtn) skippedTabBtn.classList.toggle('active', tabName === 'skipped');
+    if (excludedTabBtn) excludedTabBtn.classList.toggle('active', tabName === 'excluded');
+    
+    if (historyContainer) historyContainer.style.display = (tabName === 'history') ? 'block' : 'none';
+    if (skippedContainer) skippedContainer.style.display = (tabName === 'skipped') ? 'block' : 'none';
+    if (excludedContainer) excludedContainer.style.display = (tabName === 'excluded') ? 'block' : 'none';
+    
+    if (filterBar) filterBar.style.display = (tabName === 'history') ? 'flex' : 'none';
+
     if (tabName === 'history') {
-        if (historyTabBtn) historyTabBtn.classList.add('active');
-        if (excludedTabBtn) excludedTabBtn.classList.remove('active');
-        if (historyContainer) historyContainer.style.display = 'block';
-        if (excludedContainer) excludedContainer.style.display = 'none';
-        if (filterBar) filterBar.style.display = 'flex';
         hdRenderFilteredHistory();
     } else if (tabName === 'excluded') {
-        if (historyTabBtn) historyTabBtn.classList.remove('active');
-        if (excludedTabBtn) excludedTabBtn.classList.add('active');
-        if (historyContainer) historyContainer.style.display = 'none';
-        if (excludedContainer) excludedContainer.style.display = 'block';
-        if (filterBar) filterBar.style.display = 'none';
         if (resultInfo) resultInfo.classList.remove('visible');
         loadAndRenderExcludedSongs();
+    } else if (tabName === 'skipped') {
+        if (resultInfo) resultInfo.classList.remove('visible');
+        loadAndRenderSkippedSongs();
     }
 }
 window.switchHdTab = switchHdTab;
+
+async function loadAndRenderSkippedSongs() {
+    const container = document.getElementById('history-skipped-container');
+    const totalCountEl = document.getElementById('hd-total-count');
+    if (!container) return;
+    try {
+        const response = await fetch('/spotify/skipped');
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        const skipped = data.skipped || [];
+        
+        if (totalCountEl) totalCountEl.textContent = `${skipped.length} Einträge`;
+        
+        if (skipped.length === 0) {
+            container.innerHTML = '<div class="hd-empty">Keine übersprungenen Songs gefunden.</div>';
+            return;
+        }
+
+        const fallbackCover = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='44' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.2)' stroke-width='2'><circle cx='12' cy='12' r='10'/></svg>";
+        
+        const itemsHtml = skipped.map(item => {
+            const coverUrl = item.albumImg || fallbackCover;
+            const artists = Array.isArray(item.artists) ? item.artists.join(', ') : item.artists;
+            const date = new Date(item.timestamp);
+            const dateStr = date.toLocaleDateString('de-DE') + ' ' + date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            return `
+                <div class="hd-item" style="cursor:default;">
+                    <img src="${coverUrl}" class="hd-cover" alt="" onerror="this.src='${fallbackCover}';">
+                    <div class="hd-details">
+                        <div class="hd-title" style="color: #ff9f0a;">${escapeHTML(item.title)}</div>
+                        <div class="hd-artist">${escapeHTML(artists)}</div>
+                    </div>
+                    <div class="hd-meta">
+                        <div class="hd-time">${dateStr}</div>
+                        <div class="hd-duration" style="color:#ff453a;">⏱️ ${Math.round(item.listenedMs / 1000)}s gehört</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = `<div class="hd-grid" style="margin-top: 10px;">${itemsHtml}</div>`;
+    } catch (err) {
+        console.error('[Skipped Songs] Fehler:', err);
+        container.innerHTML = '<div class="hd-empty" style="color: #ff453a;">Fehler beim Laden der übersprungenen Songs.</div>';
+    }
+}
 
 async function loadAndRenderExcludedSongs() {
     const container = document.getElementById('history-excluded-container');

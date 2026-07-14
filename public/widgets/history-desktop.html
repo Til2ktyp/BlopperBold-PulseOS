@@ -364,6 +364,7 @@
             <h1>📜 Musik-Verlauf</h1>
             <div class="hd-tabs">
                 <button id="hd-tab-history" class="hd-tab-btn active" onclick="switchHdTab('history')">Verlauf</button>
+                <button id="hd-tab-skipped" class="hd-tab-btn" onclick="switchHdTab('skipped')">Übersprungen</button>
                 <button id="hd-tab-excluded" class="hd-tab-btn" onclick="switchHdTab('excluded')">Ignoriert</button>
                 <button id="hd-selection-mode-btn" class="hd-restore-btn" onclick="toggleSelectionMode()" style="margin-left: auto; background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.3); color: #38bdf8;">Auswahl</button>
             </div>
@@ -417,6 +418,9 @@
         </div>
         <div id="history-excluded-container" style="display: none;">
             <div class="hd-empty">Lade ignorierte Songs...</div>
+        </div>
+        <div id="history-skipped-container" style="display: none;">
+            <div class="hd-empty">Lade übersprungene Songs...</div>
         </div>
     </div>
 </div>
