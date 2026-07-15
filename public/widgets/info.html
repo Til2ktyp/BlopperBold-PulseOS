@@ -21,4 +21,21 @@
         <span id="migrateBtnText">Lieder auf AfDBook migrieren (Gedrückt halten)</span>
         <div id="migrateProgress" style="position: absolute; bottom: 0; left: 0; height: 5px; width: 0%; background: #38bdf8; transition: width 3s linear;"></div>
     </button>
+
+    <div style="margin-top: 20px; padding: 20px 30px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <div style="font-size: 1.2rem; font-weight: 600; color: white;">Spotify "Kein Gerät" Log</div>
+            <div style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-top: 4px;">Aktiviert oder deaktiviert den Log in der Konsole</div>
+        </div>
+        <label class="switch" style="position: relative; display: inline-block; width: 60px; height: 34px;">
+            <input type="checkbox" id="spotifyLogToggle" style="opacity: 0; width: 0; height: 0;">
+            <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #4a4a4a; transition: .4s; border-radius: 34px;">
+                <style>
+                    #spotifyLogToggle:checked + .slider { background-color: #667eea; }
+                    #spotifyLogToggle:checked + .slider:before { transform: translateX(26px); }
+                    .slider:before { position: absolute; content: ''; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+                </style>
+            </span>
+        </label>
+    </div>
 </div>

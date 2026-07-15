@@ -1384,6 +1384,27 @@ function initInfoWidget() {
     migrateBtn.addEventListener('mousedown', startPress);
     migrateBtn.addEventListener('mouseup', cancelPress);
     migrateBtn.addEventListener('mouseleave', cancelPress);
+    
+    // --- Spotify Log Toggle ---
+    const spotifyLogToggle = document.getElementById('spotifyLogToggle');
+    if (spotifyLogToggle) {
+        // Initiale Stellung abrufen
+        fetch('/settings/spotify-logging')
+            .then(res => res.json())
+            .then(data => {
+                spotifyLogToggle.checked = data.enabled;
+            })
+            .catch(console.error);
+
+        // Auf Änderungen reagieren
+        spotifyLogToggle.addEventListener('change', function() {
+            fetch('/settings/spotify-logging/toggle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: this.checked })
+            }).catch(console.error);
+        });
+    }
 }
 
 function initCalendarWidget() {

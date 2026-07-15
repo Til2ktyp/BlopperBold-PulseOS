@@ -8,6 +8,7 @@ const app = express();
 const PORT = 3000;
 
 const PulseOSVERSION = "26.5.1111";
+let logSpotify204 = true;
 
 // WICHTIG: Erlaubt Express, JSON-Daten (z.B. vom Handy) zu lesen
 app.use(express.json());
@@ -1360,7 +1361,9 @@ async function fetchAndCacheCurrentPlayback() {
 
         if (resPlayback.status === 204 || resPlayback.status > 400) {
             finalizeCurrentSession();
-            console.log("ℹ️ Spotify sagt: Kein aktives Gerät oder Wiedergabe pausiert (Status " + resPlayback.status + ")");
+            if (logSpotify204) {
+                console.log("ℹ️ Spotify sagt: Kein aktives Gerät oder Wiedergabe pausiert (Status " + resPlayback.status + ")");
+            }
             sendToClients({
                 action: 'spotify-unavailable',
                 reason: resPlayback.status === 204 ? 'no_device' : 'playback_error'
@@ -2860,6 +2863,20 @@ app.post('/watchface/active', (req, res) => {
     saveClientWatchfaces(data);
     console.log(`[Server] Client ${clientIp} hat Ziffernblatt auf Index ${activeWatchface} gesetzt.`);
     res.json({ success: true });
+});
+
+app.get('/settings/spotify-logging', (req, res) => {
+    res.json({ enabled: logSpotify204 });
+});
+
+app.post('/settings/spotify-logging/toggle', (req, res) => {
+    const { enabled } = req.body;
+    if (enabled !== undefined) {
+        logSpotify204 = enabled;
+    } else {
+        logSpotify204 = !logSpotify204;
+    }
+    res.json({ success: true, enabled: logSpotify204 });
 });
 
 app.get('/server/running', (req, res) => {
