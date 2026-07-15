@@ -1389,6 +1389,7 @@ function initInfoWidget() {
     const logToggles = [
         { id: 'spotifyLogToggle', key: 'spotify204' },
         { id: 'spotifyHistoryToggle', key: 'spotifyHistory' },
+        { id: 'spotifySkippedToggle', key: 'spotifySkipped' },
         { id: 'displayLogToggle', key: 'display' },
         { id: 'sseLogToggle', key: 'sse' }
     ];

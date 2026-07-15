@@ -23,19 +23,22 @@
     </button>
 
     <style>
-        .log-switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+        .log-switch { position: relative; display: inline-block; width: 60px; height: 34px; flex-shrink: 0; }
         .log-switch input { opacity: 0; width: 0; height: 0; }
         .log-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #4a4a4a; transition: .4s; border-radius: 34px; }
         .log-slider:before { position: absolute; content: ''; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .log-switch input:checked + .log-slider { background-color: #667eea; }
         .log-switch input:checked + .log-slider:before { transform: translateX(26px); }
-        .log-row { margin-top: 15px; padding: 20px 30px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .log-group-title { color: white; margin-top: 30px; margin-bottom: 10px; font-size: 1.4rem; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; }
+        .log-row { margin-top: 10px; padding: 20px 30px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
     </style>
 
-    <div class="log-row" style="margin-top: 20px;">
+    <div class="log-group-title">Spotify Logs</div>
+
+    <div class="log-row">
         <div>
             <div style="font-size: 1.2rem; font-weight: 600; color: white;">Spotify "Kein Gerät" Log</div>
-            <div style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-top: 4px;">Konsole-Spam (Status 204)</div>
+            <div style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-top: 4px;">Verhindert Konsole-Spam (Status 204), wenn kein Gerät aktiv ist.</div>
         </div>
         <label class="log-switch">
             <input type="checkbox" id="spotifyLogToggle">
@@ -46,7 +49,7 @@
     <div class="log-row">
         <div>
             <div style="font-size: 1.2rem; font-weight: 600; color: white;">Spotify History Log</div>
-            <div style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-top: 4px;">Konsole-Logs für den Wiedergabeverlauf</div>
+            <div style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-top: 4px;">Konsole-Logs für den Wiedergabeverlauf (Gespeicherte Sessions).</div>
         </div>
         <label class="log-switch">
             <input type="checkbox" id="spotifyHistoryToggle">
@@ -56,8 +59,21 @@
 
     <div class="log-row">
         <div>
+            <div style="font-size: 1.2rem; font-weight: 600; color: white;">Spotify Skipped Log</div>
+            <div style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-top: 4px;">Zeigt an, wenn Lieder übersprungen wurden.</div>
+        </div>
+        <label class="log-switch">
+            <input type="checkbox" id="spotifySkippedToggle">
+            <span class="log-slider"></span>
+        </label>
+    </div>
+
+    <div class="log-group-title">System Logs</div>
+
+    <div class="log-row">
+        <div>
             <div style="font-size: 1.2rem; font-weight: 600; color: white;">Display Log</div>
-            <div style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-top: 4px;">Konsole-Logs für Display-Zuweisungen</div>
+            <div style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-top: 4px;">Konsole-Logs für Display-Zuweisungen und Identifikation.</div>
         </div>
         <label class="log-switch">
             <input type="checkbox" id="displayLogToggle">
@@ -68,7 +84,7 @@
     <div class="log-row">
         <div>
             <div style="font-size: 1.2rem; font-weight: 600; color: white;">SSE Log</div>
-            <div style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-top: 4px;">Konsole-Logs für Server-Sent Events</div>
+            <div style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-top: 4px;">Konsole-Logs für Server-Sent Events (Live-Updates).</div>
         </div>
         <label class="log-switch">
             <input type="checkbox" id="sseLogToggle">

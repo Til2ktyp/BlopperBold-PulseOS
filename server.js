@@ -12,11 +12,11 @@ const PulseOSVERSION = "26.5.1111";
 const LOG_SETTINGS_FILE = path.join(__dirname, 'log-settings.json');
 function loadLogSettings() {
     try {
-        if (!fs.existsSync(LOG_SETTINGS_FILE)) return { spotify204: true, spotifyHistory: true, display: true, sse: true };
+        if (!fs.existsSync(LOG_SETTINGS_FILE)) return { spotify204: true, spotifyHistory: true, spotifySkipped: true, display: true, sse: true };
         const data = fs.readFileSync(LOG_SETTINGS_FILE, 'utf8');
-        return data ? JSON.parse(data) : { spotify204: true, spotifyHistory: true, display: true, sse: true };
+        return data ? JSON.parse(data) : { spotify204: true, spotifyHistory: true, spotifySkipped: true, display: true, sse: true };
     } catch(e) {
-        return { spotify204: true, spotifyHistory: true, display: true, sse: true };
+        return { spotify204: true, spotifyHistory: true, spotifySkipped: true, display: true, sse: true };
     }
 }
 function saveLogSettings(settings) {
@@ -28,6 +28,7 @@ function saveLogSettings(settings) {
 const logSettings = loadLogSettings();
 let logSpotify204 = logSettings.spotify204 !== false;
 let logSpotifyHistory = logSettings.spotifyHistory !== false;
+let logSpotifySkipped = logSettings.spotifySkipped !== false;
 let logDisplay = logSettings.display !== false;
 let logSSE = logSettings.sse !== false;
 
@@ -39,6 +40,7 @@ function filterLog(args) {
     if (args.length > 0 && typeof args[0] === 'string') {
         const msg = args[0];
         if (!logSpotifyHistory && msg.includes('[Spotify History]')) return true;
+        if (!logSpotifySkipped && msg.includes('[Spotify Skipped]')) return true;
         if (!logDisplay && msg.includes('[Display]')) return true;
         if (!logSSE && msg.includes('[SSE]')) return true;
         if (!logSpotify204 && msg.includes('Spotify sagt: Kein aktives Gerät')) return true;
@@ -2920,6 +2922,7 @@ app.get('/settings/logs', (req, res) => {
     res.json({
         spotify204: logSpotify204,
         spotifyHistory: logSpotifyHistory,
+        spotifySkipped: logSpotifySkipped,
         display: logDisplay,
         sse: logSSE
     });
@@ -2929,12 +2932,14 @@ app.post('/settings/logs/toggle', (req, res) => {
     const { key, enabled } = req.body;
     if (key === 'spotify204') logSpotify204 = enabled;
     else if (key === 'spotifyHistory') logSpotifyHistory = enabled;
+    else if (key === 'spotifySkipped') logSpotifySkipped = enabled;
     else if (key === 'display') logDisplay = enabled;
     else if (key === 'sse') logSSE = enabled;
     
     saveLogSettings({
         spotify204: logSpotify204,
         spotifyHistory: logSpotifyHistory,
+        spotifySkipped: logSpotifySkipped,
         display: logDisplay,
         sse: logSSE
     });
