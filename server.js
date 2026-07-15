@@ -2947,9 +2947,31 @@ app.post('/settings/logs/toggle', (req, res) => {
     res.json({ success: true, [key]: enabled });
 });
 
+let lastWatchdogPing = Date.now();
+let watchdogRestarting = false;
+
 app.get('/server/running', (req, res) => {
+    lastWatchdogPing = Date.now();
     res.status(200).send('OK');
 });
+
+function restartWatchdog() {
+    console.log("[Server] ⚠️ Watchdog antwortet nicht! Starte watchdog.py neu...");
+    const os = require('os');
+    const { exec } = require('child_process');
+    const platform = os.platform();
+    const cwd = __dirname;
+    
+    if (platform === 'darwin') {
+        const appleScript = `tell application "Terminal" to do script "cd '${cwd}' && python3 watchdog.py"`;
+        exec(`osascript -e '${appleScript}'`);
+    } else if (platform === 'win32') {
+        exec(`start cmd /k "python watchdog.py"`, { cwd: cwd });
+    } else {
+        const spawn = require('child_process').spawn;
+        spawn('python3', ['watchdog.py'], { cwd: cwd, detached: true, stdio: 'ignore' }).unref();
+    }
+}
 
 // --- SERVER START ---
 app.listen(PORT, () => {
@@ -2960,6 +2982,20 @@ app.listen(PORT, () => {
         checkStoredReminders();
         checkPlaylistRotationScheduling();
     }, 60 * 1000);
+
+    // Watchdog Checker
+    setInterval(() => {
+        if (Date.now() - lastWatchdogPing > 15000 && !watchdogRestarting) {
+            restartWatchdog();
+            watchdogRestarting = true;
+            
+            // Blockiere weitere Neustarts für 15 Sekunden
+            setTimeout(() => {
+                lastWatchdogPing = Date.now();
+                watchdogRestarting = false;
+            }, 15000);
+        }
+    }, 5000);
     if (SPOTIFY_REFRESH_TOKEN) {
         startSpotifyPolling();
     } else {
