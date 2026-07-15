@@ -8,10 +8,28 @@ const app = express();
 const PORT = 3000;
 
 const PulseOSVERSION = "26.5.1111";
-let logSpotify204 = true;
-let logSpotifyHistory = true;
-let logDisplay = true;
-let logSSE = true;
+
+const LOG_SETTINGS_FILE = path.join(__dirname, 'log-settings.json');
+function loadLogSettings() {
+    try {
+        if (!fs.existsSync(LOG_SETTINGS_FILE)) return { spotify204: true, spotifyHistory: true, display: true, sse: true };
+        const data = fs.readFileSync(LOG_SETTINGS_FILE, 'utf8');
+        return data ? JSON.parse(data) : { spotify204: true, spotifyHistory: true, display: true, sse: true };
+    } catch(e) {
+        return { spotify204: true, spotifyHistory: true, display: true, sse: true };
+    }
+}
+function saveLogSettings(settings) {
+    try {
+        fs.writeFileSync(LOG_SETTINGS_FILE, JSON.stringify(settings, null, 2));
+    } catch(e) {}
+}
+
+const logSettings = loadLogSettings();
+let logSpotify204 = logSettings.spotify204 !== false;
+let logSpotifyHistory = logSettings.spotifyHistory !== false;
+let logDisplay = logSettings.display !== false;
+let logSSE = logSettings.sse !== false;
 
 const originalConsoleLog = console.log;
 const originalConsoleError = console.error;
@@ -2913,6 +2931,14 @@ app.post('/settings/logs/toggle', (req, res) => {
     else if (key === 'spotifyHistory') logSpotifyHistory = enabled;
     else if (key === 'display') logDisplay = enabled;
     else if (key === 'sse') logSSE = enabled;
+    
+    saveLogSettings({
+        spotify204: logSpotify204,
+        spotifyHistory: logSpotifyHistory,
+        display: logDisplay,
+        sse: logSSE
+    });
+    
     res.json({ success: true, [key]: enabled });
 });
 
