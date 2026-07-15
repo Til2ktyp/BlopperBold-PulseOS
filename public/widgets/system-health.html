@@ -1,0 +1,96 @@
+<div class="widget-item" style="display: flex; flex-direction: column; height: 100%; box-sizing: border-box; padding: 25px;">
+    <!-- Hintergrund (Gradient & Blur) -->
+    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; border-radius: 28px; overflow: hidden;">
+        <!-- Animierter Gradient -->
+        <div class="gradient-bg" style="position: absolute; top: -50%; left: -50%; right: -50%; bottom: -50%; background: linear-gradient(120deg, rgba(20,20,30,0.8) 0%, rgba(30,40,60,0.8) 50%, rgba(20,20,30,0.8) 100%); background-size: 200% 200%; animation: gradientMove 15s ease infinite;"></div>
+        <!-- Glas-Effekt drüber -->
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);"></div>
+    </div>
+
+    <!-- Inhalt (vor dem Hintergrund) -->
+    <div style="position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column;">
+        
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-server" style="color: #667eea; font-size: 14px;"></i>
+                </div>
+                <h3 style="margin: 0; color: white; font-size: 1.1rem; font-weight: 600;">System Health</h3>
+            </div>
+            <div id="health-status-badge" style="background: rgba(46, 213, 115, 0.2); color: #2ed573; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                <div style="width: 6px; height: 6px; background: #2ed573; border-radius: 50%; box-shadow: 0 0 10px #2ed573;"></div>
+                Online
+            </div>
+        </div>
+
+        <style>
+            .health-stat-box {
+                background: rgba(255,255,255,0.05);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 16px;
+                padding: 15px;
+                flex: 1;
+            }
+            .health-stat-title {
+                color: rgba(255,255,255,0.5);
+                font-size: 0.85rem;
+                margin-bottom: 8px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .health-stat-value {
+                color: white;
+                font-size: 1.3rem;
+                font-weight: 700;
+            }
+            .health-progress-bg {
+                background: rgba(255,255,255,0.1);
+                height: 6px;
+                border-radius: 3px;
+                margin-top: 10px;
+                overflow: hidden;
+            }
+            .health-progress-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #667eea, #764ba2);
+                border-radius: 3px;
+                transition: width 0.5s ease-out;
+            }
+        </style>
+
+        <!-- Stats Row -->
+        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+            <div class="health-stat-box">
+                <div class="health-stat-title"><i class="fas fa-clock"></i> Uptime</div>
+                <div class="health-stat-value" id="health-uptime">--:--:--</div>
+                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 4px;">Laufzeit</div>
+            </div>
+            <div class="health-stat-box">
+                <div class="health-stat-title"><i class="fas fa-memory"></i> RAM (Heap)</div>
+                <div class="health-stat-value" id="health-ram-text">-- MB</div>
+                <div class="health-progress-bg">
+                    <div class="health-progress-fill" id="health-ram-bar" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 15px; margin-bottom: auto;">
+            <div class="health-stat-box">
+                <div class="health-stat-title"><i class="fas fa-bug"></i> Crashes</div>
+                <div class="health-stat-value" id="health-crashes" style="color: #ff4757;">0</div>
+                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 4px;" id="health-backup">Backup: --</div>
+            </div>
+        </div>
+
+        <!-- Latest Crash Report -->
+        <div style="margin-top: 20px; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 15px; border: 1px solid rgba(255,71,87,0.2);">
+            <div style="color: #ff4757; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                <i class="fas fa-exclamation-triangle"></i> Letzter Crash Report
+            </div>
+            <div id="health-crash-report" style="color: rgba(255,255,255,0.7); font-size: 0.75rem; font-family: monospace; white-space: pre-wrap; overflow-y: auto; max-height: 80px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent;">Keine Abstürze in den Logs gefunden. System läuft stabil.</div>
+        </div>
+
+    </div>
+</div>

@@ -1288,6 +1288,52 @@ async function syncCalendarEvents() {
         if (syncState) syncState.textContent = 'Sync fehlgeschlagen';
     }
 }
+function initSystemHealthWidget() {
+    const uptimeEl = document.getElementById('health-uptime');
+    const ramTextEl = document.getElementById('health-ram-text');
+    const ramBarEl = document.getElementById('health-ram-bar');
+    const crashesEl = document.getElementById('health-crashes');
+    const backupEl = document.getElementById('health-backup');
+    const crashReportEl = document.getElementById('health-crash-report');
+    if (!uptimeEl) return;
+
+    function formatUptime(seconds) {
+        const d = Math.floor(seconds / (3600*24));
+        const h = Math.floor(seconds % (3600*24) / 3600);
+        const m = Math.floor(seconds % 3600 / 60);
+        const s = Math.floor(seconds % 60);
+        if (d > 0) return `${d}d ${h}h ${m}m`;
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+
+    function updateHealth() {
+        fetch('/system/health')
+            .then(res => res.json())
+            .then(data => {
+                uptimeEl.textContent = formatUptime(data.uptime);
+                
+                const usedMb = Math.round(data.memory.heapUsed / 1024 / 1024);
+                const totalMb = Math.round(data.memory.heapTotal / 1024 / 1024);
+                ramTextEl.textContent = `${usedMb} MB`;
+                
+                const percent = Math.min(100, Math.round((usedMb / totalMb) * 100));
+                ramBarEl.style.width = `${percent}%`;
+                
+                crashesEl.textContent = data.crashCount;
+                backupEl.textContent = `Backup: ${data.lastBackup}`;
+                
+                if (data.crashReport) {
+                    crashReportEl.textContent = data.crashReport;
+                }
+            })
+            .catch(err => console.error("Fehler beim Laden der System-Health Daten:", err));
+    }
+    
+    updateHealth();
+    
+    if (window.systemHealthInterval) clearInterval(window.systemHealthInterval);
+    window.systemHealthInterval = setInterval(updateHealth, 5000);
+}
 
 function initInfoWidget() {
     const migrateBtn = document.getElementById('migrateBtn');
@@ -1507,6 +1553,10 @@ function initDynamicWidget(widgetName) {
 
     if (widgetName === 'info' || document.getElementById('migrateBtn')) {
         setTimeout(initInfoWidget, 0);
+    }
+
+    if (widgetName === 'system-health' || document.getElementById('health-uptime')) {
+        setTimeout(initSystemHealthWidget, 0);
     }
 
     if (widgetName === 'custom-mix-desktop' || document.getElementById('custom-mix-desktop-container')) {

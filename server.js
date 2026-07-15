@@ -2950,13 +2950,65 @@ app.post('/settings/logs/toggle', (req, res) => {
 let lastWatchdogPing = Date.now();
 let watchdogRestarting = false;
 
+app.get('/system/health', (req, res) => {
+    const os = require('os');
+    let crashReport = null;
+    let crashCount = 0;
+    try {
+        const crashFile = path.join(__dirname, 'crash-report.log');
+        if (fs.existsSync(crashFile)) {
+            crashReport = fs.readFileSync(crashFile, 'utf8');
+            crashCount = (crashReport.match(/Uncaught Exception|Unhandled Rejection/gi) || []).length;
+            if (crashReport.length > 5000) {
+                crashReport = crashReport.substring(crashReport.length - 5000);
+            }
+        }
+    } catch(e) {}
+
+    res.json({
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        osFreeMem: os.freemem(),
+        osTotalMem: os.totalmem(),
+        cpuUsage: process.cpuUsage(),
+        lastBackup: lastBackupDate || "Kein Backup in dieser Session",
+        crashReport: crashReport,
+        crashCount: crashCount
+    });
+});
+
 app.get('/server/running', (req, res) => {
     lastWatchdogPing = Date.now();
     res.status(200).send('OK');
 });
 
+const https = require('https');
+
+function sendNtfyAlert(message) {
+    try {
+        const data = Buffer.from(message, 'utf8');
+        const options = {
+            hostname: 'ntfy.sh',
+            path: '/bakasempai2ktyppulseos',
+            method: 'POST',
+            headers: {
+                'Title': 'PulseOS Server',
+                'Tags': 'warning,robot',
+                'Content-Length': data.length
+            }
+        };
+        const req = https.request(options, res => {});
+        req.on('error', e => console.error("[Server] Ntfy Error:", e.message));
+        req.write(data);
+        req.end();
+    } catch(e) {
+        console.error("[Server] Fehler beim Senden der Ntfy-Benachrichtigung:", e.message);
+    }
+}
+
 function restartWatchdog() {
     console.log("[Server] ⚠️ Watchdog antwortet nicht! Starte watchdog.py neu...");
+    sendNtfyAlert(`⚠️ PulseOS Watchdog antwortet nicht! Server startet ihn neu.`);
     const os = require('os');
     const { exec } = require('child_process');
     const platform = os.platform();
@@ -2973,6 +3025,72 @@ function restartWatchdog() {
     }
 }
 
+// --- CRASH REPORTING ---
+process.on('uncaughtException', (err) => {
+    console.error('FATAL ERROR (uncaughtException):', err);
+    try {
+        const time = new Date().toLocaleString('de-DE');
+        fs.writeFileSync(path.join(__dirname, 'crash-report.log'), `[${time}] Uncaught Exception:\n${err.stack || err}\n`);
+        sendNtfyAlert(`🔥 PulseOS Server ist komplett abgestürzt!\nGrund: ${err.message}`);
+    } catch(e) {}
+    process.exit(1); // Beende den Prozess, damit Watchdog übernehmen kann
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('FATAL ERROR (unhandledRejection):', reason);
+    try {
+        const time = new Date().toLocaleString('de-DE');
+        fs.writeFileSync(path.join(__dirname, 'crash-report.log'), `[${time}] Unhandled Rejection:\n${reason.stack || reason}\n`);
+        sendNtfyAlert(`🔥 PulseOS Server ist komplett abgestürzt (Unhandled Rejection)!\nGrund: ${reason.message || reason}`);
+    } catch(e) {}
+    process.exit(1);
+});
+
+// --- DAILY BACKUP SYSTEM ---
+let lastBackupDate = null;
+
+function performDailyBackup() {
+    console.log("[Server] Starte tägliches Backup...");
+    const backupDir = path.join(__dirname, 'backups');
+    const dateStr = new Date().toISOString().split('T')[0];
+    const todayDir = path.join(backupDir, `backup-${dateStr}`);
+
+    try {
+        if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir);
+        if (!fs.existsSync(todayDir)) fs.mkdirSync(todayDir);
+
+        const filesToBackup = [
+            'spotify-history.json',
+            'client-watchfaces.json',
+            'log-settings.json',
+            'spotify_tokens.json'
+        ];
+
+        filesToBackup.forEach(file => {
+            const src = path.join(__dirname, file);
+            const dest = path.join(todayDir, file);
+            if (fs.existsSync(src)) {
+                fs.copyFileSync(src, dest);
+            }
+        });
+        console.log(`[Server] Backup erfolgreich in ${todayDir} gespeichert.`);
+        lastBackupDate = dateStr;
+    } catch(err) {
+        console.error("[Server] Fehler beim Erstellen des Backups:", err.message);
+    }
+}
+
+function checkDailyBackup() {
+    const now = new Date();
+    // Wenn es zwischen 04:00 und 04:05 Uhr ist und heute noch kein Backup gemacht wurde
+    if (now.getHours() === 4 && now.getMinutes() < 5) {
+        const dateStr = now.toISOString().split('T')[0];
+        if (lastBackupDate !== dateStr) {
+            performDailyBackup();
+        }
+    }
+}
+
 // --- SERVER START ---
 app.listen(PORT, () => {
     console.log(`Server läuft auf http://localhost:${PORT}`);
@@ -2981,6 +3099,7 @@ app.listen(PORT, () => {
     setInterval(() => {
         checkStoredReminders();
         checkPlaylistRotationScheduling();
+        checkDailyBackup();
     }, 60 * 1000);
 
     // Watchdog Checker

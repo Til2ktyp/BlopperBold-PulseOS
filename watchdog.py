@@ -37,6 +37,16 @@ def check_for_setting_changes():
     if current_settings:
         last_settings = current_settings
 
+def send_ntfy_alert(message):
+    try:
+        ntfy_url = "https://ntfy.sh/bakasempai2ktyppulseos"
+        req = urllib.request.Request(ntfy_url, data=message.encode('utf-8'), method="POST")
+        req.add_header("Title", "PulseOS Watchdog")
+        req.add_header("Tags", "warning,robot")
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        print(f"Fehler beim Senden der Ntfy-Benachrichtigung: {e}")
+
 def is_server_running():
     try:
         # Kurzer Timeout, um nicht ewig zu warten wenn der Server down ist
@@ -85,6 +95,7 @@ if __name__ == "__main__":
         if not is_server_running():
             current_time = time.strftime('%H:%M:%S')
             print(f"[{current_time}] ⚠️ Server ist nicht erreichbar! Starte 'node server.js' neu...")
+            send_ntfy_alert(f"⚠️ PulseOS Server abgestürzt! Watchdog startet ihn um {current_time} Uhr neu.")
             open_terminal_and_run_node()
             
             print(f"[{current_time}] Warte {WAIT_AFTER_RESTART} Sekunden für den Bootvorgang...")
