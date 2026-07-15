@@ -1,0 +1,36 @@
+[
+  {
+    "id": "session-1784156303994-70ccdbc152401",
+    "trackId": "0gzEyaquSUNLBjhilDoOb6",
+    "title": "Castles",
+    "artists": [
+      "Freya Ridings"
+    ],
+    "playlistName": "Liked Songs",
+    "albumImg": "https://i.scdn.co/image/ab67616d0000b273b9158b61483f0d25ca3c5bfe",
+    "url": "https://open.spotify.com/track/0gzEyaquSUNLBjhilDoOb6",
+    "durationMs": 211840,
+    "listenedMs": 21006,
+    "timestamp": "2026-07-15T22:58:23.994Z",
+    "lastProgress": 22662,
+    "lastUpdated": 1784156324994,
+    "device": "AfDBook Pro von Til dem Juden"
+  },
+  {
+    "id": "session-1784156442088-fe4ca820eaecc",
+    "trackId": "5KSzv6Ho2Xw1k61SpM3l5n",
+    "title": "Wannsee",
+    "artists": [
+      "Die Toten Hosen"
+    ],
+    "playlistName": "Liked Songs",
+    "albumImg": "https://i.scdn.co/image/ab67616d0000b273948a0eb01d9473784223b7e4",
+    "url": "https://open.spotify.com/track/5KSzv6Ho2Xw1k61SpM3l5n",
+    "durationMs": 184440,
+    "listenedMs": 0,
+    "timestamp": "2026-07-15T23:00:42.088Z",
+    "lastProgress": 2632,
+    "lastUpdated": 1784156451192,
+    "device": "AfDBook Pro von Til dem Juden"
+  }
+]

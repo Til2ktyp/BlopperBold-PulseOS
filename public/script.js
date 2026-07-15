@@ -1292,6 +1292,10 @@ function initSystemHealthWidget() {
     const uptimeEl = document.getElementById('health-uptime');
     const ramTextEl = document.getElementById('health-ram-text');
     const ramBarEl = document.getElementById('health-ram-bar');
+    const cpuTextEl = document.getElementById('health-cpu-text');
+    const cpuBarEl = document.getElementById('health-cpu-bar');
+    const gpuTextEl = document.getElementById('health-gpu-text');
+    const gpuBarEl = document.getElementById('health-gpu-bar');
     const crashesEl = document.getElementById('health-crashes');
     const backupEl = document.getElementById('health-backup');
     const crashReportEl = document.getElementById('health-crash-report');
@@ -1316,8 +1320,21 @@ function initSystemHealthWidget() {
                 const totalMb = Math.round(data.memory.heapTotal / 1024 / 1024);
                 ramTextEl.textContent = `${usedMb} MB`;
                 
-                const percent = Math.min(100, Math.round((usedMb / totalMb) * 100));
-                ramBarEl.style.width = `${percent}%`;
+                const ramPercent = Math.min(100, Math.round((usedMb / totalMb) * 100));
+                ramBarEl.style.width = `${ramPercent}%`;
+
+                if (cpuTextEl) {
+                    cpuTextEl.textContent = `${data.cpuPercent} %`;
+                    cpuBarEl.style.width = `${data.cpuPercent}%`;
+                }
+
+                if (gpuTextEl) {
+                    gpuTextEl.textContent = data.gpuPercent;
+                    // GPU Bar default width if N/A
+                    if (gpuBarEl) {
+                        gpuBarEl.style.width = data.gpuPercent === "N/A" ? "0%" : `${parseInt(data.gpuPercent) || 0}%`;
+                    }
+                }
                 
                 crashesEl.textContent = data.crashCount;
                 backupEl.textContent = `Backup: ${data.lastBackup}`;

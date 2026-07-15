@@ -2950,8 +2950,30 @@ app.post('/settings/logs/toggle', (req, res) => {
 let lastWatchdogPing = Date.now();
 let watchdogRestarting = false;
 
+let previousCpuTime = null;
+
 app.get('/system/health', (req, res) => {
     const os = require('os');
+    
+    // CPU Usage berechnen
+    const cpus = os.cpus();
+    let totalIdle = 0, totalTick = 0;
+    for(let i = 0, len = cpus.length; i < len; i++) {
+        let cpu = cpus[i];
+        for(let type in cpu.times) {
+            totalTick += cpu.times[type];
+        }     
+        totalIdle += cpu.times.idle;
+    }
+    let currentCpuTime = { idle: totalIdle, total: totalTick };
+    let percentageCpu = 0;
+    if (previousCpuTime) {
+        let idleDifference = currentCpuTime.idle - previousCpuTime.idle;
+        let totalDifference = currentCpuTime.total - previousCpuTime.total;
+        percentageCpu = 100 - ~~(100 * idleDifference / totalDifference);
+    }
+    previousCpuTime = currentCpuTime;
+
     let crashReport = null;
     let crashCount = 0;
     try {
@@ -2971,7 +2993,8 @@ app.get('/system/health', (req, res) => {
         memory: process.memoryUsage(),
         osFreeMem: os.freemem(),
         osTotalMem: os.totalmem(),
-        cpuUsage: process.cpuUsage(),
+        cpuPercent: percentageCpu,
+        gpuPercent: "N/A",
         lastBackup: lastBackupDate || "Kein Backup in dieser Session",
         crashReport: crashReport || "Keine Abstürze in den Logs gefunden. System läuft stabil.",
         crashCount: crashCount

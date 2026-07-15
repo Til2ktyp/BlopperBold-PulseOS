@@ -78,6 +78,20 @@
 
         <div style="display: flex; gap: 15px; margin-bottom: auto;">
             <div class="health-stat-box">
+                <div class="health-stat-title"><i class="fas fa-microchip"></i> CPU</div>
+                <div class="health-stat-value" id="health-cpu-text">-- %</div>
+                <div class="health-progress-bg">
+                    <div class="health-progress-fill" id="health-cpu-bar" style="width: 0%; background: linear-gradient(90deg, #ff9a9e, #fecfef);"></div>
+                </div>
+            </div>
+            <div class="health-stat-box">
+                <div class="health-stat-title"><i class="fas fa-desktop"></i> GPU</div>
+                <div class="health-stat-value" id="health-gpu-text">-- %</div>
+                <div class="health-progress-bg">
+                    <div class="health-progress-fill" id="health-gpu-bar" style="width: 0%; background: linear-gradient(90deg, #a1c4fd, #c2e9fb);"></div>
+                </div>
+            </div>
+            <div class="health-stat-box">
                 <div class="health-stat-title"><i class="fas fa-bug"></i> Crashes</div>
                 <div class="health-stat-value" id="health-crashes" style="color: #ff4757;">0</div>
                 <div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 4px;" id="health-backup">Backup: --</div>
@@ -89,7 +103,7 @@
             <div style="color: #ff4757; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
                 <i class="fas fa-exclamation-triangle"></i> Letzter Crash Report
             </div>
-            <div id="health-crash-report" style="color: rgba(255,255,255,0.7); font-size: 0.75rem; font-family: monospace; white-space: pre-wrap; overflow-y: auto; max-height: 80px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent;">Keine Abstürze in den Logs gefunden. System läuft stabil.</div>
+            <div id="health-crash-report" style="color: rgba(255,255,255,0.7); font-size: 0.75rem; font-family: monospace; white-space: pre-wrap; overflow-y: auto; max-height: 180px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent;">Keine Abstürze in den Logs gefunden. System läuft stabil.</div>
         </div>
 
     </div>
