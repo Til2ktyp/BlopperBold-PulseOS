@@ -3016,6 +3016,7 @@ function sendNtfyAlert(message) {
 
 function restartWatchdog() {
     console.log("[Server] ⚠️ Watchdog antwortet nicht! Starte watchdog.py neu...");
+    saveCrashToJson('Watchdog Timeout', 'Watchdog hat nicht geantwortet', 'Server hat Watchdog neu gestartet');
     sendNtfyAlert(`⚠️ PulseOS Watchdog antwortet nicht! Server startet ihn neu.`);
     const os = require('os');
     const { exec } = require('child_process');

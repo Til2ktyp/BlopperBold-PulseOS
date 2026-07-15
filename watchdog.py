@@ -2,6 +2,8 @@ import os
 import sys
 import time
 import urllib.request
+import json
+import datetime
 import subprocess
 import json
 
@@ -59,6 +61,29 @@ def is_server_running():
         return False
     return False
 
+def log_crash_to_json():
+    try:
+        crash_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'crashes.json')
+        crashes = []
+        if os.path.exists(crash_file):
+            with open(crash_file, 'r', encoding='utf-8') as f:
+                try:
+                    crashes = json.load(f)
+                except:
+                    pass
+        
+        crashes.append({
+            "time": datetime.datetime.now().strftime("%d.%m.%Y, %H:%M:%S"),
+            "type": "Watchdog Restart",
+            "reason": "Server hat auf Ping nicht geantwortet",
+            "stack": "Kein Stacktrace vorhanden (Watchdog hat den Server als offline erkannt und einen Neustart erzwungen)"
+        })
+        
+        with open(crash_file, 'w', encoding='utf-8') as f:
+            json.dump(crashes, f, indent=2)
+    except Exception as e:
+        print(f"Fehler beim Schreiben in crashes.json: {e}")
+
 def open_terminal_and_run_node():
     cwd = os.path.dirname(os.path.abspath(__file__))
     
@@ -96,6 +121,7 @@ if __name__ == "__main__":
             current_time = time.strftime('%H:%M:%S')
             print(f"[{current_time}] ⚠️ Server ist nicht erreichbar! Starte 'node server.js' neu...")
             send_ntfy_alert(f"⚠️ PulseOS Server abgestürzt! Watchdog startet ihn um {current_time} Uhr neu.")
+            log_crash_to_json()
             open_terminal_and_run_node()
             
             print(f"[{current_time}] Warte {WAIT_AFTER_RESTART} Sekunden für den Bootvorgang...")
