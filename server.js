@@ -2955,12 +2955,13 @@ app.get('/system/health', (req, res) => {
     let crashReport = null;
     let crashCount = 0;
     try {
-        const crashFile = path.join(__dirname, 'crash-report.log');
+        const crashFile = path.join(__dirname, 'crashes.json');
         if (fs.existsSync(crashFile)) {
-            crashReport = fs.readFileSync(crashFile, 'utf8');
-            crashCount = (crashReport.match(/Uncaught Exception|Unhandled Rejection/gi) || []).length;
-            if (crashReport.length > 5000) {
-                crashReport = crashReport.substring(crashReport.length - 5000);
+            const crashes = JSON.parse(fs.readFileSync(crashFile, 'utf8'));
+            crashCount = crashes.length;
+            if (crashCount > 0) {
+                const latest = crashes[crashCount - 1];
+                crashReport = `[${latest.time}] ${latest.type}\nReason: ${latest.reason}\n\nStacktrace:\n${latest.stack}`;
             }
         }
     } catch(e) {}
@@ -2972,7 +2973,7 @@ app.get('/system/health', (req, res) => {
         osTotalMem: os.totalmem(),
         cpuUsage: process.cpuUsage(),
         lastBackup: lastBackupDate || "Kein Backup in dieser Session",
-        crashReport: crashReport,
+        crashReport: crashReport || "Keine Abstürze in den Logs gefunden. System läuft stabil.",
         crashCount: crashCount
     });
 });
@@ -3026,23 +3027,34 @@ function restartWatchdog() {
 }
 
 // --- CRASH REPORTING ---
+function saveCrashToJson(type, reason, stack) {
+    try {
+        const crashFile = path.join(__dirname, 'crashes.json');
+        let crashes = [];
+        if (fs.existsSync(crashFile)) {
+            try { crashes = JSON.parse(fs.readFileSync(crashFile, 'utf8')); } catch(e){}
+        }
+        crashes.push({
+            time: new Date().toLocaleString('de-DE'),
+            type: type,
+            reason: reason,
+            stack: stack
+        });
+        fs.writeFileSync(crashFile, JSON.stringify(crashes, null, 2));
+    } catch(e) {}
+}
+
 process.on('uncaughtException', (err) => {
     console.error('FATAL ERROR (uncaughtException):', err);
-    try {
-        const time = new Date().toLocaleString('de-DE');
-        fs.writeFileSync(path.join(__dirname, 'crash-report.log'), `[${time}] Uncaught Exception:\n${err.stack || err}\n`);
-        sendNtfyAlert(`🔥 PulseOS Server ist komplett abgestürzt!\nGrund: ${err.message}`);
-    } catch(e) {}
+    saveCrashToJson('Uncaught Exception', err.message, err.stack || String(err));
+    sendNtfyAlert(`🔥 PulseOS Server ist komplett abgestürzt!\nGrund: ${err.message}`);
     process.exit(1); // Beende den Prozess, damit Watchdog übernehmen kann
 });
 
 process.on('unhandledRejection', (reason, promise) => {
     console.error('FATAL ERROR (unhandledRejection):', reason);
-    try {
-        const time = new Date().toLocaleString('de-DE');
-        fs.writeFileSync(path.join(__dirname, 'crash-report.log'), `[${time}] Unhandled Rejection:\n${reason.stack || reason}\n`);
-        sendNtfyAlert(`🔥 PulseOS Server ist komplett abgestürzt (Unhandled Rejection)!\nGrund: ${reason.message || reason}`);
-    } catch(e) {}
+    saveCrashToJson('Unhandled Rejection', reason.message || String(reason), reason.stack || String(reason));
+    sendNtfyAlert(`🔥 PulseOS Server ist komplett abgestürzt (Unhandled Rejection)!\nGrund: ${reason.message || reason}`);
     process.exit(1);
 });
 
