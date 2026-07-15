@@ -9,6 +9,39 @@ const PORT = 3000;
 
 const PulseOSVERSION = "26.5.1111";
 let logSpotify204 = true;
+let logSpotifyHistory = true;
+let logDisplay = true;
+let logSSE = true;
+
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+
+function filterLog(args) {
+    if (args.length > 0 && typeof args[0] === 'string') {
+        const msg = args[0];
+        if (!logSpotifyHistory && msg.includes('[Spotify History]')) return true;
+        if (!logDisplay && msg.includes('[Display]')) return true;
+        if (!logSSE && msg.includes('[SSE]')) return true;
+        if (!logSpotify204 && msg.includes('Spotify sagt: Kein aktives Gerät')) return true;
+    }
+    return false;
+}
+
+console.log = function(...args) {
+    if (filterLog(args)) return;
+    originalConsoleLog.apply(console, args);
+};
+
+console.error = function(...args) {
+    if (filterLog(args)) return;
+    originalConsoleError.apply(console, args);
+};
+
+console.warn = function(...args) {
+    if (filterLog(args)) return;
+    originalConsoleWarn.apply(console, args);
+};
 
 // WICHTIG: Erlaubt Express, JSON-Daten (z.B. vom Handy) zu lesen
 app.use(express.json());
@@ -2865,18 +2898,22 @@ app.post('/watchface/active', (req, res) => {
     res.json({ success: true });
 });
 
-app.get('/settings/spotify-logging', (req, res) => {
-    res.json({ enabled: logSpotify204 });
+app.get('/settings/logs', (req, res) => {
+    res.json({
+        spotify204: logSpotify204,
+        spotifyHistory: logSpotifyHistory,
+        display: logDisplay,
+        sse: logSSE
+    });
 });
 
-app.post('/settings/spotify-logging/toggle', (req, res) => {
-    const { enabled } = req.body;
-    if (enabled !== undefined) {
-        logSpotify204 = enabled;
-    } else {
-        logSpotify204 = !logSpotify204;
-    }
-    res.json({ success: true, enabled: logSpotify204 });
+app.post('/settings/logs/toggle', (req, res) => {
+    const { key, enabled } = req.body;
+    if (key === 'spotify204') logSpotify204 = enabled;
+    else if (key === 'spotifyHistory') logSpotifyHistory = enabled;
+    else if (key === 'display') logDisplay = enabled;
+    else if (key === 'sse') logSSE = enabled;
+    res.json({ success: true, [key]: enabled });
 });
 
 app.get('/server/running', (req, res) => {

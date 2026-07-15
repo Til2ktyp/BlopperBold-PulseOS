@@ -1385,26 +1385,38 @@ function initInfoWidget() {
     migrateBtn.addEventListener('mouseup', cancelPress);
     migrateBtn.addEventListener('mouseleave', cancelPress);
     
-    // --- Spotify Log Toggle ---
-    const spotifyLogToggle = document.getElementById('spotifyLogToggle');
-    if (spotifyLogToggle) {
-        // Initiale Stellung abrufen
-        fetch('/settings/spotify-logging')
-            .then(res => res.json())
-            .then(data => {
-                spotifyLogToggle.checked = data.enabled;
-            })
-            .catch(console.error);
+    // --- Log Toggles ---
+    const logToggles = [
+        { id: 'spotifyLogToggle', key: 'spotify204' },
+        { id: 'spotifyHistoryToggle', key: 'spotifyHistory' },
+        { id: 'displayLogToggle', key: 'display' },
+        { id: 'sseLogToggle', key: 'sse' }
+    ];
 
-        // Auf Änderungen reagieren
-        spotifyLogToggle.addEventListener('change', function() {
-            fetch('/settings/spotify-logging/toggle', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ enabled: this.checked })
-            }).catch(console.error);
-        });
-    }
+    // Fetch initial states for all logs
+    fetch('/settings/logs')
+        .then(res => res.json())
+        .then(data => {
+            logToggles.forEach(toggleInfo => {
+                const el = document.getElementById(toggleInfo.id);
+                if (el) el.checked = data[toggleInfo.key];
+            });
+        })
+        .catch(console.error);
+
+    // Setup listeners
+    logToggles.forEach(toggleInfo => {
+        const el = document.getElementById(toggleInfo.id);
+        if (el) {
+            el.addEventListener('change', function() {
+                fetch('/settings/logs/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: toggleInfo.key, enabled: this.checked })
+                }).catch(console.error);
+            });
+        }
+    });
 }
 
 function initCalendarWidget() {
