@@ -2978,6 +2978,13 @@ app.get('/system/health', (req, res) => {
     });
 });
 
+app.get('/system/crash-test', (req, res) => {
+    res.send("Crash wird in 1 Sekunde ausgelöst...");
+    setTimeout(() => {
+        throw new Error("Manueller Test-Absturz ausgelöst durch /system/crash-test");
+    }, 1000);
+});
+
 app.get('/server/running', (req, res) => {
     lastWatchdogPing = Date.now();
     res.status(200).send('OK');
@@ -3056,6 +3063,18 @@ process.on('unhandledRejection', (reason, promise) => {
     saveCrashToJson('Unhandled Rejection', reason.message || String(reason), reason.stack || String(reason));
     sendNtfyAlert(`🔥 PulseOS Server ist komplett abgestürzt (Unhandled Rejection)!\nGrund: ${reason.message || reason}`);
     process.exit(1);
+});
+
+process.on('SIGINT', () => {
+    console.log("Server wird manuell beendet (SIGINT)");
+    saveCrashToJson('Shutdown', 'Manueller Stop (STRG+C)', 'Kein Stacktrace');
+    process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+    console.log("Server wird beendet (SIGTERM)");
+    saveCrashToJson('Shutdown', 'Prozess terminiert', 'Kein Stacktrace');
+    process.exit(0);
 });
 
 // --- DAILY BACKUP SYSTEM ---
