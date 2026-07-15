@@ -2862,6 +2862,10 @@ app.post('/watchface/active', (req, res) => {
     res.json({ success: true });
 });
 
+app.get('/server/running', (req, res) => {
+    res.status(200).send('OK');
+});
+
 // --- SERVER START ---
 app.listen(PORT, () => {
     console.log(`Server läuft auf http://localhost:${PORT}`);
