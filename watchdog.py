@@ -38,7 +38,7 @@ def open_terminal_and_run_node():
         
     elif sys.platform == "win32":  # Windows
         print("Starte neues Terminal auf Windows...")
-        subprocess.Popen(["start", "cmd", "/k", "node server.js"], shell=True, cwd=cwd)
+        subprocess.Popen(["start", "cmd", "/k", "node --watch server.js"], shell=True, cwd=cwd)
         
     else:
         print("Betriebssystem wird nicht offiziell unterstützt. Versuche Standard-Ausführung...")
