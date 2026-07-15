@@ -36,3 +36,4 @@ test-real-token.js
 test-resource-api2.js
 generation-log.txt
 test-add.js
+crashes.json
